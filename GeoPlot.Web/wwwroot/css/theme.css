@@ -1,6 +1,17 @@
 ﻿svg {
   height: 500px; }
   svg g {
-    fill: white;
-    stroke: #000;
-    stroke-width: 0.1%; }
+    pointer-events: painted; }
+    svg g.region {
+      fill: none;
+      stroke: #00F;
+      stroke-width: 0.2%; }
+    svg g.district {
+      fill: white;
+      stroke: #999;
+      stroke-width: 0.1%;
+      transition-duration: 0.2s; }
+      svg g.district:hover {
+        stroke: #000;
+        stroke-width: 0.3%;
+        z-index: 2; }

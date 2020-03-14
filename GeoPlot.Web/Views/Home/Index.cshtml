@@ -1,29 +1,29 @@
-﻿@model PlotViewModel
+﻿@model GeoPlotViewModel
 @{
     ViewData["Title"] = "Home Page";
 }
 
 <div class="text-center">
     <h1 class="display-4">Welcome</h1>
-    <svg preserveAspectRatio="xMidYMid meet" viewBox="@Model.ViewBox.X @Model.ViewBox.Y @Model.ViewBox.Width @Model.ViewBox.Height">
-        @foreach (var region in Model.Regions)
+    <svg preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+        @foreach (var area in Model.Geo.Areas)
         {
-            <g id="district_@region.Id">
-                @foreach (var poly in region.Polys)
+            <g id="@area.Key" class="@area.Value.Type.ToString().ToLower()">
+                @foreach (var poly in area.Value.Poly)
                 {
-                    <polygon points="@string.Join(' ', poly.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                    <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
                 }
             </g>
-
+            area.Value.Poly = null;
         }
     </svg>
-    <input type="number"  data-bind="value: dayNumber" />
+    <input type="number" data-bind="value: dayNumber" />
 </div>
 
 @section Scripts {
     <script>
         GeoPlot.app.initServices();
         GeoPlot.Uri.appRoot = '@Url.Content("~/")';
-        ko.applyBindings(new GeoPlot.PlotPage(@Html.Json(Model.Data)));
+        ko.applyBindings(new GeoPlot.GeoPlotPage(@Html.Json(Model.Data), @Html.Json(Model.Geo)));
     </script>
 }

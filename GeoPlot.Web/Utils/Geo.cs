@@ -1,4 +1,5 @@
-﻿using GeoPlot.Web.Models;
+﻿using GeoPlot.Web.Entities;
+using GeoPlot.Web.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 
-namespace Eusoft.Mathematics.Geometry
+namespace GeoPlot.Web
 {
     public static class Geo
     {

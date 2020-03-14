@@ -6,6 +6,13 @@
 
     }
 
+    export interface IRect2D extends IGeometry {
+        x: number;
+        y: number
+        width: number;
+        height: number;
+    }
+
     /****************************************/
 
     export interface IPoint2D extends IGeometry {

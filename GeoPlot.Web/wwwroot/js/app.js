@@ -1120,54 +1120,6 @@ var GeoPlot;
 var GeoPlot;
 (function (GeoPlot) {
     /****************************************/
-    var PlotPage = /** @class */ (function () {
-        function PlotPage(data) {
-            var _this = this;
-            this.dayNumber = ko.observable(0);
-            var svg = document.getElementsByTagName("svg").item(0);
-            this._data = data;
-            this.dayNumber.subscribe(function (a) { return _this.updateData(); });
-            this.updateData();
-        }
-        /****************************************/
-        PlotPage.prototype.updateData = function () {
-            var day = this._data.days[this.dayNumber()];
-            for (var key in day.values) {
-                var element = document.getElementById("district_" + key.toUpperCase());
-                if (element) {
-                    var factor1 = (day.values[key].totalPositive / day.values[key].totalPopulation) / this._data.maxFactor;
-                    var factor2 = (day.values[key].totalPositive / day.values[key].totalPopulation) * 100000;
-                    var value = 0;
-                    if (factor2 > 0.01 && factor2 <= 10)
-                        value = 0.2;
-                    else if (factor2 > 10 && factor2 <= 20)
-                        value = 0.4;
-                    else if (factor2 > 20 && factor2 <= 100)
-                        value = 0.6;
-                    else if (factor2 > 100 && factor2 <= 200)
-                        value = 0.8;
-                    else if (factor2 > 200)
-                        value = 1;
-                    if (day.values[key].totalPositive == 0) {
-                        element.style.fill = "#fff";
-                        element.style.fillOpacity = "1";
-                    }
-                    else {
-                        factor1 = 1 - Math.pow(1 - factor1, 3);
-                        value = Math.ceil(factor1 * 20) / 20;
-                        element.style.fill = "#f00";
-                        element.style.fillOpacity = (value).toString();
-                    }
-                }
-            }
-        };
-        return PlotPage;
-    }());
-    GeoPlot.PlotPage = PlotPage;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    /****************************************/
     var Graphics = /** @class */ (function () {
         function Graphics(svg) {
             this._svg = svg;
@@ -1219,5 +1171,62 @@ var GeoPlot;
         return Geo;
     }());
     GeoPlot.Geo = Geo;
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    var GeoAreaType;
+    (function (GeoAreaType) {
+        GeoAreaType[GeoAreaType["Country"] = 0] = "Country";
+        GeoAreaType[GeoAreaType["State"] = 1] = "State";
+        GeoAreaType[GeoAreaType["Region"] = 2] = "Region";
+        GeoAreaType[GeoAreaType["District"] = 3] = "District";
+    })(GeoAreaType = GeoPlot.GeoAreaType || (GeoPlot.GeoAreaType = {}));
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    /****************************************/
+    var GeoPlotPage = /** @class */ (function () {
+        function GeoPlotPage(data, geo) {
+            var _this = this;
+            this.dayNumber = ko.observable(0);
+            var svg = document.getElementsByTagName("svg").item(0);
+            svg.addEventListener("click", function (e) { return _this.onMapClick(e); });
+            this._data = data;
+            this._geo = geo;
+            this.dayNumber.subscribe(function (a) { return _this.updateData(); });
+            this.updateData();
+        }
+        /****************************************/
+        GeoPlotPage.prototype.onMapClick = function (e) {
+            var item = e.target;
+            if (item.parentElement.classList.contains("district")) {
+                var area = this._geo.areas[item.parentElement.id.toLowerCase()];
+                alert(area.name);
+            }
+        };
+        /****************************************/
+        GeoPlotPage.prototype.updateData = function () {
+            var day = this._data.days[this.dayNumber()];
+            for (var key in day.values) {
+                var element = document.getElementById(key.toUpperCase());
+                if (element) {
+                    var area = this._geo.areas[key];
+                    var factor1 = (day.values[key].totalPositive / area.demography.total) / this._data.maxFactor;
+                    if (day.values[key].totalPositive == 0) {
+                        element.style.fill = "#fff";
+                        element.style.fillOpacity = "1";
+                    }
+                    else {
+                        factor1 = 1 - Math.pow(1 - factor1, 3);
+                        var value = Math.ceil(factor1 * 20) / 20;
+                        element.style.fill = "#f00";
+                        element.style.fillOpacity = (value).toString();
+                    }
+                }
+            }
+        };
+        return GeoPlotPage;
+    }());
+    GeoPlot.GeoPlotPage = GeoPlotPage;
 })(GeoPlot || (GeoPlot = {}));
 //# sourceMappingURL=app.js.map

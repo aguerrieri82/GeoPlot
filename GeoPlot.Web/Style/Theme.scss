@@ -2,11 +2,29 @@
     height: 500px;
 
     g {
-        fill: white;
-        stroke: #000;
-        stroke-width: 0.1%;
+        pointer-events: painted;
 
-        polygon {
+        &.selected {
+        }
+
+
+        &.region {
+            fill: none;
+            stroke: #00F;
+            stroke-width: 0.2%;
+        }
+
+        &.district {
+            fill: white;
+            stroke: #999;
+            stroke-width: 0.1%;
+            transition-duration: 0.2s;
+
+            &:hover {
+                stroke: #000;
+                stroke-width: 0.3%;
+                z-index: 2;
+            }
         }
     }
 }
