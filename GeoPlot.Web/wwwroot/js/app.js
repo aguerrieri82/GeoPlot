@@ -492,6 +492,54 @@ var GeoPlot;
         return DistinctEnumerator;
     }());
     /****************************************/
+    var DictionaryEnumerator = /** @class */ (function () {
+        /****************************************/
+        function DictionaryEnumerator(value) {
+            this._keyList = Object.getOwnPropertyNames(value);
+            this._value = value;
+            this.reset();
+        }
+        Object.defineProperty(DictionaryEnumerator.prototype, "current", {
+            /****************************************/
+            get: function () {
+                return {
+                    key: this._keyList[this._curIndex],
+                    value: this._value[this._keyList[this._curIndex]]
+                };
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /****************************************/
+        DictionaryEnumerator.prototype.moveNext = function () {
+            this._curIndex++;
+            return this._curIndex < this._keyList.length;
+        };
+        /****************************************/
+        DictionaryEnumerator.prototype.reset = function () {
+            this._curIndex = -1;
+        };
+        /****************************************/
+        DictionaryEnumerator.prototype.first = function () {
+            return {
+                key: this._keyList[0],
+                value: this._value[this._keyList[0]]
+            };
+        };
+        /****************************************/
+        DictionaryEnumerator.prototype.last = function () {
+            return {
+                key: this._keyList[this._keyList.length - 1],
+                value: this._value[this._keyList[this._keyList.length - 1]]
+            };
+        };
+        /****************************************/
+        DictionaryEnumerator.prototype.count = function () {
+            return this._keyList.length;
+        };
+        return DictionaryEnumerator;
+    }());
+    /****************************************/
     var ArrayEnumerator = /** @class */ (function () {
         /****************************************/
         function ArrayEnumerator(value) {
@@ -812,11 +860,17 @@ var GeoPlot;
             result.sort(function (a, b) {
                 var itemA = selector(a);
                 var itemB = selector(b);
-                if (a == b)
-                    return 0;
-                if (a > b)
-                    return 1;
-                return -1;
+                return itemA - itemB;
+            });
+            return linq(result);
+        };
+        /****************************************/
+        Linq.prototype.orderByDesc = function (selector) {
+            var result = this.toArray();
+            result.sort(function (a, b) {
+                var itemA = selector(a);
+                var itemB = selector(b);
+                return itemB - itemA;
             });
             return linq(result);
         };
@@ -925,8 +979,10 @@ var GeoPlot;
             enumerator = new CollectionEnumerator(value);
         else if ("next" in value && typeof (value["next"]) == "function")
             enumerator = new IteratorEnumerator(value);
-        else
+        else if ("current" in value && "reset" in value && "moveNext" in value)
             enumerator = value;
+        else
+            return new Linq(new DictionaryEnumerator(value));
         return new Linq(enumerator);
     }
     GeoPlot.linq = linq;
@@ -1189,25 +1245,40 @@ var GeoPlot;
             this.dayData = ko.observable();
             this.dayFactor = ko.observable();
         }
+        AreaViewModel.prototype.select = function () {
+        };
         return AreaViewModel;
     }());
     /****************************************/
     var GeoPlotPage = /** @class */ (function () {
         function GeoPlotPage(data, geo) {
             var _this = this;
+            this._updateDayData = false;
             /****************************************/
             this.dayNumber = ko.observable(0);
             this.totalDays = ko.observable(0);
             this.currentData = ko.observable();
             this.isPlaying = ko.observable(false);
+            this.ageGroup = ko.observable("total");
             this.currentArea = ko.observable();
+            this.topAreas = ko.observable();
             var svg = document.getElementsByTagName("svg").item(0);
             svg.addEventListener("click", function (e) { return _this.onMapClick(e); });
             this._data = data;
             this._geo = geo;
             this.totalDays(this._data.days.length - 1);
-            this.dayNumber.subscribe(function (a) { return _this.updateData(); });
-            this.updateData();
+            this.dayNumber.subscribe(function (a) { return _this.updateDayData(); });
+            this.ageGroup.subscribe(function (a) { return _this.updateMap(); });
+            this.updateDayData();
+            var instance = M.Collapsible.getInstance(document.getElementById("topCases"));
+            instance.options.onOpenStart = function () {
+                if (!_this._daysData)
+                    _this.computeDayData();
+                _this._updateDayData = true;
+            };
+            instance.options.onCloseEnd = function () {
+                _this._updateDayData = false;
+            };
         }
         /****************************************/
         GeoPlotPage.prototype.onMapClick = function (e) {
@@ -1269,7 +1340,55 @@ var GeoPlot;
                 area.value = this._selectedArea;
                 this.updateArea(area);
                 this.currentArea(area);
+                if (this._chart == null)
+                    this.initChart();
+                this.updateChart();
             }
+        };
+        /****************************************/
+        GeoPlotPage.prototype.updateChart = function () {
+            var _this = this;
+            var day = [this.dayNumber()];
+            this._chart.data.datasets[0].data = GeoPlot.linq(this._data.days).select(function (a) { return ({
+                x: new Date(a.data),
+                y: a.values[_this.currentArea().value.id.toLowerCase()].totalPositive
+            }); }).toArray();
+            this._chart.update();
+        };
+        /****************************************/
+        GeoPlotPage.prototype.initChart = function () {
+            var canvas = document.querySelector("#areaGraph");
+            this._chart = new Chart(canvas, {
+                type: "line",
+                data: {
+                    datasets: [
+                        {
+                            label: "Infetti",
+                            lineTension: 0,
+                            data: [],
+                            backgroundColor: "#5cd6d3",
+                            borderColor: "#00a59d",
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    legend: {
+                        display: false
+                    },
+                    scales: {
+                        xAxes: [{
+                                type: "time",
+                                distribution: "linear",
+                                time: {
+                                    unit: "day",
+                                    bounds: "ticks",
+                                    tooltipFormat: "DD/MMM"
+                                }
+                            }],
+                    }
+                }
+            });
         };
         /****************************************/
         GeoPlotPage.prototype.updateArea = function (viewModel) {
@@ -1279,17 +1398,45 @@ var GeoPlot;
             var area = viewModel.value;
             var day = this._data.days[this.dayNumber()];
             viewModel.dayData(day.values[id]);
-            viewModel.dayFactor(Math.round((day.values[id].totalPositive / area.demography.total) * 100000 * 10) / 10);
+            viewModel.dayFactor({
+                total: Math.round((day.values[id].totalPositive / area.demography.total) * 100000 * 10) / 10,
+                old: Math.round((day.values[id].totalPositive / area.demography.old) * 100000 * 10) / 10,
+            });
         };
         /****************************************/
-        GeoPlotPage.prototype.updateData = function () {
+        GeoPlotPage.prototype.computeDayData = function () {
+            var _this = this;
+            this._daysData = [];
+            for (var i = 0; i < this._data.days.length; i++) {
+                var day = this._data.days[i];
+                var item = {};
+                item.topAreas = GeoPlot.linq(day.values).orderByDesc(function (a) { return a.value.totalPositive; }).select(function (a) {
+                    var area = new AreaViewModel();
+                    area.value = _this._geo.areas[a.key.toLowerCase()];
+                    area.select = function () { return _this.selectedArea = area.value; };
+                    _this.updateArea(area);
+                    return area;
+                }).take(10).toArray();
+                this._daysData.push(item);
+            }
+        };
+        /****************************************/
+        GeoPlotPage.prototype.updateDayData = function () {
             var day = this._data.days[this.dayNumber()];
             this.currentData(GeoPlot.DateUtils.format(day.data, "{DD}/{MM}/{YYYY}"));
+            this.updateMap();
+            this.updateArea(this.currentArea());
+            if (this._daysData && this._updateDayData)
+                this.topAreas(this._daysData[this.dayNumber()].topAreas);
+        };
+        /****************************************/
+        GeoPlotPage.prototype.updateMap = function () {
+            var day = this._data.days[this.dayNumber()];
             for (var key in day.values) {
                 var element = document.getElementById(key.toUpperCase());
                 if (element) {
                     var area = this._geo.areas[key];
-                    var factor1 = (day.values[key].totalPositive / area.demography.total) / this._data.maxFactor;
+                    var factor1 = (day.values[key].totalPositive / area.demography[this.ageGroup()]) / this._data.maxFactor.total;
                     if (day.values[key].totalPositive == 0) {
                         element.style.fill = "#fff";
                         element.style.fillOpacity = "1";
@@ -1302,7 +1449,6 @@ var GeoPlot;
                     }
                 }
             }
-            this.updateArea(this.currentArea());
         };
         return GeoPlotPage;
     }());

@@ -120,6 +120,70 @@
 
     /****************************************/
 
+    class DictionaryEnumerator<T> implements IEnumerator<IKeyValue<T>> {
+
+        private _curIndex: number;
+        private _keyList: string[];
+        private _value: IDictionary<T>;
+
+        /****************************************/
+
+        constructor(value: IDictionary<T>) {
+            this._keyList = Object.getOwnPropertyNames(value);
+            this._value = value;
+            this.reset();
+        }
+
+        /****************************************/
+
+        get current(): IKeyValue<T> {
+            return {
+                key: this._keyList[this._curIndex],
+                value: this._value[this._keyList[this._curIndex]]
+            };
+        }
+
+        /****************************************/
+
+        moveNext(): boolean {
+            this._curIndex++;
+            return this._curIndex < this._keyList.length;
+        }
+
+        /****************************************/
+
+        reset(): void {
+            this._curIndex = -1;
+        }
+
+        /****************************************/
+
+        first(): IKeyValue<T> {
+            return {
+                key: this._keyList[0],
+                value: this._value[this._keyList[0]]
+            };
+        }
+
+        /****************************************/
+
+        last(): IKeyValue<T> {
+            return {
+                key: this._keyList[this._keyList.length - 1],
+                value: this._value[this._keyList[this._keyList.length - 1]]
+            };
+        }
+
+        /****************************************/
+
+        count(): number {
+            return this._keyList.length;
+        }
+
+    }
+
+    /****************************************/
+
     class ArrayEnumerator<T> implements IEnumerator<T> {
 
         private _curIndex: number;
@@ -583,11 +647,20 @@
             result.sort((a, b) => {
                 var itemA = selector(a);
                 var itemB = selector(b);
-                if (a == b)
-                    return 0;
-                if (a > b)
-                    return 1;
-                return -1;
+                return itemA - itemB;
+            });
+            return linq(result);
+        }
+
+        /****************************************/
+
+        orderByDesc(selector: (item: T) => any): Linq<T> {
+
+            var result = this.toArray();
+            result.sort((a, b) => {
+                var itemA = selector(a);
+                var itemB = selector(b);
+                return itemB - itemA;
             });
             return linq(result);
         }
@@ -741,10 +814,11 @@
     export function linq<T>(array: T[]): Linq<T>;
     export function linq<T>(list: ICollection<T>): Linq<T>;
     export function linq<T>(iterator: Iterator<T>): Linq<T>;
+    export function linq<T>(dictionary: IDictionary<T>): Linq<IKeyValue<T>>;
 
-    export function linq<T>(value: any): Linq<T> {
+    export function linq<T>(value: any): Linq<any> {
 
-        let enumerator: IEnumerator<T>;
+        let enumerator: IEnumerator<any>;
 
         if (!value)
             enumerator = new EmptyEnumerator<T>();
@@ -756,9 +830,11 @@
             enumerator = new CollectionEnumerator<T>(value);
         else if ("next" in value && typeof (value["next"]) == "function")
             enumerator = new IteratorEnumerator(value);
-        else
+        else if ("current" in value && "reset" in value && "moveNext" in value )
             enumerator = value;
+        else
+            return new Linq(new DictionaryEnumerator<T>(value));
 
-        return new Linq<T>(enumerator);
+        return new Linq(enumerator);
     }
 }

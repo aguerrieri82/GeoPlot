@@ -1,4 +1,16 @@
-﻿svg {
+﻿.stack-horizontal {
+  display: flex;
+  flex-direction: row;
+  align-items: center; }
+  .stack-horizontal > * {
+    margin-right: 25px; }
+    .stack-horizontal > *.stack-fit {
+      flex-grow: 1;
+      flex-basis: 0; }
+    .stack-horizontal > *:last-child {
+      margin-right: 0; }
+
+svg {
   width: 50vh;
   max-width: 100%; }
   svg g {

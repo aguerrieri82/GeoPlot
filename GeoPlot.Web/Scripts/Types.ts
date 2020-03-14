@@ -13,7 +13,7 @@
     export interface IDayAreaDataSet<TData>
     {
         max: TData;
-        maxFactor: number;
+        maxFactor: IDemography;
         days: IDayAreaItem<TData>[];
     }    
 
@@ -32,6 +32,7 @@
         total?: number;
         male?: number;
         female?: number;
+        old?: number;
     }
 
     export interface IGeoArea {

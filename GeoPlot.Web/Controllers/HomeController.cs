@@ -36,8 +36,12 @@ namespace GeoPlot.Web.Controllers
             model.Geo = await LoadDistricts();
 
             model.Data = await LoadInfectionData();
-           
-            model.Data.MaxFactor = model.Data.Days.SelectMany(a => a.Values).Max(a => a.Value.TotalPositive.GetValueOrDefault() / (double)model.Geo.Areas[a.Key].Demography.Total.Value);
+
+            model.Data.MaxFactor = new Demography()
+            {
+                Total = model.Data.Days.SelectMany(a => a.Values).Max(a => a.Value.TotalPositive.GetValueOrDefault() / model.Geo.Areas[a.Key].Demography.Total.Value),
+                Old = model.Data.Days.SelectMany(a => a.Values).Max(a => a.Value.TotalPositive.GetValueOrDefault() / model.Geo.Areas[a.Key].Demography.Old.Value),
+            };
 
             return View(model);
         }
@@ -50,9 +54,9 @@ namespace GeoPlot.Web.Controllers
 
         async Task<DayAreaDataSet<InfectionData>> LoadInfectionData()
         {
-            var json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "\\data\\dpc-covid19-ita-province.json");
+            //var json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "\\data\\dpc-covid19-ita-province.json");
             
-            //var json = await HttpGet("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json");
+            var json = await HttpGet("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json");
 
             var data = JsonConvert.DeserializeObject<DistrictInfectionRawItem[]>(json).Where(a => !string.IsNullOrWhiteSpace(a.sigla_provincia));
 
@@ -79,8 +83,6 @@ namespace GeoPlot.Web.Controllers
 
             return result;
         }
-
-   
 
         async Task<GeoAreaSet> LoadDistricts()
         {
@@ -139,6 +141,7 @@ namespace GeoPlot.Web.Controllers
             var distData = JsonConvert.DeserializeObject<DistrictPopulatonRawItem[]>(json);
 
             var popData = distData.Where(a => a.eta == "Totale").ToDictionary(a => "D" + a.codice);
+            var oldPopData = distData.Where(a => a.eta != "Totale" && int.Parse(a.eta) > 65).GroupBy(a=> a.codice).ToDictionary(a => "D" + a.Key, a=> a.Sum(b=> b.totale_femmine + b.totale_maschi));
             foreach (var area in result.Areas.Where(a=> a.Value.Type == GeoAreaType.District))
             {
                 DistrictPopulatonRawItem popItem;
@@ -148,7 +151,8 @@ namespace GeoPlot.Web.Controllers
                     { 
                         Female  = popItem.totale_femmine,
                         Male = popItem.totale_maschi,
-                        Total = popItem.totale_femmine + popItem.totale_maschi
+                        Total = popItem.totale_femmine + popItem.totale_maschi,
+                        Old = oldPopData[area.Key]
                     };
             }
             return result;

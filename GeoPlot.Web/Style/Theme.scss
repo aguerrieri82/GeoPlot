@@ -1,4 +1,23 @@
 ﻿
+.stack-horizontal {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    > * {
+        margin-right: 25px;
+
+        &.stack-fit {
+            flex-grow: 1;
+            flex-basis: 0;
+        }
+
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
+
 svg {
     width: 50vh;
     max-width: 100%;

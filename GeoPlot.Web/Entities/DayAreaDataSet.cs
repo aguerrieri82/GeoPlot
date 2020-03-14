@@ -17,7 +17,7 @@ namespace GeoPlot.Web.Entities
     {
         public TData Max { get; set; }
 
-        public double MaxFactor { get; set; }
+        public Demography MaxFactor { get; set; }
 
         public IList<DayAreaItem<TData>> Days { get; set; }
     }

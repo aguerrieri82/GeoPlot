@@ -6,6 +6,7 @@
     "@types/knockout": "3.4.66",
     "@types/chart.js": "2.9.14",
     "@types/geojson": "7946.0.7",
+    "@types/materialize-css": "1.0.7",
     "chartjs-plugin-zoom": "0.7.5",
     "simplify-geojson": "1.0.3"
   }

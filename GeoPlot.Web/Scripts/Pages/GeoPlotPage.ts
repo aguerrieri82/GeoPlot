@@ -1,12 +1,25 @@
 ﻿namespace GeoPlot {
 
+    type AgeGroup = keyof IDemography;
 
     class AreaViewModel {
 
-        value: IGeoArea;   
-        
+        select() {
+
+        }
+
+        /****************************************/
+
+        value: IGeoArea;           
         dayData = ko.observable<IInfectionData>();
-        dayFactor = ko.observable<number>();
+        dayFactor = ko.observable<IDemography>();
+    }
+
+
+    /****************************************/
+
+    interface IDayData {
+        topAreas?: AreaViewModel[];
     }
 
     /****************************************/
@@ -15,7 +28,10 @@
 
         private readonly _data: IDayAreaDataSet<IInfectionData>;
         private readonly _geo: IGeoAreaSet;
-        private _selectedArea: IGeoArea;
+        private _selectedArea: IGeoArea; ù
+        private _chart: Chart;
+        private _daysData: IDayData[];
+        private _updateDayData: boolean = false;
 
         constructor(data: IDayAreaDataSet<IInfectionData>, geo: IGeoAreaSet) {
             let svg = document.getElementsByTagName("svg").item(0);
@@ -24,8 +40,21 @@
             this._geo = geo;
 
             this.totalDays(this._data.days.length - 1);
-            this.dayNumber.subscribe(a => this.updateData());
-            this.updateData();
+            this.dayNumber.subscribe(a => this.updateDayData());
+            this.ageGroup.subscribe(a => this.updateMap());
+            this.updateDayData();
+
+            var instance = M.Collapsible.getInstance(document.getElementById("topCases"));
+
+            instance.options.onOpenStart = () => {
+                if (!this._daysData)
+                    this.computeDayData();
+                this._updateDayData = true;
+            }
+            instance.options.onCloseEnd = () => {
+                this._updateDayData = false;
+            }
+
         }
 
         /****************************************/
@@ -106,7 +135,65 @@
                 this.updateArea(area);
 
                 this.currentArea(area)
+
+                if (this._chart == null)
+                    this.initChart();
+
+                this.updateChart();
             }
+        }
+
+        /****************************************/
+
+        protected updateChart() {
+            let day = [this.dayNumber()];
+
+            this._chart.data.datasets[0].data = linq(this._data.days).select(a => ({
+                x: new Date(a.data),
+                y: a.values[this.currentArea().value.id.toLowerCase()].totalPositive
+            })).toArray();
+
+            this._chart.update();
+        }
+
+        /****************************************/
+
+        protected initChart() {
+            let canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
+
+            this._chart = new Chart(canvas, {
+                type: "line",
+                data: {
+                    datasets: [
+                        {
+                            label: "Infetti",
+                            lineTension: 0,
+                            data: [],
+                            backgroundColor: "#5cd6d3",
+                            borderColor: "#00a59d",
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    legend: {
+                        display: false
+                    },     
+                    scales: {
+                        xAxes: [{
+                            type: "time",
+                            distribution: "linear",
+                            time: {
+                                unit: "day",
+                                bounds: "ticks",
+                                tooltipFormat: "DD/MMM"
+                            }
+
+                        }],
+                       
+                    }
+                }
+            });
         }
 
         /****************************************/
@@ -123,16 +210,63 @@
 
             viewModel.dayData(day.values[id]);
 
-            viewModel.dayFactor(Math.round((day.values[id].totalPositive / area.demography.total) * 100000 * 10) / 10);
+            viewModel.dayFactor({
+                total: Math.round((day.values[id].totalPositive / area.demography.total) * 100000 * 10) / 10,
+                old: Math.round((day.values[id].totalPositive / area.demography.old) * 100000 * 10) / 10,
+            });
         }
 
         /****************************************/
 
-        protected updateData() {
+        protected computeDayData() {
+
+            this._daysData = [];
+
+            for (var i = 0; i < this._data.days.length; i++) {
+
+                let day = this._data.days[i];
+
+                let item: IDayData = {};
+
+                item.topAreas = linq(day.values).orderByDesc(a => a.value.totalPositive).select(a => {
+
+                    let area = new AreaViewModel();
+
+                    area.value = this._geo.areas[a.key.toLowerCase()];
+
+                    area.select = () => this.selectedArea = area.value;
+
+                    this.updateArea(area);
+
+                    return area;
+
+                }).take(10).toArray();
+
+                this._daysData.push(item);
+            }
+        }
+
+        /****************************************/
+
+        protected updateDayData() {
             
             let day = this._data.days[this.dayNumber()];
 
             this.currentData(DateUtils.format(day.data, "{DD}/{MM}/{YYYY}"));
+
+            this.updateMap();
+
+            this.updateArea(this.currentArea());   
+
+            if (this._daysData && this._updateDayData)
+                this.topAreas(this._daysData[this.dayNumber()].topAreas);
+        }
+
+        /****************************************/
+
+        protected updateMap() {
+
+            let day = this._data.days[this.dayNumber()];
 
             for (let key in day.values) {
                 let element = document.getElementById(key.toUpperCase());
@@ -140,7 +274,7 @@
 
                     let area = this._geo.areas[key];
 
-                    let factor1 = (day.values[key].totalPositive / area.demography.total) / this._data.maxFactor;
+                    let factor1 = (day.values[key].totalPositive / area.demography[this.ageGroup()]) / this._data.maxFactor.total;
 
                     if (day.values[key].totalPositive == 0) {
                         element.style.fill = "#fff";
@@ -154,8 +288,6 @@
                     }
                 }
             }
-
-            this.updateArea(this.currentArea());       
         }
 
         /****************************************/
@@ -164,6 +296,8 @@
         totalDays = ko.observable(0);
         currentData = ko.observable<string>();
         isPlaying = ko.observable(false);
+        ageGroup = ko.observable<AgeGroup>("total");
         currentArea = ko.observable<AreaViewModel>();
+        topAreas = ko.observable<AreaViewModel[]>();
     }
 }
