@@ -12,5 +12,9 @@ namespace GeoPlot.Web.Models
         public GeoAreaSet Geo { get; set; }
 
         public DayAreaDataSet<InfectionData> Data { get; set; }
+
+        public int? Day { get; set; }
+
+        public string District { get; set; }
     }
 }

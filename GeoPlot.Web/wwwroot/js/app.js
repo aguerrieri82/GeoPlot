@@ -135,6 +135,9 @@ var GeoPlot;
     }());
     GeoPlot.DomUtils = DomUtils;
 })(GeoPlot || (GeoPlot = {}));
+function formatNumber(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 var GeoPlot;
 (function (GeoPlot) {
     var Geo = /** @class */ (function () {
@@ -1251,7 +1254,7 @@ var GeoPlot;
     }());
     /****************************************/
     var GeoPlotPage = /** @class */ (function () {
-        function GeoPlotPage(data, geo) {
+        function GeoPlotPage(model) {
             var _this = this;
             this._updateDayData = false;
             /****************************************/
@@ -1262,14 +1265,12 @@ var GeoPlot;
             this.ageGroup = ko.observable("total");
             this.currentArea = ko.observable();
             this.topAreas = ko.observable();
-            var svg = document.getElementsByTagName("svg").item(0);
-            svg.addEventListener("click", function (e) { return _this.onMapClick(e); });
-            this._data = data;
-            this._geo = geo;
+            this._data = model.data;
+            this._geo = model.geo;
             this.totalDays(this._data.days.length - 1);
             this.dayNumber.subscribe(function (a) { return _this.updateDayData(); });
             this.ageGroup.subscribe(function (a) { return _this.updateMap(); });
-            this.updateDayData();
+            this.dayNumber(model.day != undefined ? model.day : this._data.days.length - 1);
             var instance = M.Collapsible.getInstance(document.getElementById("topCases"));
             instance.options.onOpenStart = function () {
                 if (!_this._daysData)
@@ -1279,6 +1280,10 @@ var GeoPlot;
             instance.options.onCloseEnd = function () {
                 _this._updateDayData = false;
             };
+            var svg = document.getElementsByTagName("svg").item(0);
+            svg.addEventListener("click", function (e) { return _this.onMapClick(e); });
+            if (model.district)
+                this.selectedArea = this._geo.areas[model.district.toLowerCase()];
         }
         /****************************************/
         GeoPlotPage.prototype.onMapClick = function (e) {
@@ -1344,6 +1349,7 @@ var GeoPlot;
                     this.initChart();
                 this.updateChart();
             }
+            this.updateUrl();
         };
         /****************************************/
         GeoPlotPage.prototype.updateChart = function () {
@@ -1382,7 +1388,6 @@ var GeoPlot;
                                 distribution: "linear",
                                 time: {
                                     unit: "day",
-                                    bounds: "ticks",
                                     tooltipFormat: "DD/MMM"
                                 }
                             }],
@@ -1416,9 +1421,10 @@ var GeoPlot;
                     area.select = function () { return _this.selectedArea = area.value; };
                     _this.updateArea(area);
                     return area;
-                }).take(10).toArray();
+                }).take(25).toArray();
                 this._daysData.push(item);
             }
+            this.topAreas(this._daysData[this.dayNumber()].topAreas);
         };
         /****************************************/
         GeoPlotPage.prototype.updateDayData = function () {
@@ -1428,6 +1434,14 @@ var GeoPlot;
             this.updateArea(this.currentArea());
             if (this._daysData && this._updateDayData)
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
+            this.updateUrl();
+        };
+        /****************************************/
+        GeoPlotPage.prototype.updateUrl = function () {
+            var url = GeoPlot.Uri.appRoot + "?day=" + this.dayNumber();
+            if (this.selectedArea)
+                url += "&district=" + this.selectedArea.id;
+            history.replaceState(null, null, url);
         };
         /****************************************/
         GeoPlotPage.prototype.updateMap = function () {

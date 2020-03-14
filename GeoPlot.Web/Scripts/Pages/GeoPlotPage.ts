@@ -22,6 +22,13 @@
         topAreas?: AreaViewModel[];
     }
 
+    interface IGeoPlotViewModel {
+        geo: IGeoAreaSet;
+        data: IDayAreaDataSet<IInfectionData>;
+        day?: number;
+        district?: string;
+    }
+
     /****************************************/
 
     export class GeoPlotPage {
@@ -33,16 +40,16 @@
         private _daysData: IDayData[];
         private _updateDayData: boolean = false;
 
-        constructor(data: IDayAreaDataSet<IInfectionData>, geo: IGeoAreaSet) {
-            let svg = document.getElementsByTagName("svg").item(0);
-            svg.addEventListener("click", e => this.onMapClick(e))
-            this._data = data;
-            this._geo = geo;
+        constructor(model: IGeoPlotViewModel) {
+
+            this._data = model.data;
+            this._geo = model.geo;
 
             this.totalDays(this._data.days.length - 1);
             this.dayNumber.subscribe(a => this.updateDayData());
             this.ageGroup.subscribe(a => this.updateMap());
-            this.updateDayData();
+
+            this.dayNumber(model.day != undefined ? model.day : this._data.days.length - 1);
 
             var instance = M.Collapsible.getInstance(document.getElementById("topCases"));
 
@@ -55,6 +62,11 @@
                 this._updateDayData = false;
             }
 
+            let svg = document.getElementsByTagName("svg").item(0);
+            svg.addEventListener("click", e => this.onMapClick(e))
+
+            if (model.district)
+                this.selectedArea = this._geo.areas[model.district.toLowerCase()];
         }
 
         /****************************************/
@@ -141,6 +153,8 @@
 
                 this.updateChart();
             }
+
+            this.updateUrl();
         }
 
         /****************************************/
@@ -185,7 +199,6 @@
                             distribution: "linear",
                             time: {
                                 unit: "day",
-                                bounds: "ticks",
                                 tooltipFormat: "DD/MMM"
                             }
 
@@ -240,10 +253,12 @@
 
                     return area;
 
-                }).take(10).toArray();
+                }).take(25).toArray();
 
                 this._daysData.push(item);
             }
+
+            this.topAreas(this._daysData[this.dayNumber()].topAreas);
         }
 
         /****************************************/
@@ -260,6 +275,16 @@
 
             if (this._daysData && this._updateDayData)
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
+            this.updateUrl();
+        }
+
+        /****************************************/
+
+        protected updateUrl() {
+            let url = Uri.appRoot + "?day=" + this.dayNumber();
+            if (this.selectedArea)
+                url += "&district=" + this.selectedArea.id;
+            history.replaceState(null, null, url;
         }
 
         /****************************************/

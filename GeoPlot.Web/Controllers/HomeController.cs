@@ -29,13 +29,16 @@ namespace GeoPlot.Web.Controllers
         }
 
         [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.None, NoStore = false)]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? day, string district)
         {
-            var model = new GeoPlotViewModel();
+            var model = new GeoPlotViewModel
+            {
+                District =district,
+                Day = day,
+                Geo = await LoadDistricts(),
 
-            model.Geo = await LoadDistricts();
-
-            model.Data = await LoadInfectionData();
+                Data = await LoadInfectionData()
+            };
 
             model.Data.MaxFactor = new Demography()
             {
