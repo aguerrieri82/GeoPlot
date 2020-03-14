@@ -12,6 +12,8 @@ using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
 using Newtonsoft.Json;
 using GeoPlot.Web.Entities;
+using NetTopologySuite.Simplify;
+using System.Net.Http;
 
 namespace GeoPlot.Web.Controllers
 {
@@ -26,6 +28,7 @@ namespace GeoPlot.Web.Controllers
             _env = env;
         }
 
+        [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.None, NoStore = false)]
         public async Task<IActionResult> Index()
         {
             var model = new GeoPlotViewModel();
@@ -48,6 +51,9 @@ namespace GeoPlot.Web.Controllers
         async Task<DayAreaDataSet<InfectionData>> LoadInfectionData()
         {
             var json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "\\data\\dpc-covid19-ita-province.json");
+            
+            //var json = await HttpGet("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json");
+
             var data = JsonConvert.DeserializeObject<DistrictInfectionRawItem[]>(json).Where(a => !string.IsNullOrWhiteSpace(a.sigla_provincia));
 
             var result = new DayAreaDataSet<InfectionData>()
@@ -73,6 +79,8 @@ namespace GeoPlot.Web.Controllers
 
             return result;
         }
+
+   
 
         async Task<GeoAreaSet> LoadDistricts()
         {
@@ -145,11 +153,24 @@ namespace GeoPlot.Web.Controllers
             }
             return result;
         }
+
+        async Task<string> HttpGet(string url)
+        {
+            using var client = new HttpClient();
+            return await client.GetStringAsync(url);
+        }
+
         void CreatePoly(Geometry geo, IList<Poly2D> result)
         {
             if (geo is Polygon geoPoly)
             {
-                result.Add(new Poly2D() { Points = geoPoly.ExteriorRing.Coordinates.Select(a => Geo.Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
+                var simplifier = new VWSimplifier(geoPoly.ExteriorRing);
+                simplifier.DistanceTolerance = 0.01;
+
+                var simpGeo = simplifier.GetResultGeometry();
+                
+                if (simpGeo.IsValid)
+                    result.Add(new Poly2D() { Points = simpGeo.Coordinates.Select(a => Geo.Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
             }
             else if (geo is MultiPolygon multiPoly)
             {

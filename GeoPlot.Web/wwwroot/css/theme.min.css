@@ -1,1 +1,1 @@
-﻿svg{height:500px;}svg g{pointer-events:painted;}svg g.region{fill:none;stroke:#00f;stroke-width:.2%;}svg g.district{fill:white;stroke:#999;stroke-width:.1%;transition-duration:.2s;}svg g.district:hover{stroke:#000;stroke-width:.3%;z-index:2;}
+﻿svg{width:50vh;max-width:100%;}svg g{pointer-events:painted;}svg g.region{fill:none;stroke:#000;stroke-width:.2%;}svg g.district{fill:white;stroke:#999;stroke-width:.1%;transition:opacity .3s;}svg g.district:hover{stroke:#000;stroke-width:.3%;z-index:5;}

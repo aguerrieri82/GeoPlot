@@ -1,5 +1,7 @@
-﻿svg {
-    height: 500px;
+﻿
+svg {
+    width: 50vh;
+    max-width: 100%;
 
     g {
         pointer-events: painted;
@@ -10,7 +12,7 @@
 
         &.region {
             fill: none;
-            stroke: #00F;
+            stroke: #000;
             stroke-width: 0.2%;
         }
 
@@ -18,12 +20,12 @@
             fill: white;
             stroke: #999;
             stroke-width: 0.1%;
-            transition-duration: 0.2s;
+            transition: opacity 0.3s;
 
             &:hover {
                 stroke: #000;
                 stroke-width: 0.3%;
-                z-index: 2;
+                z-index: 5;
             }
         }
     }

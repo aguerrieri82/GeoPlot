@@ -1,24 +1,82 @@
 ﻿@model GeoPlotViewModel
 @{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Coronavirus";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <svg preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
-        @foreach (var area in Model.Geo.Areas)
-        {
-            <g id="@area.Key" class="@area.Value.Type.ToString().ToLower()">
-                @foreach (var poly in area.Value.Poly)
-                {
-                    <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
-                }
-            </g>
-            area.Value.Poly = null;
-        }
-    </svg>
-    <input type="number" data-bind="value: dayNumber" />
-</div>
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m6 l8">
+                <section class="card-panel">
+                    <div class="center-align">
+                        <svg preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+                            @foreach (var area in Model.Geo.Areas)
+                            {
+                                <g id="@area.Key" class="@area.Value.Type.ToString().ToLower()">
+                                    @foreach (var poly in area.Value.Poly)
+                                    {
+                                        <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                                    }
+                                </g>
+                                area.Value.Poly = null;
+                            }
+                        </svg>
+                    </div>
+                </section>
+                <section class="day">
+                    <div class="row">
+                        <div class="col s12 m6">
+                            <div class="range-field">
+                                <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
+                            </div>
+                        </div>
+                        <div class="col m6">
+                            <div class="input-field inline">
+                                <input type="number" min="0" data-bind="value: dayNumber, attr: {max: totalDays}" />
+                            </div>
+                            <div class="input-field inline">
+                                <span data-bind="text: currentData"></span>
+                            </div>
+                            <div class="input-field inline">
+                                <button class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
+                                <button class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <div class="col s12 m6 l4 ">
+                <section class="card">
+                    <div class="card-content">
+
+                        <!--ko if: currentArea-->
+                        <span class="card-title" data-bind="text: currentArea().value.name"></span>
+
+                        <div>
+                            <label>Popolazione</label>
+                            <div data-bind="text: currentArea().value.demography.total"></div>
+                        </div>
+                        <div>
+                            <label>Infezioni</label>
+                            <div data-bind="text: currentArea().dayData().totalPositive"></div>
+                        </div>
+                        <div>
+                            <label>Fattore (Infetti per 100.000 abitanti)</label>
+                            <div data-bind="text: currentArea().dayFactor"></div>
+                        </div>
+                        <!--/ko-->
+                        <!--ko ifnot: currentArea-->
+                        <span>Selezionare una provincia</span>
+                        <!--/ko-->
+                    </div>
+
+                </section>
+            </div>
+        </div>
+        
+
+
+    </div>
 
 @section Scripts {
     <script>
