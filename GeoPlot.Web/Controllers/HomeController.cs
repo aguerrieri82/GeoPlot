@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using GeoPlot.Web.Entities;
 using NetTopologySuite.Simplify;
 using System.Net.Http;
+using Microsoft.AspNetCore.ResponseCaching;
 
 namespace GeoPlot.Web.Controllers
 {
@@ -28,7 +29,7 @@ namespace GeoPlot.Web.Controllers
             _env = env;
         }
 
-        [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.None, NoStore = false)]
+        [ResponseCache(Duration = 3600, VaryByQueryKeys = new[] { "day", "district" })]
         public async Task<IActionResult> Index(int? day, string district)
         {
             var model = new GeoPlotViewModel

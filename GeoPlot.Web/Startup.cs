@@ -26,21 +26,20 @@ namespace GeoPlot.Web
             services.AddControllersWithViews()
                     .AddRazorRuntimeCompilation();
 
+            services.AddResponseCaching(); 
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
 
-            app.UseDeveloperExceptionPage();
-
             if (env.IsDevelopment())
             {
+                app.UseDeveloperExceptionPage();
             }
             else
             {
                 app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
             
@@ -50,6 +49,8 @@ namespace GeoPlot.Web
             app.UseStaticFiles();
 
             app.UseRouting();
+
+            app.UseResponseCaching();
 
             app.UseAuthorization();
 

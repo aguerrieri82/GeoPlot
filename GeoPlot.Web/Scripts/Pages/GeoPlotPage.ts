@@ -284,7 +284,7 @@
             let url = Uri.appRoot + "?day=" + this.dayNumber();
             if (this.selectedArea)
                 url += "&district=" + this.selectedArea.id;
-            history.replaceState(null, null, url;
+            history.replaceState(null, null, url);
         }
 
         /****************************************/
