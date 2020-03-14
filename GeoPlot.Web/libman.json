@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "defaultProvider": "cdnjs",
+  "libraries": [
+    {
+      "library": "knockout@3.5.0",
+      "destination": "wwwroot/lib/knockout/"
+    },
+    {
+      "library": "bluebird@3.5.4",
+      "destination": "wwwroot/lib/bluebird/"
+    }    
+  ]
+}

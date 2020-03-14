@@ -1,0 +1,29 @@
+﻿@model PlotViewModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <svg preserveAspectRatio="xMidYMid meet" viewBox="@Model.ViewBox.X @Model.ViewBox.Y @Model.ViewBox.Width @Model.ViewBox.Height">
+        @foreach (var region in Model.Regions)
+        {
+            <g id="district_@region.Id">
+                @foreach (var poly in region.Polys)
+                {
+                    <polygon points="@string.Join(' ', poly.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                }
+            </g>
+
+        }
+    </svg>
+    <input type="number"  data-bind="value: dayNumber" />
+</div>
+
+@section Scripts {
+    <script>
+        GeoPlot.app.initServices();
+        GeoPlot.Uri.appRoot = '@Url.Content("~/")';
+        ko.applyBindings(new GeoPlot.PlotPage(@Html.Json(Model.Data)));
+    </script>
+}
