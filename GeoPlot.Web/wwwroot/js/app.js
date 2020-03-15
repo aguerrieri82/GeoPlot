@@ -1322,13 +1322,16 @@ var GeoPlot;
                 if (value == this._selectedArea)
                     return;
                 if (this._selectedArea) {
-                    var element = document.getElementById(value.id.toUpperCase());
+                    var element = document.getElementById(this._selectedArea.id.toUpperCase());
                     element.classList.remove("selected");
                 }
                 this._selectedArea = value;
                 if (this._selectedArea) {
-                    var element = document.getElementById(value.id.toUpperCase());
+                    var element = document.getElementById(this._selectedArea.id.toUpperCase());
                     element.classList.add("selected");
+                    var parent_1 = element.parentElement;
+                    element.remove();
+                    parent_1.appendChild(element);
                 }
                 this.changeArea();
             },
@@ -1452,13 +1455,15 @@ var GeoPlot;
                     var area = this._geo.areas[key];
                     var factor1 = (day.values[key].totalPositive / area.demography[this.ageGroup()]) / this._data.maxFactor.total;
                     if (day.values[key].totalPositive == 0) {
-                        element.style.fill = "#fff";
+                        if (element.classList.contains("valid"))
+                            element.classList.remove("valid");
                         element.style.fillOpacity = "1";
                     }
                     else {
+                        if (!element.classList.contains("valid"))
+                            element.classList.add("valid");
                         factor1 = 1 - Math.pow(1 - factor1, 3);
                         var value = Math.ceil(factor1 * 20) / 20;
-                        element.style.fill = "#b71c1c";
                         element.style.fillOpacity = (value).toString();
                     }
                 }

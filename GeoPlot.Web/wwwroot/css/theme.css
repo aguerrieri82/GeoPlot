@@ -20,11 +20,12 @@ svg {
       stroke: #000;
       stroke-width: 0.2%; }
     svg g.district {
-      fill: white;
       stroke: #999;
-      stroke-width: 0.1%;
-      transition: opacity 0.3s; }
-      svg g.district:hover {
-        stroke: #000;
-        stroke-width: 0.3%;
-        z-index: 5; }
+      stroke-width: 0.05%;
+      transition: opacity 0.3s;
+      fill: white; }
+      svg g.district.valid {
+        fill: #b71c1c; }
+      svg g.district.selected, svg g.district:hover {
+        stroke: #F57F17;
+        stroke-width: 0.3%; }

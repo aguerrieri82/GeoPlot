@@ -25,8 +25,6 @@ svg {
     g {
         pointer-events: painted;
 
-        &.selected {
-        }
 
 
         &.region {
@@ -36,15 +34,18 @@ svg {
         }
 
         &.district {
-            fill: white;
             stroke: #999;
-            stroke-width: 0.1%;
+            stroke-width: 0.05%;
             transition: opacity 0.3s;
+            fill: white;
 
-            &:hover {
-                stroke: #000;
+            &.valid {
+                fill: #b71c1c;
+            }
+
+            &.selected,  &:hover {
+                stroke: #F57F17;
                 stroke-width: 0.3%;
-                z-index: 5;
             }
         }
     }

@@ -1,6 +1,8 @@
 ﻿@model GeoPlotViewModel
 @{
     ViewData["Title"] = "Coronavirus";
+
+    var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region };
 }
 
 <div class="container">
@@ -10,15 +12,20 @@
             <section class="card-panel">
                 <div class="center-align">
                     <svg preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
-                        @foreach (var area in Model.Geo.Areas)
-                        {
-                            <g id="@area.Key" class="@area.Value.Type.ToString().ToLower()">
-                                @foreach (var poly in area.Value.Poly)
+                        @foreach (var areaType in typeOrder)
+                        { 
+                            <g class="group">
+                                @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
                                 {
-                                    <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                                    <g id="@area.Key" class="@area.Value.Type.ToString().ToLower()">
+                                        @foreach (var poly in area.Value.Poly)
+                                        {
+                                            <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                                        }
+                                    </g>
+                                    area.Value.Poly = null;
                                 }
                             </g>
-                            area.Value.Poly = null;
                         }
                     </svg>
                 </div>
