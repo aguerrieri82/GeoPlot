@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace GeoPlot.Web.Entities
+namespace GeoPlot.Entities
 {
     public struct Poly2D
     {

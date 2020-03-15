@@ -3,7 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29827.131
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoPlot.Web", "GeoPlot.Web\GeoPlot.Web.csproj", "{FCC969A4-8491-4BCC-8F94-0A4C32BDA5CC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.Web", "GeoPlot.Web\GeoPlot.Web.csproj", "{FCC969A4-8491-4BCC-8F94-0A4C32BDA5CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoPlot.Core", "GeoPlot.Core\GeoPlot.Core.csproj", "{EE1A6F97-CA09-4F58-973A-0B35828885D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoPlot.Entities", "GeoPlot.Entities\GeoPlot.Entities.csproj", "{9CA70A55-F117-4A0D-8366-536EE3BBABC9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoPlot.Coronavirus", "GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj", "{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +21,18 @@ Global
 		{FCC969A4-8491-4BCC-8F94-0A4C32BDA5CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FCC969A4-8491-4BCC-8F94-0A4C32BDA5CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FCC969A4-8491-4BCC-8F94-0A4C32BDA5CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE1A6F97-CA09-4F58-973A-0B35828885D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE1A6F97-CA09-4F58-973A-0B35828885D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE1A6F97-CA09-4F58-973A-0B35828885D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE1A6F97-CA09-4F58-973A-0B35828885D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9CA70A55-F117-4A0D-8366-536EE3BBABC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9CA70A55-F117-4A0D-8366-536EE3BBABC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9CA70A55-F117-4A0D-8366-536EE3BBABC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9CA70A55-F117-4A0D-8366-536EE3BBABC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace GeoPlot.Web.Entities
+namespace GeoPlot.Coronavirus.Entities
 {
-    public struct DistrictInfectionRawItem
+    public struct DistrictInfectionItalyRawItem
     {
         public DateTime data;
 

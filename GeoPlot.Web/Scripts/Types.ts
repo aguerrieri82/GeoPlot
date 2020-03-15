@@ -5,8 +5,8 @@
         lng: number;
     }
 
-    export interface IDayAreaItem<TValue> {
-        data: string;
+    export interface IDayAreaGroupItem<TValue> {
+        date: string;
         values: IDictionary<TValue>;
     }
 
@@ -14,7 +14,7 @@
     {
         max: TData;
         maxFactor: IDemography;
-        days: IDayAreaItem<TData>[];
+        days: IDayAreaGroupItem<TData>[];
     }    
 
     export interface IInfectionData {

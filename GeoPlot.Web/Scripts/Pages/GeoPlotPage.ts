@@ -10,7 +10,7 @@
 
         /****************************************/
 
-        value: IGeoArea;           
+        value: IGeoArea;
         dayData = ko.observable<IInfectionData>();
         dayFactor = ko.observable<IDemography>();
     }
@@ -29,6 +29,12 @@
         district?: string;
     }
 
+    interface IColor {
+        r: number;
+        g: number;
+        b: number;
+    }
+
     /****************************************/
 
     export class GeoPlotPage {
@@ -39,6 +45,7 @@
         private _chart: Chart;
         private _daysData: IDayData[];
         private _updateDayData: boolean = false;
+        private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
 
         constructor(model: IGeoPlotViewModel) {
 
@@ -103,7 +110,7 @@
                 this.dayNumber(0);
             else
                 this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
-            
+
             setTimeout(() => this.nextFrame(), 300);
         }
 
@@ -130,7 +137,7 @@
                 let parent = element.parentElement;
                 element.remove();
                 parent.appendChild(element);
-            }    
+            }
             this.changeArea();
         }
 
@@ -145,8 +152,8 @@
 
                 let day = this._data.days[this.dayNumber()];
 
-                area.value = this._selectedArea;                
-             
+                area.value = this._selectedArea;
+
                 this.updateArea(area);
 
                 this.currentArea(area)
@@ -166,7 +173,7 @@
             let day = [this.dayNumber()];
 
             this._chart.data.datasets[0].data = linq(this._data.days).select(a => ({
-                x: new Date(a.data),
+                x: new Date(a.date),
                 y: a.values[this.currentArea().value.id.toLowerCase()].totalPositive
             })).toArray();
 
@@ -195,7 +202,7 @@
                 options: {
                     legend: {
                         display: false
-                    },     
+                    },
                     scales: {
                         xAxes: [{
                             type: "time",
@@ -206,7 +213,7 @@
                             }
 
                         }],
-                       
+
                     }
                 }
             });
@@ -267,14 +274,14 @@
         /****************************************/
 
         protected updateDayData() {
-            
+
             let day = this._data.days[this.dayNumber()];
 
-            this.currentData(DateUtils.format(day.data, "{DD}/{MM}/{YYYY}"));
+            this.currentData(DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
 
             this.updateMap();
 
-            this.updateArea(this.currentArea());   
+            this.updateArea(this.currentArea());
 
             if (this._daysData && this._updateDayData)
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
@@ -302,19 +309,21 @@
 
                     let area = this._geo.areas[key];
 
-                    let factor1 = (day.values[key].totalPositive / area.demography[this.ageGroup()]) / this._data.maxFactor.total;
+                    let factor1 = (day.values[key].totalPositive / area.demography[this.ageGroup()]) / (1000 / 100000);
 
                     if (day.values[key].totalPositive == 0) {
                         if (element.classList.contains("valid"))
                             element.classList.remove("valid");
                         element.style.fillOpacity = "1";
+                        element.style.removeProperty("fill");
                     }
                     else {
                         if (!element.classList.contains("valid"))
                             element.classList.add("valid");
-                        factor1 = 1 - Math.pow(1 - factor1, 3);
+                        factor1 = 1 - Math.pow(1 - factor1, 2);
                         let value = Math.ceil(factor1 * 20) / 20;
                         element.style.fillOpacity = (value).toString();
+                        element.style.fill = this._gradient.valueAt(value).toString();
                     }
                 }
             }

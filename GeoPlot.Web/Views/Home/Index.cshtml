@@ -18,12 +18,12 @@
                                 @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
                                 {
                                     <g id="@area.Key" class="@area.Value.Type.ToString().ToLower()">
-                                        @foreach (var poly in area.Value.Poly)
+                                        @foreach (var poly in area.Value.Geometry)
                                         {
                                             <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
                                         }
                                     </g>
-                                    area.Value.Poly = null;
+                                    area.Value.Geometry = null;
                                 }
                             </g>
                         }
@@ -67,15 +67,15 @@
                     <!--ko if: currentArea-->
                     <span class="card-title" data-bind="text: currentArea().value.name"></span>
                     <div class="row">
-                        <div class="col s12 m4">
+                        <div class="col s4">
                             <label>Infezioni</label>
                             <div data-bind="text: formatNumber(currentArea().dayData().totalPositive)"></div>
                         </div>
-                        <div class="col s12 m4">
+                        <div class="col s4">
                             <label>Popolazione</label>
                             <div data-bind="text: formatNumber(currentArea().value.demography[ageGroup()])"></div>
                         </div>
-                        <div class="col s12 m4">
+                        <div class="col s4">
                             <label title="(Infetti per 100.000 abitanti)">Fattore</label>
                             <div data-bind="text: currentArea().dayFactor()[ageGroup()]"></div>
                         </div>
@@ -86,7 +86,7 @@
                     </div>
                     <!--/ko-->
                     <!--ko ifnot: currentArea-->
-                    <span>Selezionare una provincia</span>
+                    <span class="empty-text">Selezionare una provincia</span>
                     <!--/ko-->
                 </div>
 

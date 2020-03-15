@@ -18,6 +18,11 @@
     }
 }
 
+.empty-text{
+    font-style: italic;
+    color: #999;
+}
+
 svg {
     width: 50vh;
     max-width: 100%;
@@ -43,7 +48,7 @@ svg {
                 fill: #b71c1c;
             }
 
-            &.selected,  &:hover {
+            &.selected, &:hover {
                 stroke: #F57F17;
                 stroke-width: 0.3%;
             }

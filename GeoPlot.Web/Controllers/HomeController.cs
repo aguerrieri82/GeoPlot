@@ -7,14 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using GeoPlot.Web.Models;
 using Microsoft.AspNetCore.Hosting;
-using NetTopologySuite.IO;
-using NetTopologySuite.Features;
-using NetTopologySuite.Geometries;
-using Newtonsoft.Json;
-using GeoPlot.Web.Entities;
-using NetTopologySuite.Simplify;
-using System.Net.Http;
-using Microsoft.AspNetCore.ResponseCaching;
+using GeoPlot.Entities;
+using GeoPlot.Coronavirus;
+using GeoPlot.Core;
 
 namespace GeoPlot.Web.Controllers
 {
@@ -36,12 +31,11 @@ namespace GeoPlot.Web.Controllers
             {
                 District =district,
                 Day = day,
-                Geo = await LoadDistricts(),
-
+                Geo = await LoadGeoAreas(),
                 Data = await LoadInfectionData()
             };
 
-            model.Data.MaxFactor = new Demography()
+            model.Data.MaxFactor = new Demography<double>()
             {
                 Total = model.Data.Days.SelectMany(a => a.Values).Max(a => a.Value.TotalPositive.GetValueOrDefault() / model.Geo.Areas[a.Key].Demography.Total.Value),
                 Old = model.Data.Days.SelectMany(a => a.Values).Max(a => a.Value.TotalPositive.GetValueOrDefault() / model.Geo.Areas[a.Key].Demography.Old.Value),
@@ -58,133 +52,47 @@ namespace GeoPlot.Web.Controllers
 
         async Task<DayAreaDataSet<InfectionData>> LoadInfectionData()
         {
-            //var json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "\\data\\dpc-covid19-ita-province.json");
-            
-            var json = await HttpGet("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json");
+            var adapters = new[] { new InfectionDistrictItalyAdapter() };
 
-            var data = JsonConvert.DeserializeObject<DistrictInfectionRawItem[]>(json).Where(a => !string.IsNullOrWhiteSpace(a.sigla_provincia));
+            var items = await Task.WhenAll(adapters.Select(a => a.LoadAsync()));
+            
+            var data = items.SelectMany(a => a);
 
             var result = new DayAreaDataSet<InfectionData>()
             {
-                Days = new List<DayAreaItem<InfectionData>>(),
+                Days = data.GroupBy(a => a.Date.Date).Select(a=> new DayAreaGroupItem<InfectionData>()
+                {
+                    Date = a.Key,
+                    Values = a.ToDictionary(b => b.AreaId, b => b.Value)
+                }).ToArray(),
+
                 Max = new InfectionData()
                 {
-                    TotalPositive = data.Max(a => a.totale_casi)
+                    TotalPositive = data.Max(a => a.Value.TotalPositive)
                 }
             };
 
-            foreach (var item in data.GroupBy(a => a.data.Date))
-            {
-                var day = new DayAreaItem<InfectionData>();
-                day.Data = item.Key;
-                day.Values = item.ToDictionary(a => "D" + a.codice_provincia.ToString(), a => new InfectionData()
-                {
-                    TotalPositive = a.totale_casi,
-                });
-
-                result.Days.Add(day);
-            }
-
             return result;
         }
 
-        async Task<GeoAreaSet> LoadDistricts()
+        async Task<GeoAreaSet> LoadGeoAreas()
         {
-            var result = new GeoAreaSet();
-            result.Areas = new Dictionary<string, GeoArea>();
+            var adapters = new BaseGeoJsonAdapter[] { new ItalyDistrictAdapter(_env.WebRootPath + "\\data\\district-population.json"), new ItalyRegionAdapter() };
 
-            //District
-            var json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "\\data\\limits_IT_provinces.geojson.json");
-            var reader = new GeoJsonReader();
-            var features = reader.Read<FeatureCollection>(json);
+            var items = await Task.WhenAll(adapters.Select(a => a.LoadAsync()));
 
-            var min = Geo.Project(new GeoPoint() { Lat = features.BoundingBox.MinY, Lng = features.BoundingBox.MinX });
-            var max = Geo.Project(new GeoPoint() { Lat = features.BoundingBox.MaxY, Lng = features.BoundingBox.MaxX });
+            var data = items.SelectMany(a => a);
 
-            result.ViewBox = new Rect2D
+            var result = new GeoAreaSet
             {
-                X = min.X,
-                Y = max.Y,
-                Width = (max.X - min.X),
-                Height = (min.Y - max.Y)
+                Areas = data.ToDictionary(a => a.Id, a => a),
+                ViewBox = adapters[0].ViewBox
             };
 
-            foreach (var feature in features)
-            {
-                var area = new GeoArea
-                {
-                    Type = GeoAreaType.District,
-                    Poly = new List<Poly2D>(),
-                    Id = "D" + feature.Attributes["prov_istat_code_num"].ToString(),
-                    Name = (string)feature.Attributes["prov_name"]
-                };
-                CreatePoly(feature.Geometry, area.Poly);
-                result.Areas[area.Id] = area;
-            }
-
-            //Region
-            json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "\\data\\limits_IT_regions.geojson.json");
-            features = reader.Read<FeatureCollection>(json);
-
-            foreach (var feature in features)
-            {
-                var area = new GeoArea
-                {
-                    Type = GeoAreaType.Region,
-                    Poly = new List<Poly2D>(),
-                    Id = "R" + feature.Attributes["reg_istat_code_num"].ToString(),
-                    Name = (string)feature.Attributes["reg_name"]
-                };
-                CreatePoly(feature.Geometry, area.Poly);
-                result.Areas[area.Id] = area;
-            }
-
-
-            //Population
-            json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "\\data\\district-population.json");
-            var distData = JsonConvert.DeserializeObject<DistrictPopulatonRawItem[]>(json);
-
-            var popData = distData.Where(a => a.eta == "Totale").ToDictionary(a => "D" + a.codice);
-            var oldPopData = distData.Where(a => a.eta != "Totale" && int.Parse(a.eta) > 65).GroupBy(a=> a.codice).ToDictionary(a => "D" + a.Key, a=> a.Sum(b=> b.totale_femmine + b.totale_maschi));
-            foreach (var area in result.Areas.Where(a=> a.Value.Type == GeoAreaType.District))
-            {
-                DistrictPopulatonRawItem popItem;
-
-                if (popData.TryGetValue(area.Key, out popItem))
-                    area.Value.Demography = new Demography()
-                    { 
-                        Female  = popItem.totale_femmine,
-                        Male = popItem.totale_maschi,
-                        Total = popItem.totale_femmine + popItem.totale_maschi,
-                        Old = oldPopData[area.Key]
-                    };
-            }
             return result;
         }
 
-        async Task<string> HttpGet(string url)
-        {
-            using var client = new HttpClient();
-            return await client.GetStringAsync(url);
-        }
 
-        void CreatePoly(Geometry geo, IList<Poly2D> result)
-        {
-            if (geo is Polygon geoPoly)
-            {
-                var simplifier = new VWSimplifier(geoPoly.ExteriorRing);
-                simplifier.DistanceTolerance = 0.01;
 
-                var simpGeo = simplifier.GetResultGeometry();
-                
-                if (simpGeo.IsValid)
-                    result.Add(new Poly2D() { Points = simpGeo.Coordinates.Select(a => Geo.Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
-            }
-            else if (geo is MultiPolygon multiPoly)
-            {
-                foreach (var innerPoly in multiPoly.Geometries)
-                    CreatePoly(innerPoly, result);
-            }
-        }
     }
 }

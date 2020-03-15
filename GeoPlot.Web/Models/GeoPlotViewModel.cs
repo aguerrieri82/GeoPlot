@@ -1,4 +1,4 @@
-﻿using GeoPlot.Web.Entities;
+﻿using GeoPlot.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

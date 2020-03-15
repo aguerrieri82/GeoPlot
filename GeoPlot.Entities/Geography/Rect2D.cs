@@ -1,4 +1,4 @@
-﻿namespace GeoPlot.Web.Entities
+﻿namespace GeoPlot.Entities
 {
     public struct Rect2D
     {

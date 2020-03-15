@@ -10,6 +10,10 @@
     .stack-horizontal > *:last-child {
       margin-right: 0; }
 
+.empty-text {
+  font-style: italic;
+  color: #999; }
+
 svg {
   width: 50vh;
   max-width: 100%; }
