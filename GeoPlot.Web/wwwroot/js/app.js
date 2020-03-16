@@ -1776,12 +1776,14 @@ var GeoPlot;
             this._chart.update();
         };
         /****************************************/
-        GeoPlotPage.prototype.updateArea = function (viewModel) {
+        GeoPlotPage.prototype.updateArea = function (viewModel, dayNumber) {
             if (!viewModel || !this.selectedIndicator() || !this.selectedFactor())
                 return;
+            if (dayNumber == undefined)
+                dayNumber = this.dayNumber();
             var id = viewModel.value.id.toLowerCase();
             var area = viewModel.value;
-            var day = this._data.days[this.dayNumber()];
+            var day = this._data.days[dayNumber];
             viewModel.data(day.values[id]);
             viewModel.indicator(day.values[id][this.selectedIndicator().id]);
             viewModel.factor(GeoPlot.MathUtils.discretize(this.selectedFactor().compute(day.values[id], area, viewModel.indicator()), 10));
@@ -1795,11 +1797,15 @@ var GeoPlot;
                 var day = this_1._data.days[i];
                 var item = {};
                 var isInArea = this_1.VIEW_MODES[this_1.viewMode()].validateId;
-                item.topAreas = GeoPlot.linq(day.values).orderByDesc(function (a) { return _this.selectedFactor().compute(a.value, _this._geo.areas[a.key.toLowerCase()], a.value[_this.selectedIndicator().id]); }).where(function (a) { return isInArea(a.key); }).select(function (a) {
+                item.topAreas = GeoPlot.linq(day.values).select(function (a) { return ({
+                    factor: _this.selectedFactor().compute(a.value, _this._geo.areas[a.key.toLowerCase()], a.value[_this.selectedIndicator().id]),
+                    value: a
+                }); })
+                    .orderByDesc(function (a) { return a.factor; }).where(function (a) { return isInArea(a.value.key); }).select(function (a) {
                     var area = new AreaViewModel();
-                    area.value = _this._geo.areas[a.key.toLowerCase()];
+                    area.value = _this._geo.areas[a.value.key.toLowerCase()];
                     area.select = function () { return _this.selectedArea = area.value; };
-                    _this.updateArea(area);
+                    _this.updateArea(area, i);
                     return area;
                 }).take(25).toArray();
                 this_1._daysData.push(item);

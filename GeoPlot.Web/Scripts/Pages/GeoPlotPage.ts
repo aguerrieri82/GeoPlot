@@ -561,14 +561,17 @@
 
         /****************************************/
 
-        protected updateArea(viewModel: AreaViewModel) {
+        protected updateArea(viewModel: AreaViewModel, dayNumber?: number) {
 
             if (!viewModel || !this.selectedIndicator() || !this.selectedFactor())
                 return;
 
+            if (dayNumber == undefined)
+                dayNumber = this.dayNumber();
+
             const id = viewModel.value.id.toLowerCase();
             const area = viewModel.value;
-            const day = this._data.days[this.dayNumber()];
+            const day = this._data.days[dayNumber];
 
             viewModel.data(day.values[id]);
 
@@ -593,15 +596,19 @@
 
                 const isInArea = this.VIEW_MODES[this.viewMode()].validateId;
 
-                item.topAreas = linq(day.values).orderByDesc(a => this.selectedFactor().compute(a.value, this._geo.areas[a.key.toLowerCase()], a.value[this.selectedIndicator().id])).where(a => isInArea(a.key)).select(a => {
+                item.topAreas = linq(day.values).select(a => ({
+                        factor: this.selectedFactor().compute(a.value, this._geo.areas[a.key.toLowerCase()], a.value[this.selectedIndicator().id]),
+                        value: a
+                    }))
+                    .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
 
                     const area = new AreaViewModel();
 
-                    area.value = this._geo.areas[a.key.toLowerCase()];
+                    area.value = this._geo.areas[a.value.key.toLowerCase()];
 
                     area.select = () => this.selectedArea = area.value;
 
-                    this.updateArea(area);
+                    this.updateArea(area, i);
 
                     return area;
 
