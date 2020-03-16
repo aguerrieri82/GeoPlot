@@ -1440,34 +1440,39 @@ var GeoPlot;
                     id: "none",
                     name: "Nessuno",
                     compute: function (v, a, i) { return i; },
-                    reference: function (v, a) { return "N/A"; }
+                    reference: function (v, a) { return "N/A"; },
+                    description: "[indicator]"
                 },
                 {
                     id: "population",
                     name: "Popolazione",
                     compute: function (v, a, i) { return (i / a.demography.total) * 100000; },
-                    reference: function (v, a) { return formatNumber(a.demography.total); }
+                    reference: function (v, a) { return formatNumber(a.demography.total); },
+                    description: "[indicator] ogni 100.000 abitanti"
                 },
                 {
                     id: "totalPositive",
                     name: "Positivi Totali",
                     validFor: ["region"],
                     compute: function (v, a, i) { return !v.totalPositive ? 0 : (i / v.totalPositive) * 100; },
-                    reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); }
+                    reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
+                    description: "% [indicator] su positivi totali"
                 },
                 {
                     id: "severe",
                     name: "Gravi",
                     validFor: ["region"],
                     compute: function (v, a, i) { return !v.totalSevere ? 0 : (i / v.totalSevere) * 100; },
-                    reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); }
+                    reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
+                    description: "% [indicator] sui gravi totali"
                 },
                 {
                     id: "test",
                     name: "Tamponi",
                     validFor: ["region"],
                     compute: function (v, a, i) { return !v.toatlTests ? 0 : (i / v.toatlTests) * 100; },
-                    reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); }
+                    reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
+                    description: "% [indicator] sui tamponi eseguiti"
                 }
             ];
             /****************************************/
@@ -1483,23 +1488,25 @@ var GeoPlot;
             this.autoMaxFactor = ko.observable(true);
             this.maxFactor = ko.observable();
             this.isGraphDelta = ko.observable(false);
+            this.factorDescription = ko.observable();
             this._data = model.data;
             this._geo = model.geo;
             this.totalDays(this._data.days.length - 1);
             this.dayNumber.subscribe(function (a) { return _this.updateDayData(); });
             this._mapSvg = document.getElementsByTagName("svg").item(0);
             this._mapSvg.addEventListener("click", function (e) { return _this.onMapClick(e); });
-            var instance1 = M.Tabs.init(document.getElementById("areaTabs"));
-            instance1.options.onShow = function (el) {
+            M.AutoInit();
+            var areaTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+            areaTabs.options.onShow = function (el) {
                 _this.setViewMode(el.dataset["viewMode"]);
             };
-            var instance2 = M.Collapsible.init(document.getElementById("topCases"));
-            instance2.options.onOpenStart = function () {
+            var topCases = M.Collapsible.getInstance(document.getElementById("topCases"));
+            topCases.options.onOpenStart = function () {
                 if (!_this._daysData)
                     _this.updateTopAreas();
                 _this._topAreasVisible = true;
             };
-            instance2.options.onCloseEnd = function () {
+            topCases.options.onCloseEnd = function () {
                 _this._topAreasVisible = false;
             };
             this.indicators = ko.computed(function () { return GeoPlot.linq(_this.INDICATORS)
@@ -1543,6 +1550,16 @@ var GeoPlot;
                 state = {};
             setTimeout(function () { return _this.loadState(state); }, 0);
         }
+        /****************************************/
+        GeoPlotPage.prototype.isDefaultState = function (state) {
+            return (!state.day || state.day == this._data.days.length - 1) &&
+                (!state.view || state.view == "district") &&
+                !state.area &&
+                (!state.indicator || state.indicator == "totalPositive") &&
+                (!state.factor || state.factor == "none") &&
+                !state.maxFactor &&
+                !state.graphDelta;
+        };
         /****************************************/
         GeoPlotPage.prototype.loadState = function (state) {
             if (!state.view)
@@ -1697,6 +1714,8 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateIndicator = function () {
+            if (this.selectedIndicator() && this.selectedFactor())
+                this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
             this.updateMaxFactor();
             this.updateDayData();
             this.updateChart();
@@ -1791,7 +1810,10 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateUrl = function () {
-            var url = GeoPlot.Uri.appRoot + "Home/Overview?state=" + encodeURIComponent(btoa(JSON.stringify(this.saveStata())));
+            var state = this.saveStata();
+            var url = GeoPlot.Uri.appRoot + "Home/Overview";
+            if (!this.isDefaultState(state))
+                url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state)));
             history.replaceState(null, null, url);
         };
         /****************************************/

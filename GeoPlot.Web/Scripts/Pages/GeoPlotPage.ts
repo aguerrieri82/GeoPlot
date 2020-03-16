@@ -43,6 +43,7 @@
         validFor?: ViewMode[];
         compute: (value: IInfectionData, area: IGeoArea, indicator: number) => number
         reference: (value: IInfectionData, area: IGeoArea) => any;
+        description: string;
     }
 
     /****************************************/
@@ -76,6 +77,7 @@
         private _topAreasVisible: boolean = false;
         private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
         private _mapSvg: SVGSVGElement;
+
 
         readonly VIEW_MODES: { [K in ViewMode]: IViewModeData } = {
             "district": {
@@ -142,34 +144,39 @@
                 id: "none",
                 name: "Nessuno",
                 compute: (v, a, i) => i,
-                reference: (v, a) => "N/A"
+                reference: (v, a) => "N/A",
+                description: "[indicator]"
             },
             {
                 id: "population",
                 name: "Popolazione",
                 compute: (v, a, i) => (i / a.demography.total) * 100000,
-                reference: (v, a) => formatNumber(a.demography.total)
+                reference: (v, a) => formatNumber(a.demography.total),
+                description: "[indicator] ogni 100.000 abitanti"
             },
             {
                 id: "totalPositive",
                 name: "Positivi Totali",
                 validFor: ["region"],
                 compute: (v, a, i) => !v.totalPositive ? 0 : (i / v.totalPositive) * 100,
-                reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive)
+                reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive),
+                description: "% [indicator] su positivi totali"
             },
             {
                 id: "severe",
                 name: "Gravi",
                 validFor: ["region"],
                 compute: (v, a, i) => !v.totalSevere ? 0 : (i / v.totalSevere) * 100,
-                reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere)
+                reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere),
+                description: "% [indicator] sui gravi totali"
             },
             {
                 id: "test",
                 name: "Tamponi",
                 validFor: ["region"],
                 compute: (v, a, i) => !v.toatlTests ? 0 : (i / v.toatlTests) * 100,
-                reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests)
+                reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
+                description: "% [indicator] sui tamponi eseguiti"
             }
         ];
 
@@ -184,21 +191,24 @@
             this._mapSvg = document.getElementsByTagName("svg").item(0);
             this._mapSvg.addEventListener("click", e => this.onMapClick(e))
 
-            const instance1 = M.Tabs.init(document.getElementById("areaTabs"));
+            M.AutoInit();
+
+            const areaTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
             
-            instance1.options.onShow = (el: HTMLDivElement) => {
+            areaTabs.options.onShow = (el: HTMLDivElement) => {
 
                 this.setViewMode(<ViewMode>el.dataset["viewMode"]);
             };          
 
-            const instance2 = M.Collapsible.init(document.getElementById("topCases"));
+            const topCases = M.Collapsible.getInstance(document.getElementById("topCases"));
 
-            instance2.options.onOpenStart = () => {
+            topCases.options.onOpenStart = () => {
                 if (!this._daysData)
                     this.updateTopAreas();
                 this._topAreasVisible = true;
             }
-            instance2.options.onCloseEnd = () => {
+            
+            topCases.options.onCloseEnd = () => {
                 this._topAreasVisible = false;
             }
 
@@ -252,6 +262,18 @@
                 state = {};
 
             setTimeout(() => this.loadState(state), 0);
+        }
+
+        /****************************************/
+
+        protected isDefaultState(state: IPageState) {
+            return (!state.day || state.day == this._data.days.length - 1) &&
+                (!state.view || state.view == "district") &&
+                !state.area &&
+                (!state.indicator || state.indicator == "totalPositive") &&
+                (!state.factor || state.factor == "none") &&
+                !state.maxFactor &&
+                !state.graphDelta;
         }
 
         /****************************************/
@@ -458,11 +480,15 @@
         /****************************************/
 
         protected updateIndicator() {
+
+            if (this.selectedIndicator() && this.selectedFactor())
+                this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
             this.updateMaxFactor();
             this.updateDayData();
             this.updateChart();
             if (this._topAreasVisible)
                 this.updateTopAreas();
+
 
         }
 
@@ -592,8 +618,10 @@
         /****************************************/
 
         protected updateUrl() {
-            const url = Uri.appRoot + "Home/Overview?state=" + encodeURIComponent(btoa(JSON.stringify(this.saveStata())));
-
+            const state = this.saveStata();
+            let url = Uri.appRoot + "Home/Overview";
+            if (!this.isDefaultState(state))
+                url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state)));
             history.replaceState(null, null, url);
         }
 
@@ -653,6 +681,7 @@
         maxFactor = ko.observable<number>();
         isGraphDelta = ko.observable<boolean>(false);
         indicators: KnockoutObservable<IIndicator[]>;
+        factorDescription = ko.observable<string>();
         factors: KnockoutObservable<IFactor[]>;
     }
 }

@@ -1,4 +1,11 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var menu = new[]
+    {
+        new MenuViewModel() { Name = "Panoramica", Action = "Overview", Controller = "Home" },
+        new MenuViewModel() { Name = "Studio", Action = "Studio", Controller = "Home" }
+    };
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -21,25 +28,37 @@
 
 </head>
 <body>
-    <header>
+    <header class="navbar-fixed">
         <nav>
             <div class="nav-wrapper container">
                 <a asp-controller="Home" asp-action="Index" class="brand-logo">Coronavirus</a>
+                <ul id="nav-mobile" class="right hide-on-med-and-down">
+                    @foreach (var item in menu)
+                    {
+                        <li class="@Html.ActiveClass(item.Action, item.Controller)"><a asp-controller="@item.Controller" asp-action="@item.Action">@item.Name</a></li>
+                    }
+                </ul>
             </div>
         </nav>
+        <ul class="sidenav" id="mobile-demo">
+            @foreach (var item in menu)
+            {
+                <li class="@Html.ActiveClass(item.Action, item.Controller)"><a asp-controller="@item.Controller" asp-action="@item.Action">@item.Name</a></li>
+            }
+        </ul>
     </header>
     <main role="main">
         @RenderBody()
     </main>
 
     <footer class="page-footer">
- 
+
         <div class="footer-copyright">
             <div class="container">
                 © 2020 - Andrea Guerrieri
                 <a class="grey-text text-lighten-4 right" href="mailto:aguerrieri82@gmail.com">aguerrieri82@gmail.com</a>
             </div>
-            </div>
+        </div>
         </div>
     </footer>
 

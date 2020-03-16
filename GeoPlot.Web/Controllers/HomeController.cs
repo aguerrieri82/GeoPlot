@@ -29,7 +29,7 @@ namespace GeoPlot.Web.Controllers
             return RedirectToAction("Overview");
         }
 
-        [ResponseCache(Duration = 3600)]
+        [ResponseCache(Duration = 3600, VaryByHeader ="X-App-Version")]
         public async Task<IActionResult> Overview(string state)
         {
             var model = new GeoPlotViewModel() 

@@ -704,7 +704,7 @@
 
                 this.foreach(item => {
                     const itemKey = keySelector(item);
-                    const groupItem = linq(result).first(a => a.key == itemKey);
+                    let groupItem = linq(result).first(a => a.key == itemKey);
                     if (!groupItem) {
                         groupItem = {
                             key: itemKey,
