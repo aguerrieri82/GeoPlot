@@ -1,22 +1,6 @@
 ﻿namespace GeoPlot {
 
-    type AgeGroup = keyof IDemography;
-
-    class AreaViewModel {
-
-        select() {
-
-        }
-
-        /****************************************/
-
-        value: IGeoArea;
-        dayData = ko.observable<IInfectionData>();
-        dayFactor = ko.observable<IDemography>();
-    }
-
-
-    /****************************************/
+    type ViewMode = "district" | "region";
 
     interface IDayData {
         topAreas?: AreaViewModel[];
@@ -29,11 +13,44 @@
         district?: string;
     }
 
-    interface IColor {
-        r: number;
-        g: number;
-        b: number;
+    interface IViewModeData {
+        label: { singular: string, plural: string },
+        mapGroup: string,
+        areaType: GeoAreaType
+        validateId: (id: string) => boolean;
     }
+
+    interface IIndicator {
+        id: keyof IInfectionData;
+        name: string;
+        validFor?: ViewMode[];
+    }
+
+    interface IFactor {
+        name: string;
+        validFor?: ViewMode[];
+        compute: (value: IInfectionData, area: IGeoArea, indicator: number) => number
+        reference: (value: IInfectionData, area: IGeoArea) => any;
+    }
+
+    /****************************************/
+
+    class AreaViewModel {
+
+        select() {
+
+        }
+
+        /****************************************/
+
+        value: IGeoArea;
+
+        data = ko.observable<IInfectionData>();
+        factor = ko.observable<number>();
+        indicator = ko.observable<number>();
+        reference = ko.observable<any>();
+    }
+
 
     /****************************************/
 
@@ -44,8 +61,98 @@
         private _selectedArea: IGeoArea; ù
         private _chart: Chart;
         private _daysData: IDayData[];
-        private _updateDayData: boolean = false;
+        private _topAreasVisible: boolean = false;
         private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
+        private _mapSvg: SVGSVGElement;
+
+        readonly VIEW_MODES: { [K in ViewMode]: IViewModeData } = {
+            "district": {
+                label: {
+                    singular: "provincia",
+                    plural: "province"
+                },
+                mapGroup: "group_district",
+                areaType: GeoAreaType.District,
+                validateId: (id: string) => id[0].toLowerCase() == 'd'
+            },
+            "region": {
+                label: {
+                    singular: "regione",
+                    plural: "regioni"
+                },
+                mapGroup: "group_dregion",
+                areaType: GeoAreaType.Region,
+                validateId: (id: string) => id[0].toLowerCase() == 'r'
+            },
+        }
+
+        readonly INDICATORS: IIndicator[] = [
+            {
+                id: "totalPositive",
+                name: "Positivi Totali"
+            },
+            {
+                id: "currentPositive",
+                name: "Attuali Positivi",
+                validFor: ["region"]
+            },
+            {
+                id: "totalDeath",
+                name: "Deceduti",
+                validFor: ["region"]
+            },
+            {
+                id: "totalSevere",
+                name: "Gravi",
+                validFor: ["region"]
+            },
+            {
+                id: "totalHospedalized",
+                name: "Ricoverati",
+                validFor: ["region"]
+            },
+            {
+                id: "totalHealed",
+                name: "Guariti",
+                validFor: ["region"]
+            },
+            {
+                id: "toatlTests",
+                name: "Tamponi",
+                validFor: ["region"]
+            },
+        ];
+
+        readonly FACTORS: IFactor[] = [
+            {
+                name: "Nessuno",
+                compute: (v, a, i) => i,
+                reference: (v, a) => "N/A"
+            },
+            {
+                name: "Popolazione",
+                compute: (v, a, i) => (i / a.demography.total) * 100000,
+                reference: (v, a) => formatNumber(a.demography.total)
+            },
+            {
+                name: "Positivi Totali",
+                validFor: ["region"],
+                compute: (v, a, i) => !v.totalPositive ? 0 : (i / v.totalPositive) * 100,
+                reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive)
+            },
+            {
+                name: "Gravi",
+                validFor: ["region"],
+                compute: (v, a, i) => !v.totalSevere ? 0 : (i / v.totalSevere) * 100,
+                reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere)
+            },
+            {
+                name: "Tamponi",
+                validFor: ["region"],
+                compute: (v, a, i) => !v.toatlTests ? 0 : (i / v.toatlTests) * 100,
+                reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests)
+            }
+        ];
 
         constructor(model: IGeoPlotViewModel) {
 
@@ -54,36 +161,68 @@
 
             this.totalDays(this._data.days.length - 1);
             this.dayNumber.subscribe(a => this.updateDayData());
-            this.ageGroup.subscribe(a => this.updateMap());
+
+            this._mapSvg = document.getElementsByTagName("svg").item(0);
+            this._mapSvg.addEventListener("click", e => this.onMapClick(e))
+
+            let instance1 = M.Tabs.init(document.getElementById("areaTabs"));
+            
+            instance1.options.onShow = (el: HTMLDivElement) => {
+
+                this.setViewMode(<ViewMode>el.dataset["viewMode"]);
+            };
+
+            instance1.select("districtTab");
+
+            let instance2 = M.Collapsible.init(document.getElementById("topCases"));
+
+            instance2.options.onOpenStart = () => {
+                if (!this._daysData)
+                    this.updateTopAreas();
+                this._topAreasVisible = true;
+            }
+            instance2.options.onCloseEnd = () => {
+                this._topAreasVisible = false;
+            }
 
             this.dayNumber(model.day != undefined ? model.day : this._data.days.length - 1);
 
-            var instance = M.Collapsible.getInstance(document.getElementById("topCases"));
-
-            instance.options.onOpenStart = () => {
-                if (!this._daysData)
-                    this.computeDayData();
-                this._updateDayData = true;
-            }
-            instance.options.onCloseEnd = () => {
-                this._updateDayData = false;
-            }
-
-            let svg = document.getElementsByTagName("svg").item(0);
-            svg.addEventListener("click", e => this.onMapClick(e))
-
             if (model.district)
                 this.selectedArea = this._geo.areas[model.district.toLowerCase()];
-        }
 
-        /****************************************/
+            this.indicators = ko.computed(() => linq(this.INDICATORS)
+                .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
+                .toArray());
 
-        private onMapClick(e: MouseEvent) {
-            let item = <SVGPolygonElement>e.target;
-            if (item.parentElement.classList.contains("district")) {
-                let area = this._geo.areas[item.parentElement.id.toLowerCase()];
-                this.selectedArea = area;
-            }
+            this.factors = ko.computed(() => linq(this.FACTORS)
+                .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
+                .toArray());
+
+
+            this.selectedIndicator.subscribe(value => {
+                if (!value)
+                    return;
+                this.updateIndicator();
+            });
+
+            this.selectedFactor.subscribe(value => {
+                if (!value)
+                    return;
+                this.updateIndicator();
+            });
+
+            this.autoMaxFactor.subscribe(value => {
+                if (value) {
+                    this.updateMaxFactor();
+                    this.updateMap();
+                }
+                
+            });
+
+            this.maxFactor.subscribe(() => {
+                if (!this.autoMaxFactor())
+                    this.updateMap();
+            });
         }
 
         /****************************************/
@@ -101,18 +240,34 @@
 
         /****************************************/
 
-        protected nextFrame() {
+        setViewMode(mode: ViewMode) {
 
-            if (!this.isPlaying())
-                return;
+            this.viewMode(mode);
 
-            if (this.dayNumber() >= this._data.days.length - 1)
-                this.dayNumber(0);
+            let districtGroup = document.getElementById("group_district");
+
+            if (mode == "district")
+                districtGroup.style.removeProperty("display");
             else
-                this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
+                districtGroup.style.display = "none";
 
-            setTimeout(() => this.nextFrame(), 300);
+            this.selectedArea = null;
+
+            this._chart = null;
+
+            this.updateMaxFactor();
+
+            this.updateDayData();
+
+            if (this._topAreasVisible)
+                this.updateTopAreas();
+            else
+                this._daysData = undefined;
+
+            setTimeout(() =>
+                M.FormSelect.init(document.querySelectorAll("select")));
         }
+
 
         /****************************************/
 
@@ -143,6 +298,31 @@
 
         /****************************************/
 
+        private onMapClick(e: MouseEvent) {
+            let item = <SVGPolygonElement>e.target;
+            if (item.parentElement.classList.contains(this.viewMode())) {
+                let area = this._geo.areas[item.parentElement.id.toLowerCase()];
+                this.selectedArea = area;
+            }
+        }
+
+        /****************************************/
+
+        protected nextFrame() {
+
+            if (!this.isPlaying())
+                return;
+
+            if (this.dayNumber() >= this._data.days.length - 1)
+                this.dayNumber(0);
+            else
+                this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
+
+            setTimeout(() => this.nextFrame(), 300);
+        }
+
+        /****************************************/
+
         protected changeArea() {
             if (this._selectedArea == null)
                 this.currentArea(null);
@@ -158,26 +338,10 @@
 
                 this.currentArea(area)
 
-                if (this._chart == null)
-                    this.initChart();
-
                 this.updateChart();
             }
 
             this.updateUrl();
-        }
-
-        /****************************************/
-
-        protected updateChart() {
-            let day = [this.dayNumber()];
-
-            this._chart.data.datasets[0].data = linq(this._data.days).select(a => ({
-                x: new Date(a.date),
-                y: a.values[this.currentArea().value.id.toLowerCase()].totalPositive
-            })).toArray();
-
-            this._chart.update();
         }
 
         /****************************************/
@@ -221,9 +385,54 @@
 
         /****************************************/
 
+        protected updateIndicator() {
+            this.updateMaxFactor();
+            this.updateDayData();
+            this.updateChart();
+            if (this._topAreasVisible)
+                this.updateTopAreas();
+
+        }
+
+        /****************************************/
+
+        protected updateMaxFactor() {
+
+            if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
+                return;
+
+            this.maxFactor(linq(this._data.days)
+                .select(a => linq(a.values).where(a => this.VIEW_MODES[this.viewMode()].validateId(a.key))
+                    .select(b => this.selectedFactor().compute(b.value, this._geo.areas[b.key], b.value[this.selectedIndicator().id])).max()).max());
+        }
+
+        /****************************************/
+
+        protected updateChart() {
+
+            if (!this.selectedIndicator() || !this.currentArea() || !this.selectedFactor())
+                return;
+
+            if (this._chart == null)
+                this.initChart();
+
+            let area = this.currentArea().value;
+            let areaId = area.id.toLowerCase();
+            let field = this.selectedIndicator().id;
+
+            this._chart.data.datasets[0].data = linq(this._data.days).select(a => ({
+                x: new Date(a.date),
+                y: this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
+            })).toArray();
+
+            this._chart.update();
+        }
+
+        /****************************************/
+
         protected updateArea(viewModel: AreaViewModel) {
 
-            if (!viewModel)
+            if (!viewModel || !this.selectedIndicator() || !this.selectedFactor())
                 return;
 
             let id = viewModel.value.id.toLowerCase();
@@ -231,17 +440,18 @@
 
             let day = this._data.days[this.dayNumber()];
 
-            viewModel.dayData(day.values[id]);
+            viewModel.data(day.values[id]);
 
-            viewModel.dayFactor({
-                total: Math.round((day.values[id].totalPositive / area.demography.total) * 100000 * 10) / 10,
-                old: Math.round((day.values[id].totalPositive / area.demography.old) * 100000 * 10) / 10,
-            });
+            viewModel.indicator(day.values[id][this.selectedIndicator().id]);
+
+            viewModel.factor(MathUtils.discretize(this.selectedFactor().compute(day.values[id], area, viewModel.indicator()), 10));
+
+            viewModel.reference(this.selectedFactor().reference(day.values[id], area));
         }
 
         /****************************************/
 
-        protected computeDayData() {
+        protected updateTopAreas() {
 
             this._daysData = [];
 
@@ -251,7 +461,9 @@
 
                 let item: IDayData = {};
 
-                item.topAreas = linq(day.values).orderByDesc(a => a.value.totalPositive).select(a => {
+                let isInArea = this.VIEW_MODES[this.viewMode()].validateId;
+
+                item.topAreas = linq(day.values).orderByDesc(a => a.value[this.selectedIndicator().id]).where(a => isInArea(a.key)).select(a => {
 
                     let area = new AreaViewModel();
 
@@ -283,8 +495,9 @@
 
             this.updateArea(this.currentArea());
 
-            if (this._daysData && this._updateDayData)
+            if (this._daysData && this._topAreasVisible)
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
+
             this.updateUrl();
         }
 
@@ -301,6 +514,9 @@
 
         protected updateMap() {
 
+            if (!this.selectedIndicator() || !this.selectedFactor())
+                return;
+
             let day = this._data.days[this.dayNumber()];
 
             for (let key in day.values) {
@@ -309,9 +525,16 @@
 
                     let area = this._geo.areas[key];
 
-                    let factor1 = (day.values[key].totalPositive / area.demography[this.ageGroup()]) / (1000 / 100000);
+                    if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
+                        continue;
 
-                    if (day.values[key].totalPositive == 0) {
+                    let field = this.selectedIndicator().id;
+
+                    let factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
+
+                    factor = Math.min(1, factor / this.maxFactor());
+
+                    if (day.values[key][field] == 0 || isNaN(factor)) {
                         if (element.classList.contains("valid"))
                             element.classList.remove("valid");
                         element.style.fillOpacity = "1";
@@ -320,10 +543,9 @@
                     else {
                         if (!element.classList.contains("valid"))
                             element.classList.add("valid");
-                        factor1 = 1 - Math.pow(1 - factor1, 2);
-                        let value = Math.ceil(factor1 * 20) / 20;
-                        element.style.fillOpacity = (value).toString();
-                        element.style.fill = this._gradient.valueAt(value).toString();
+                        let value = MathUtils.discretize(MathUtils.exponential(factor), 20);
+                        element.style.fillOpacity = value.toString();
+                        //element.style.fill = this._gradient.valueAt(value).toString();
                     }
                 }
             }
@@ -335,8 +557,14 @@
         totalDays = ko.observable(0);
         currentData = ko.observable<string>();
         isPlaying = ko.observable(false);
-        ageGroup = ko.observable<AgeGroup>("total");
         currentArea = ko.observable<AreaViewModel>();
         topAreas = ko.observable<AreaViewModel[]>();
+        viewMode = ko.observable<ViewMode>();
+        selectedIndicator = ko.observable<IIndicator>();
+        selectedFactor = ko.observable<IFactor>();
+        autoMaxFactor = ko.observable<boolean>(true);
+        maxFactor = ko.observable<number>();
+        indicators: KnockoutObservable<IIndicator[]>;
+        factors: KnockoutObservable<IFactor[]>;
     }
 }

@@ -8,40 +8,36 @@ using System.Threading.Tasks;
 
 namespace GeoPlot.Core
 {
-    public class ItalyDistrictAdapter : BaseGeoJsonAdapter
+    public class ItalyRegionAdapter : BaseGeoJsonAdapter
     {
         IDictionary<string, Demography<int>> _demoData;
         string _demoSource;
 
-        public ItalyDistrictAdapter(string demoSource)
-            : this("https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_provinces.geojson", demoSource)
+        public ItalyRegionAdapter(string demoSource)
+            : this("https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_regions.geojson", demoSource)
         {
         }
 
-        public ItalyDistrictAdapter(string districtSource, string demoSource)
-            : base(districtSource)
+        public ItalyRegionAdapter(string dataSource, string demoSource)
+            : base(dataSource)
         {
             _demoSource = demoSource;
         }
 
         public override async Task<IEnumerable<GeoArea>> LoadAsync()
         {
-            var demoAdapter = new ItalyDistrictDemographyAdapter(_demoSource);
+            var demoAdapter = new ItalyRegionDemographyAdapter(_demoSource);
             var demoData = await demoAdapter.LoadAsync();
             _demoData = demoData.ToDictionary(a => a.AreaId, a => a.Value);
             return await base.LoadAsync();
         }
 
-        protected override IEnumerable<GeoArea> Load(string textData)
-        {
-            return base.Load(textData);
-        }
 
         protected override void ProcessFeature(IFeature feature, GeoArea geoArea)
         {
-            geoArea.Type = GeoAreaType.District;
-            geoArea.Id = "D" + feature.Attributes["prov_istat_code_num"].ToString();
-            geoArea.Name = (string)feature.Attributes["prov_name"];
+            geoArea.Type = GeoAreaType.Region;
+            geoArea.Id = "R" + feature.Attributes["reg_istat_code_num"].ToString();
+            geoArea.Name = (string)feature.Attributes["reg_name"];
             geoArea.Demography = _demoData[geoArea.Id];
         }
     }

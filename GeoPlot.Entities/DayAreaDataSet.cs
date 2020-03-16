@@ -30,10 +30,6 @@ namespace GeoPlot.Entities
 
     public class DayAreaDataSet<TData>
     {
-        public TData Max { get; set; }
-
-        public Demography<double> MaxFactor { get; set; }
-
         public IList<DayAreaGroupItem<TData>> Days { get; set; }
     }
 }

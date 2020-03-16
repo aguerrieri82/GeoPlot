@@ -13,8 +13,4 @@
     <ProjectReference Include="..\GeoPlot.Entities\GeoPlot.Entities.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Resources\" />
-  </ItemGroup>
-
 </Project>

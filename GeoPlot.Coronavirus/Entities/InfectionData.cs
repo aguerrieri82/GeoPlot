@@ -1,6 +1,6 @@
-﻿namespace GeoPlot.Entities
+﻿namespace GeoPlot.Coronavirus
 {
-    public struct InfectionData
+    public class InfectionData
     {
         public int? TotalPositive { get; set; }
 
@@ -13,5 +13,7 @@
         public int? TotalHospedalized { get; set; }
 
         public int? TotalHealed { get; set; }
+
+        public int? ToatlTests { get; set; }
     }
 }

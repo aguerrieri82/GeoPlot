@@ -12,13 +12,17 @@
 
     export interface IDayAreaDataSet<TData>
     {
-        max: TData;
-        maxFactor: IDemography;
         days: IDayAreaGroupItem<TData>[];
     }    
 
     export interface IInfectionData {
         totalPositive: number;
+        currentPositive: number;
+        totalDeath: number;
+        totalSevere: number;
+        totalHospedalized: number;
+        totalHealed: number;
+        toatlTests: number;
     }
 
     export enum GeoAreaType {
@@ -40,7 +44,8 @@
         name: string;
         demography: IDemography;
         type: GeoAreaType;
-        poly: IPoly2D[];
+        geography: IPoly2D[];
+        parentId: string;
     }
 
     export interface IGeoAreaSet {

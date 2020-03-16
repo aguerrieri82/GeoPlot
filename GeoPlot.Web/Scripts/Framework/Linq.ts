@@ -582,6 +582,21 @@
 
         /****************************************/
 
+        max(selector?: (item: T) => number): number {
+
+            if (selector)
+                return this.select(selector).max();
+            let result = Number.NEGATIVE_INFINITY;
+            this.foreach(a => {
+                let number = parseFloat(<any>a);
+                if (number > result)
+                    result = number; 
+            });
+            return result;
+        }
+
+        /****************************************/
+
         avg(selector?: (item: T) => number): number {
 
             if (selector)

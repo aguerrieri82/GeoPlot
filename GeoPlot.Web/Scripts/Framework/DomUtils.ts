@@ -13,11 +13,21 @@
             }
             return false;
         }
+
+        /****************************************/
+
+        static removeClass(element: Element, className: string) {
+            if (element.classList.contains(className))
+                element.classList.remove(className);
+        }
+
+        /****************************************/
+
+        static addClass(element: Element, className: string) {
+            if (!element.classList.contains(className))
+                element.classList.add(className);
+        }
     }
 }
 
-/****************************************/
 
-function formatNumber(x) {
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}

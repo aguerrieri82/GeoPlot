@@ -12,7 +12,5 @@ namespace GeoPlot.Entities
         public T? Male { get; set; }
 
         public T? Female { get; set; }
-
-        public T? Old { get; set; }
     }
 }

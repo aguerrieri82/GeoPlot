@@ -14,22 +14,26 @@
   font-style: italic;
   color: #999; }
 
-svg {
+.no-margin {
+  margin: 0 !important; }
+
+svg.map {
   width: 50vh;
-  max-width: 100%; }
-  svg g {
-    pointer-events: painted; }
-    svg g.region {
-      fill: none;
+  max-width: 100%;
+  pointer-events: painted; }
+  svg.map .group .area {
+    fill: none; }
+    svg.map .group .area.region {
       stroke: #000;
       stroke-width: 0.2%; }
-    svg g.district {
+    svg.map .group .area.district {
       stroke: #999;
       stroke-width: 0.05%;
-      transition: opacity 0.3s;
-      fill: white; }
-      svg g.district.valid {
-        fill: #b71c1c; }
-      svg g.district.selected, svg g.district:hover {
-        stroke: #F57F17;
-        stroke-width: 0.3%; }
+      transition: opacity 0.3s; }
+  svg.map .group.active .area {
+    fill: white; }
+    svg.map .group.active .area.valid {
+      fill: #b71c1c; }
+    svg.map .group.active .area.selected, svg.map .group.active .area:hover {
+      stroke: #F57F17;
+      stroke-width: 0.3%; }

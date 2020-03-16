@@ -9,6 +9,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Scripts\Framework\Global.ts" />
+    <None Remove="Scripts\Framework\MathUtils.ts" />
     <None Remove="Scripts\Geo.ts" />
     <None Remove="Scripts\Graphics.ts" />
     <None Remove="Scripts\Types.ts" />

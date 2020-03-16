@@ -21,7 +21,6 @@ namespace GeoPlot.Entities
         TValue Value { get;  }
     }
 
-
     public class GeoAreaItem<TValue> : IGeoAreaItem<TValue>
     { 
         public string AreaId { get; set; }

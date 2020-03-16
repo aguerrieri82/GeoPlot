@@ -64,9 +64,9 @@
         valueAt(pos: number) : RgbColor {
 
             if (pos < 0)
-                pos = 0;
+                return this.colors[0];
             if (pos > 1)
-                pos = 1;
+                this.colors[this.colors.length - 1];
 
             let stepSize = 1 / (this.colors.length - 1);
             let minX = Math.floor(pos / stepSize);

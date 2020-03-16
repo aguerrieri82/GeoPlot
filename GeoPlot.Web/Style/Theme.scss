@@ -23,34 +23,44 @@
     color: #999;
 }
 
-svg {
+.no-margin{
+    margin: 0 !important;
+}
+
+svg.map {
     width: 50vh;
     max-width: 100%;
+    pointer-events: painted;
 
-    g {
-        pointer-events: painted;
+    .group {
 
-
-
-        &.region {
+        .area {
             fill: none;
-            stroke: #000;
-            stroke-width: 0.2%;
-        }
 
-        &.district {
-            stroke: #999;
-            stroke-width: 0.05%;
-            transition: opacity 0.3s;
-            fill: white;
-
-            &.valid {
-                fill: #b71c1c;
+            &.region {
+                stroke: #000;
+                stroke-width: 0.2%;
             }
 
-            &.selected, &:hover {
-                stroke: #F57F17;
-                stroke-width: 0.3%;
+            &.district {
+                stroke: #999;
+                stroke-width: 0.05%;
+                transition: opacity 0.3s;
+            }
+        }
+
+        &.active {
+            .area {
+                fill: white;
+
+                &.valid {
+                    fill: #b71c1c;
+                }
+
+                &.selected, &:hover {
+                    stroke: #F57F17;
+                    stroke-width: 0.3%;
+                }
             }
         }
     }

@@ -5,136 +5,156 @@
     var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region };
 }
 
-<div class="container">
-    <p class="center-align">Andamento giornaliero infetti coronavirus, su base provinciale. Cliccare sulla <b>slide in basso</b> per cambiare giorno.</p>
-    <div class="row">
-        <div class="col s12 m6 l8">
-            <section class="card-panel">
-                <div class="center-align">
-                    <svg preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
-                        @foreach (var areaType in typeOrder)
-                        { 
-                            <g class="group">
-                                @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
-                                {
-                                    <g id="@area.Key" class="@area.Value.Type.ToString().ToLower()">
-                                        @foreach (var poly in area.Value.Geometry)
-                                        {
-                                            <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
-                                        }
-                                    </g>
-                                    area.Value.Geometry = null;
-                                }
-                            </g>
-                        }
-                    </svg>
-                </div>
-            </section>
-            <section class="day">
-                <div class="stack-horizontal">
-                    <span data-bind="text: dayNumber"></span>
-                    <div class="range-field stack-fit">
-                        <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
+    <div class="container">
+   
+        <p class="center-align">Andamento giornaliero infetti coronavirus, su base provinciale. Cliccare sulla <b>slide in basso</b> per cambiare giorno.</p>
+        <div class="row">
+            <div class="col s12 m6 l8">
+                <section class="z-depth-1">
+                    <ul class="tabs" id="areaTabs">
+                        <li class="tab"><a href="#districtTab">Province</a></li>
+                        <li class="tab"><a href="#regionTab">Regioni</a></li>
+                    </ul>
+                    <div id="regionTab" data-view-mode="region"></div>
+                    <div id="districtTab" data-view-mode="district"></div>
+                    <div class="center-align">
+                        <svg class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+                            @foreach (var areaType in typeOrder)
+                            {
+                                <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: viewMode() == '@(areaType.ToString().ToLower())'}">
+                                    @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
+                                    {
+                                        <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">
+                                            @foreach (var poly in area.Value.Geometry)
+                                            {
+                                                <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                                            }
+                                        </g>
+                                        area.Value.Geometry = null;
+                                    }
+                                </g>
+                            }
+                        </svg>
                     </div>
-                    <div>
-                        <button title="Play" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
-                        <button title="Pause" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
-                    </div>
-                </div>
-            </section>
-        </div>
+                </section>
 
-        <div class="col s12 m6 l4 ">
-            <h5>
-                Giorno  <span data-bind="text: currentData"></span>
-            </h5>
-            <p>
-                In rapporto alla popolazione:
-            </p>
-            <div>
-                <label>
-                    <input name="ageGroup" type="radio" value="total" data-bind="checked: ageGroup" />
-                    <span>Tutti</span>
-                </label>
-                <label>
-                    <input name="ageGroup" type="radio" value="old" data-bind="checked: ageGroup" />
-                    <span>Anziani (65+)</span>
-                </label>
+                <section class="day">
+                    <div class="stack-horizontal">
+                        <span data-bind="text: dayNumber"></span>
+                        <div class="range-field stack-fit">
+                            <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
+                        </div>
+                        <div>
+                            <button title="Play" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
+                            <button title="Pause" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
+                        </div>
+                    </div>
+                </section>
             </div>
-            <section class="card">
-                <div class="card-content">
 
-                    <!--ko if: currentArea-->
-                    <span class="card-title" data-bind="text: currentArea().value.name"></span>
-                    <div class="row">
-                        <div class="col s4">
-                            <label>Infezioni</label>
-                            <div data-bind="text: formatNumber(currentArea().dayData().totalPositive)"></div>
+            <div class="col s12 m6 l4 ">
+                <h5>
+                    Giorno <span data-bind="text: currentData"></span>
+                </h5>
+                <section class="card">
+                    <div class="card-content">
+                        <span class="card-title">Filtro</span>
+                        <div class="row  no-margin"">
+                            <div class="col s6 input-field">
+                                <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
+                                <label>Indicatore</label>
+                            </div>
+                            <div class="col s6 input-field">
+                                <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
+                                <label>In rapporto a</label>
+                            </div>
                         </div>
-                        <div class="col s4">
-                            <label>Popolazione</label>
-                            <div data-bind="text: formatNumber(currentArea().value.demography[ageGroup()])"></div>
-                        </div>
-                        <div class="col s4">
-                            <label title="(Infetti per 100.000 abitanti)">Fattore</label>
-                            <div data-bind="text: currentArea().dayFactor()[ageGroup()]"></div>
+                        <div class="row no-margin">
+                            <div class="col s6 input-field">
+                                <label>
+                                    <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor"/>
+                                    <span>Soglia automatica</span>
+                                </label>
+                            </div>
+                            <div class="input-field col s6">
+                                <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor"/>
+                                <label for="limit">Soglia</label>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <canvas id="areaGraph">
-                        </canvas>
-                    </div>
-                    <!--/ko-->
-                    <!--ko ifnot: currentArea-->
-                    <span class="empty-text">Selezionare una provincia</span>
-                    <!--/ko-->
-                </div>
+                </section>
+                <section class="card">
+                    <div class="card-content">
 
-            </section>
-            <ul class="collapsible" id="topCases">
-                <li>
-                    <span class="card-title collapsible-header">Province più colpite</span>
-                    <div class="collapsible-body">
-                        <!--ko if topAreas-->
-                        <table class="responsive-table highlight">
-                            <thead>
-                                <tr>
-                                    <th>Provincia</th>
-                                    <th>Casi</th>
-                                    <th>Pop.</th>
-                                    <th title="(Infetti per 100.000 abitanti)">Fatt.</th>
-                                </tr>
-                            </thead>
-                            <tbody data-bind="foreach: topAreas">
-                                <tr data-bind="click: select">
-                                    <td data-bind="text: value.name"></td>
-                                    <td data-bind="text: formatNumber(dayData().totalPositive)"></td>
-                                    <td><span data-bind="text: formatNumber(value.demography[$parent.ageGroup()])"></span></td>
-                                    <td><span data-bind="text: dayFactor()[$parent.ageGroup()]"></span></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <!--ko if: currentArea-->
+                        <span class="card-title" data-bind="text: currentArea().value.name"></span>
+                        <div class="row">
+                            <div class="col s4">
+                                <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
+                                <div data-bind="text: formatNumber(currentArea().indicator())"></div>
+                            </div>
+                            <div class="col s4">
+                                <label data-bind="text: selectedFactor().name"></label>
+                                <div data-bind="text: currentArea().reference"></div>
+                            </div>
+                            <div class="col s4">
+                                <label title="(Infetti per 100.000 abitanti)">Fattore</label>
+                                <div data-bind="text: currentArea().factor"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <canvas id="areaGraph">
+                            </canvas>
+                        </div>
+                        <!--/ko-->
+                        <!--ko ifnot: currentArea-->
+                        <span class="empty-text">Selezionare una <span data-bind="text: VIEW_MODES[viewMode()].label.singular"></span></span>
                         <!--/ko-->
                     </div>
-                </li>
-            </ul>
+
+                </section>
+                <ul class="collapsible" id="topCases">
+                    <li>
+                        <div class="card-title collapsible-header"><span data-bind="text: capitalizeFirst(VIEW_MODES[viewMode()].label.plural)"></span>&nbsp;più colpite</div>
+                        <div class="collapsible-body">
+                            <!--ko if topAreas-->
+                            <table class="responsive-table highlight">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
+                                        <th data-bind="text: selectedFactor().name"></th>
+                                        <th title="(Infetti per 100.000 abitanti)">Fatt.</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: topAreas">
+                                    <tr data-bind="click: select">
+                                        <td data-bind="text: value.name"></td>
+                                        <td data-bind="text: formatNumber(indicator())"></td>
+                                        <td><span data-bind="text: reference"></span></td>
+                                        <td><span data-bind="text: factor"></span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <!--/ko-->
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
+
+
+
     </div>
 
-
-
-</div>
-
 @section Head{
-    <link  href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.css"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.css" />
 
 }
 
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
     <script>
-        M.AutoInit();
-
         GeoPlot.app.initServices();
         GeoPlot.Uri.appRoot = '@Url.Content("~/")';
         ko.applyBindings(new GeoPlot.GeoPlotPage(@Html.Json(Model)));

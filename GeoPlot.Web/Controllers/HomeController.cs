@@ -29,16 +29,10 @@ namespace GeoPlot.Web.Controllers
         {
             var model = new GeoPlotViewModel
             {
-                District =district,
+                District = district,
                 Day = day,
                 Geo = await LoadGeoAreas(),
                 Data = await LoadInfectionData()
-            };
-
-            model.Data.MaxFactor = new Demography<double>()
-            {
-                Total = model.Data.Days.SelectMany(a => a.Values).Max(a => a.Value.TotalPositive.GetValueOrDefault() / model.Geo.Areas[a.Key].Demography.Total.Value),
-                Old = model.Data.Days.SelectMany(a => a.Values).Max(a => a.Value.TotalPositive.GetValueOrDefault() / model.Geo.Areas[a.Key].Demography.Old.Value),
             };
 
             return View(model);
@@ -52,24 +46,36 @@ namespace GeoPlot.Web.Controllers
 
         async Task<DayAreaDataSet<InfectionData>> LoadInfectionData()
         {
-            var adapters = new[] { new InfectionDistrictItalyAdapter() };
+            var adapters = new IDataAdapter<DayAreaItem<InfectionData>>[]
+            {
+                new InfectionDistrictItalyAdapter(),
+                new InfectionRegionItalyAdapter()
+            };
 
             var items = await Task.WhenAll(adapters.Select(a => a.LoadAsync()));
-            
+
             var data = items.SelectMany(a => a);
 
             var result = new DayAreaDataSet<InfectionData>()
             {
-                Days = data.GroupBy(a => a.Date.Date).Select(a=> new DayAreaGroupItem<InfectionData>()
-                {
-                    Date = a.Key,
-                    Values = a.ToDictionary(b => b.AreaId, b => b.Value)
-                }).ToArray(),
+                Days = new List<DayAreaGroupItem<InfectionData>>()
+            };
 
-                Max = new InfectionData()
+            foreach (var day in data.GroupBy(a => a.Date.Date))
+            {
+                var item = new DayAreaGroupItem<InfectionData>()
                 {
-                    TotalPositive = data.Max(a => a.Value.TotalPositive)
+                    Date = day.Key,
+                    Values = new Dictionary<string, InfectionData>()
+                };
+
+                foreach (var area in day.GroupBy(a => a.AreaId))
+                {
+                    var value = area.OrderByDescending(a => a.Date).First();
+                    item.Values[area.Key] = value.Value;
                 }
+
+                result.Days.Add(item);
             };
 
             return result;
@@ -77,7 +83,11 @@ namespace GeoPlot.Web.Controllers
 
         async Task<GeoAreaSet> LoadGeoAreas()
         {
-            var adapters = new BaseGeoJsonAdapter[] { new ItalyDistrictAdapter(_env.WebRootPath + "\\data\\district-population.json"), new ItalyRegionAdapter() };
+            var adapters = new BaseGeoJsonAdapter[]
+            {
+                new ItalyDistrictAdapter(_env.WebRootPath + "\\data\\province.csv"),
+                new ItalyRegionAdapter(_env.WebRootPath + "\\data\\regioni.csv")
+            };
 
             var items = await Task.WhenAll(adapters.Select(a => a.LoadAsync()));
 
