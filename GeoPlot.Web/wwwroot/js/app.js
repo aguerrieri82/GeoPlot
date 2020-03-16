@@ -1488,6 +1488,7 @@ var GeoPlot;
             this.autoMaxFactor = ko.observable(true);
             this.maxFactor = ko.observable();
             this.isGraphDelta = ko.observable(false);
+            this.isZoomChart = ko.observable(false);
             this.factorDescription = ko.observable();
             this._data = model.data;
             this._geo = model.geo;
@@ -1541,6 +1542,11 @@ var GeoPlot;
                 _this.updateChart();
                 _this.updateUrl();
             });
+            this.isZoomChart.subscribe(function () {
+                setTimeout(function () {
+                    return _this.updateChart();
+                }, 500);
+            });
             var urlParams = new URLSearchParams(window.location.search);
             var stateRaw = urlParams.get("state");
             var state;
@@ -1559,6 +1565,10 @@ var GeoPlot;
                 (!state.factor || state.factor == "none") &&
                 !state.maxFactor &&
                 !state.graphDelta;
+        };
+        /****************************************/
+        GeoPlotPage.prototype.toggleChartZoom = function () {
+            this.isZoomChart(!this.isZoomChart());
         };
         /****************************************/
         GeoPlotPage.prototype.loadState = function (state) {
@@ -1696,6 +1706,7 @@ var GeoPlot;
                     ]
                 },
                 options: {
+                    maintainAspectRatio: false,
                     legend: {
                         display: false
                     },

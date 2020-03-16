@@ -1,6 +1,6 @@
 ﻿@model GeoPlotViewModel
 @{
-    ViewData["Title"] = "Coronavirus";
+    ViewData["Title"] = "Panoramica";
 
     var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region };
 }
@@ -75,12 +75,17 @@
                             <div data-bind="text: currentArea().factor"></div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col s16">
-                            <label class="title" data-bind="text: factorDescription"></label>
+                    <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
+                        <div class="relative">
+                            <a href="#!" title="Espandi grafico" class="action-right" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
+                            <label class="title">
+                                <span data-bind="text: factorDescription"></span>
+                            </label>
                         </div>
-                        <canvas id="areaGraph">
-                        </canvas>
+                        <div class="chart-container">
+                            <canvas id="areaGraph">
+                            </canvas>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col s16">
@@ -127,7 +132,10 @@
 
             <ul class="collapsible" id="topCases">
                 <li>
-                    <div class="card-title collapsible-header"><span data-bind="text: capitalizeFirst(VIEW_MODES[viewMode()].label.plural)"></span>&nbsp;più colpite</div>
+                    <div class="card-title collapsible-header">
+                        <span data-bind="text: capitalizeFirst(VIEW_MODES[viewMode()].label.plural)"></span>&nbsp;più colpite
+                        <i class="material-icons">chevron_right</i>
+                    </div>
                     <div class="collapsible-body">
                         <!--ko if topAreas-->
                         <table class="responsive-table highlight">

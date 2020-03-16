@@ -252,6 +252,11 @@
                 this.updateUrl();
             });
 
+            this.isZoomChart.subscribe(() => {
+                setTimeout(() =>
+                    this.updateChart(), 500);
+            });
+
             const urlParams = new URLSearchParams(window.location.search);
             const stateRaw = urlParams.get("state");
             let state: IPageState;
@@ -274,6 +279,13 @@
                 (!state.factor || state.factor == "none") &&
                 !state.maxFactor &&
                 !state.graphDelta;
+        }
+
+        /****************************************/
+
+        toggleChartZoom() {
+
+            this.isZoomChart(!this.isZoomChart());
         }
 
         /****************************************/
@@ -458,6 +470,7 @@
                     ]
                 },
                 options: {
+                    maintainAspectRatio: false,
                     legend: {
                         display: false
                     },
@@ -680,6 +693,7 @@
         autoMaxFactor = ko.observable<boolean>(true);
         maxFactor = ko.observable<number>();
         isGraphDelta = ko.observable<boolean>(false);
+        isZoomChart = ko.observable<boolean>(false);
         indicators: KnockoutObservable<IIndicator[]>;
         factorDescription = ko.observable<string>();
         factors: KnockoutObservable<IFactor[]>;

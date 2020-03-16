@@ -41,6 +41,11 @@ namespace GeoPlot.Web.Controllers
             return View(model);
         }
 
+        public async Task<IActionResult> Studio()
+        {
+            return View();
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

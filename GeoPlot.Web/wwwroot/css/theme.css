@@ -22,6 +22,50 @@ label.title {
   display: block;
   font-size: 15px; }
 
+ul.collapsible li .collapsible-header {
+  position: relative; }
+  ul.collapsible li .collapsible-header i {
+    position: absolute;
+    right: 0;
+    transition-duration: 0.3s; }
+
+ul.collapsible li.active .collapsible-header i {
+  transform: rotate(90deg); }
+
+.chart-container {
+  position: relative;
+  height: 250px;
+  box-sizing: border-box; }
+
+.chart {
+  transition-duration: 0.3s;
+  position: relative;
+  margin-bottom: 24px; }
+  .chart.zoom {
+    background-color: white;
+    position: fixed;
+    top: 80px;
+    bottom: 60px;
+    left: 60px;
+    right: 60px;
+    padding: 24px;
+    z-index: 3;
+    overflow: hidden; }
+    .chart.zoom .chart-container {
+      position: absolute;
+      top: 60px;
+      right: 24px;
+      left: 24px;
+      bottom: 24px;
+      height: auto; }
+
+.relative {
+  position: relative; }
+
+.action-right {
+  position: absolute;
+  right: 0px; }
+
 svg.map {
   width: 50vh;
   max-width: 100%;
