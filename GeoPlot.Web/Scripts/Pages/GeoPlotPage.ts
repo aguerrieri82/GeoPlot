@@ -16,6 +16,9 @@
         indicator?: keyof IInfectionData;
         factor?: FactorType;
         graphDelta?: boolean;
+        groupSize?: number;
+        startDay?: number;
+        logScale?: boolean;
     }
 
     interface IGeoPlotViewModel  {
@@ -35,6 +38,12 @@
         id: keyof IInfectionData;
         name: string;
         validFor?: ViewMode[];
+    }
+
+    interface IGroupDay {
+        number: number;
+        value: Date;
+        text: string;
     }
 
     interface IFactor {
@@ -191,16 +200,22 @@
             this._mapSvg = document.getElementsByTagName("svg").item(0);
             this._mapSvg.addEventListener("click", e => this.onMapClick(e))
 
-            M.AutoInit();
+            this.days = [];
+            for (var i = 0; i < this._data.days.length; i++)
+                this.days.push({ number: i, value: new Date(this._data.days[i].date), text: DateUtils.format(this._data.days[i].date, "{DD}/{MM}") });
 
-            const areaTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+            M.Tooltip.init(document.querySelectorAll(".tooltipped"));
+
+            M.Sidenav.init(document.getElementById("mobile-menu"));
+
+            const areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
             
             areaTabs.options.onShow = (el: HTMLDivElement) => {
 
                 this.setViewMode(<ViewMode>el.dataset["viewMode"]);
             };          
 
-            const topCases = M.Collapsible.getInstance(document.getElementById("topCases"));
+            const topCases = M.Collapsible.init(document.getElementById("topCases"));
 
             topCases.options.onOpenStart = () => {
                 if (!this._daysData)
@@ -252,9 +267,24 @@
                 this.updateUrl();
             });
 
+            this.isLogScale.subscribe(() => {
+                this.updateChart();
+                this.updateUrl();
+            });
+
             this.isZoomChart.subscribe(() => {
-                setTimeout(() =>
-                    this.updateChart(), 500);
+                this.updateChart();
+                this.updateUrl();
+            });
+
+            this.groupSize.subscribe(() => {
+                this.updateChart();
+                this.updateUrl();
+            });
+
+            this.startDay.subscribe(() => {
+                this.updateChart();
+                this.updateUrl();
             });
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -278,7 +308,10 @@
                 (!state.indicator || state.indicator == "totalPositive") &&
                 (!state.factor || state.factor == "none") &&
                 !state.maxFactor &&
-                !state.graphDelta;
+                !state.graphDelta &&
+                !state.logScale &&
+                (!state.groupSize || state.groupSize == 1) &&
+                (state.startDay == undefined || state.startDay == 0);
         }
 
         /****************************************/
@@ -300,13 +333,16 @@
 
             document.body.scrollTop = 0;
 
-            if (state.indicator)
-                this.selectedIndicator(linq(this.INDICATORS).first(a => a.id == state.indicator));
+            if (state.logScale != undefined)
+                this.isLogScale(state.logScale);
 
-            if (state.factor)
-                this.selectedFactor(linq(this.FACTORS).first(a => a.id == state.factor));
+            if (state.startDay != undefined)
+                this.startDay(state.startDay);
 
-            if (state.graphDelta)
+            if (state.groupSize)
+                this.groupSize(state.groupSize);
+
+            if (state.graphDelta != undefined)
                 this.isGraphDelta(state.graphDelta);
 
             if (state.maxFactor) {
@@ -315,6 +351,12 @@
             }
 
             this.dayNumber(state.day != undefined ? state.day : this._data.days.length - 1);
+
+            if (state.indicator)
+                this.selectedIndicator(linq(this.INDICATORS).first(a => a.id == state.indicator));
+
+            if (state.factor)
+                this.selectedFactor(linq(this.FACTORS).first(a => a.id == state.factor));
 
             if (state.area)
                 this.selectedArea = this._geo.areas[state.area.toLowerCase()];
@@ -331,7 +373,10 @@
                 graphDelta: this.isGraphDelta(),
                 maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
                 day: this.dayNumber(),
-                area: this.selectedArea ? this.selectedArea.id : undefined
+                area: this.selectedArea ? this.selectedArea.id : undefined,
+                groupSize: this.groupSize(),
+                startDay: this.startDay(),
+                logScale: this.isLogScale()
             };
         }
 
@@ -375,7 +420,7 @@
                 this._daysData = undefined;
 
             setTimeout(() =>
-                M.FormSelect.init(document.querySelectorAll("select")));
+                M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
         }
 
 
@@ -437,6 +482,7 @@
             if (this._selectedArea == null)
                 this.currentArea(null);
             else {
+                var isEmptyArea = !this.currentArea();
 
                 const area = new AreaViewModel();
 
@@ -447,6 +493,9 @@
                 this.currentArea(area)
 
                 this.updateChart();
+
+                if (isEmptyArea)
+                    M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
             }
 
             this.updateUrl();
@@ -474,6 +523,13 @@
                     maintainAspectRatio: false,
                     legend: {
                         display: false
+                    },
+                    tooltips: {
+                        callbacks: {
+                            label: (t,d) => {
+                                return t.xLabel + ": " + MathUtils.round(parseFloat(t.value), 1);
+                            }
+                        }
                     },
                     scales: {
                         xAxes: [{
@@ -535,10 +591,15 @@
 
             this._chart.data.datasets[0].label = this.factorDescription();
 
+            if (this.isLogScale())
+                this._chart.options.scales.yAxes[0].type = "logarithmic";
+            else
+                this._chart.options.scales.yAxes[0].type = "linear";
+
             if (this.isGraphDelta()) {
                 this._chart.data.datasets[0].data = [];
 
-                for (let i = 1; i < this._data.days.length; i++) {
+                for (let i = 1 + this.startDay(); i < this._data.days.length; i++) {
                     const day = this._data.days[i];
                     const prevDay = this._data.days[i - 1];
                     const item : Chart.ChartPoint = {
@@ -550,10 +611,28 @@
                 }
             }
             else {
-                this._chart.data.datasets[0].data = linq(this._data.days).select(a => ({
+                this._chart.data.datasets[0].data = linq(this._data.days).skip(this.startDay()).select(a => ({
                     x: new Date(a.date),
                     y: this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
                 })).toArray();
+            }
+
+            if (this.groupSize() > 1) {
+                const newData = [];
+                const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
+                let count = this.groupSize();
+                let curPoint: { x?: Date, y: number } = {y: 0};
+                for (let i = data.length - 1; i >= 0; i--) {
+                    curPoint.y += data[i].y;
+                    count--;
+                    if (count == 0) {
+                        curPoint.x = data[i].x;
+                        newData.unshift(curPoint);
+                        curPoint = { y: 0 };
+                        count = this.groupSize();
+                    }
+                }
+                this._chart.data.datasets[0].data = newData;
             }
 
             this._chart.update();
@@ -642,7 +721,7 @@
 
         protected updateUrl() {
             const state = this.saveStata();
-            let url = Uri.appRoot + "Home/Overview";
+            let url = Uri.appRoot + "Overview";
             if (!this.isDefaultState(state))
                 url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state)));
             history.replaceState(null, null, url);
@@ -702,10 +781,15 @@
         selectedFactor = ko.observable<IFactor>();
         autoMaxFactor = ko.observable<boolean>(true);
         maxFactor = ko.observable<number>();
+        isLogScale = ko.observable<boolean>(false);
         isGraphDelta = ko.observable<boolean>(false);
         isZoomChart = ko.observable<boolean>(false);
+        groupSize = ko.observable<number>(1);
+        startDay = ko.observable<number>(0);
         indicators: KnockoutObservable<IIndicator[]>;
         factorDescription = ko.observable<string>();
         factors: KnockoutObservable<IFactor[]>;
+        days: IGroupDay[];
+        groupDays = [1, 2, 3, 4, 5, 6, 7];
     }
 }

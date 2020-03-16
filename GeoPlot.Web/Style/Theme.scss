@@ -94,6 +94,11 @@ ul.collapsible li {
     }
 }
 
+.material-tooltip{
+    max-width: 300px !important;
+    white-space: pre-wrap;
+}
+
 .relative{
     position: relative;
 }

@@ -1098,6 +1098,10 @@ var GeoPlot;
             return Math.round(value * steps) / steps;
         };
         /****************************************/
+        MathUtils.round = function (value, digits) {
+            return Math.round(value * Math.pow(10, digits)) / Math.pow(10, digits);
+        };
+        /****************************************/
         MathUtils.exponential = function (value, weight) {
             if (weight === void 0) { weight = 2; }
             return 1 - Math.pow(1 - value, weight);
@@ -1487,21 +1491,29 @@ var GeoPlot;
             this.selectedFactor = ko.observable();
             this.autoMaxFactor = ko.observable(true);
             this.maxFactor = ko.observable();
+            this.isLogScale = ko.observable(false);
             this.isGraphDelta = ko.observable(false);
             this.isZoomChart = ko.observable(false);
+            this.groupSize = ko.observable(1);
+            this.startDay = ko.observable(0);
             this.factorDescription = ko.observable();
+            this.groupDays = [1, 2, 3, 4, 5, 6, 7];
             this._data = model.data;
             this._geo = model.geo;
             this.totalDays(this._data.days.length - 1);
             this.dayNumber.subscribe(function (a) { return _this.updateDayData(); });
             this._mapSvg = document.getElementsByTagName("svg").item(0);
             this._mapSvg.addEventListener("click", function (e) { return _this.onMapClick(e); });
-            M.AutoInit();
-            var areaTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+            this.days = [];
+            for (var i = 0; i < this._data.days.length; i++)
+                this.days.push({ number: i, value: new Date(this._data.days[i].date), text: GeoPlot.DateUtils.format(this._data.days[i].date, "{DD}/{MM}") });
+            M.Tooltip.init(document.querySelectorAll(".tooltipped"));
+            M.Sidenav.init(document.getElementById("mobile-menu"));
+            var areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
             areaTabs.options.onShow = function (el) {
                 _this.setViewMode(el.dataset["viewMode"]);
             };
-            var topCases = M.Collapsible.getInstance(document.getElementById("topCases"));
+            var topCases = M.Collapsible.init(document.getElementById("topCases"));
             topCases.options.onOpenStart = function () {
                 if (!_this._daysData)
                     _this.updateTopAreas();
@@ -1542,10 +1554,21 @@ var GeoPlot;
                 _this.updateChart();
                 _this.updateUrl();
             });
+            this.isLogScale.subscribe(function () {
+                _this.updateChart();
+                _this.updateUrl();
+            });
             this.isZoomChart.subscribe(function () {
-                setTimeout(function () {
-                    return _this.updateChart();
-                }, 500);
+                _this.updateChart();
+                _this.updateUrl();
+            });
+            this.groupSize.subscribe(function () {
+                _this.updateChart();
+                _this.updateUrl();
+            });
+            this.startDay.subscribe(function () {
+                _this.updateChart();
+                _this.updateUrl();
             });
             var urlParams = new URLSearchParams(window.location.search);
             var stateRaw = urlParams.get("state");
@@ -1564,7 +1587,10 @@ var GeoPlot;
                 (!state.indicator || state.indicator == "totalPositive") &&
                 (!state.factor || state.factor == "none") &&
                 !state.maxFactor &&
-                !state.graphDelta;
+                !state.graphDelta &&
+                !state.logScale &&
+                (!state.groupSize || state.groupSize == 1) &&
+                (state.startDay == undefined || state.startDay == 0);
         };
         /****************************************/
         GeoPlotPage.prototype.toggleChartZoom = function () {
@@ -1577,17 +1603,23 @@ var GeoPlot;
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
             viewTabs.select(this.VIEW_MODES[state.view].tab);
             document.body.scrollTop = 0;
-            if (state.indicator)
-                this.selectedIndicator(GeoPlot.linq(this.INDICATORS).first(function (a) { return a.id == state.indicator; }));
-            if (state.factor)
-                this.selectedFactor(GeoPlot.linq(this.FACTORS).first(function (a) { return a.id == state.factor; }));
-            if (state.graphDelta)
+            if (state.logScale != undefined)
+                this.isLogScale(state.logScale);
+            if (state.startDay != undefined)
+                this.startDay(state.startDay);
+            if (state.groupSize)
+                this.groupSize(state.groupSize);
+            if (state.graphDelta != undefined)
                 this.isGraphDelta(state.graphDelta);
             if (state.maxFactor) {
                 this.autoMaxFactor(false);
                 this.maxFactor(state.maxFactor);
             }
             this.dayNumber(state.day != undefined ? state.day : this._data.days.length - 1);
+            if (state.indicator)
+                this.selectedIndicator(GeoPlot.linq(this.INDICATORS).first(function (a) { return a.id == state.indicator; }));
+            if (state.factor)
+                this.selectedFactor(GeoPlot.linq(this.FACTORS).first(function (a) { return a.id == state.factor; }));
             if (state.area)
                 this.selectedArea = this._geo.areas[state.area.toLowerCase()];
         };
@@ -1600,7 +1632,10 @@ var GeoPlot;
                 graphDelta: this.isGraphDelta(),
                 maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
                 day: this.dayNumber(),
-                area: this.selectedArea ? this.selectedArea.id : undefined
+                area: this.selectedArea ? this.selectedArea.id : undefined,
+                groupSize: this.groupSize(),
+                startDay: this.startDay(),
+                logScale: this.isLogScale()
             };
         };
         /****************************************/
@@ -1629,7 +1664,7 @@ var GeoPlot;
             else
                 this._daysData = undefined;
             setTimeout(function () {
-                return M.FormSelect.init(document.querySelectorAll("select"));
+                return M.FormSelect.init(document.querySelectorAll(".row-indicator select"));
             });
         };
         Object.defineProperty(GeoPlotPage.prototype, "selectedArea", {
@@ -1681,11 +1716,14 @@ var GeoPlot;
             if (this._selectedArea == null)
                 this.currentArea(null);
             else {
+                var isEmptyArea = !this.currentArea();
                 var area = new AreaViewModel();
                 area.value = this._selectedArea;
                 this.updateArea(area);
                 this.currentArea(area);
                 this.updateChart();
+                if (isEmptyArea)
+                    M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
             }
             this.updateUrl();
         };
@@ -1709,6 +1747,13 @@ var GeoPlot;
                     maintainAspectRatio: false,
                     legend: {
                         display: false
+                    },
+                    tooltips: {
+                        callbacks: {
+                            label: function (t, d) {
+                                return t.xLabel + ": " + GeoPlot.MathUtils.round(parseFloat(t.value), 1);
+                            }
+                        }
                     },
                     scales: {
                         xAxes: [{
@@ -1754,9 +1799,13 @@ var GeoPlot;
             var areaId = area.id.toLowerCase();
             var field = this.selectedIndicator().id;
             this._chart.data.datasets[0].label = this.factorDescription();
+            if (this.isLogScale())
+                this._chart.options.scales.yAxes[0].type = "logarithmic";
+            else
+                this._chart.options.scales.yAxes[0].type = "linear";
             if (this.isGraphDelta()) {
                 this._chart.data.datasets[0].data = [];
-                for (var i = 1; i < this._data.days.length; i++) {
+                for (var i = 1 + this.startDay(); i < this._data.days.length; i++) {
                     var day = this._data.days[i];
                     var prevDay = this._data.days[i - 1];
                     var item = {
@@ -1768,10 +1817,27 @@ var GeoPlot;
                 }
             }
             else {
-                this._chart.data.datasets[0].data = GeoPlot.linq(this._data.days).select(function (a) { return ({
+                this._chart.data.datasets[0].data = GeoPlot.linq(this._data.days).skip(this.startDay()).select(function (a) { return ({
                     x: new Date(a.date),
                     y: _this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
                 }); }).toArray();
+            }
+            if (this.groupSize() > 1) {
+                var newData = [];
+                var data = this._chart.data.datasets[0].data;
+                var count = this.groupSize();
+                var curPoint = { y: 0 };
+                for (var i = data.length - 1; i >= 0; i--) {
+                    curPoint.y += data[i].y;
+                    count--;
+                    if (count == 0) {
+                        curPoint.x = data[i].x;
+                        newData.unshift(curPoint);
+                        curPoint = { y: 0 };
+                        count = this.groupSize();
+                    }
+                }
+                this._chart.data.datasets[0].data = newData;
             }
             this._chart.update();
         };
@@ -1829,7 +1895,7 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.updateUrl = function () {
             var state = this.saveStata();
-            var url = GeoPlot.Uri.appRoot + "Home/Overview";
+            var url = GeoPlot.Uri.appRoot + "Overview";
             if (!this.isDefaultState(state))
                 url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state)));
             history.replaceState(null, null, url);

@@ -8,24 +8,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-7878533-4"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-
-        gtag('config', 'UA-7878533-4');
-    </script>
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>@ViewData["Title"] - Coronavirus Italia</title>
+
+    <meta name="title" content="Coronavirus Italia" >
+    <meta name="description"  content="Analisi diffusione italiana coronavirus (SARS-CoV-2), con andamento giornaliero, grafici, indicatori, sia a livello provinciale che regionale.">
+    <meta property="og:type" content="website" >
+    <meta property="og:url" content="https://www.oggibo.it/coronavirus/Overview">
+    <meta property="og:title" content="Coronavirus Italia" >
+    <meta property="og:description" content="Analisi diffusione italiana coronavirus (SARS-CoV-2), con andamento giornaliero, grafici, indicatori, sia a livello provinciale che regionale.">
+    <meta property="og:image" content="@Url.Content("~/image/preview-alt.png")">
 
     <environment include="Production">
         <link href="~/css/theme.min.css" asp-append-version="true" rel="stylesheet" />
         <script src="~/js/app.min.js" asp-append-version="true"></script>
+
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-7878533-4"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() { dataLayer.push(arguments); }
+            gtag('js', new Date());
+
+            gtag('config', 'UA-7878533-4');
+        </script>
     </environment>
+
     <environment include="Development">
         <link href="~/css/theme.css" asp-append-version="true" rel="stylesheet" />
     </environment>
@@ -56,6 +67,7 @@
                         </a>
                     </li>
                     }
+                    <li><a href="https://youtu.be/6GxybVPwiDc" target="_blank"><i class="material-icons left">help</i>Guida</a></li>
                 </ul>
             </div>
         </nav>
@@ -74,6 +86,7 @@
             </a>
         </li>
             }
+        <li><a href="https://youtu.be/6GxybVPwiDc" target="_blank"><i class="material-icons left">help</i>Guida</a></li>
     </ul>
     <main role="main">
         @RenderBody()

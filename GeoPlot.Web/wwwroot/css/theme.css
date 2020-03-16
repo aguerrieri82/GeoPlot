@@ -65,6 +65,10 @@ ul.collapsible li.active .collapsible-header i {
       bottom: 24px;
       height: auto; }
 
+.material-tooltip {
+  max-width: 300px !important;
+  white-space: pre-wrap; }
+
 .relative {
   position: relative; }
 

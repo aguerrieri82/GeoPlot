@@ -5,6 +5,7 @@
     var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region };
 }
     <div class="container">
+
         <h6>Giorno <span data-bind="text: currentData"></span></h6>
         <div class="row">
             <div class="col s12 m6 l7">
@@ -55,7 +56,6 @@
             <div class="col s12 m6 l5 ">
                 <section class="card">
                     <div class="card-content">
-
                         <!--ko if: currentArea-->
                         <span class="card-title" data-bind="text: currentArea().value.name"></span>
                         <div class="row">
@@ -85,11 +85,27 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col s16">
+                            <div class="col s12">
                                 <label>
                                     <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
                                     <span>Incremento giornaliero</span>
                                 </label>
+                            </div>
+                            <div class="col s12">
+                                <label>
+                                    <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
+                                    <span>Scala logaritmica</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="row no-margin row-chart-group">
+                            <div class="col s6 input-field">
+                                <select data-bind="options: groupDays, value: groupSize"></select>
+                                <label>Ragruppa (giorni)</label>
+                            </div>
+                            <div class="col s6 input-field">
+                                <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
+                                <label>A partire da</label>
                             </div>
                         </div>
                         <!--/ko-->
@@ -102,7 +118,7 @@
                 <section class="card">
                     <div class="card-content">
                         <span class="card-title">Filtro</span>
-                        <div class="row no-margin">
+                        <div class="row no-margin row-indicator">
                             <div class="col s6 input-field">
                                 <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
                                 <label>Indicatore</label>
@@ -117,6 +133,7 @@
                                 <label>
                                     <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor" />
                                     <span>Soglia automatica</span>
+                                    <i class="material-icons tooltipped" data-position="top" data-tooltip="La colorazione nella mappa è relativa al valore più alto dell'indicatore che si ha avuto in un area geografica (rosso scuro = soglia, bianco = 0).&#013; E' possibile impostare manualmente il valore di riferimento (soglia massima) e rendere i colori relativi a quel valore.">info</i></span>
                                 </label>
                             </div>
                             <div class="input-field col s6">
