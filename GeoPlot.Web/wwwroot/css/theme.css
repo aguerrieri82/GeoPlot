@@ -38,14 +38,14 @@ ul.collapsible li.active .collapsible-header i {
   background-color: white; }
   .chart .chart-container {
     position: relative;
-    height: 250px;
+    height: 25vh;
     transition-duration: 0.3s; }
   .chart.zoom {
     position: fixed;
     top: 80px;
     bottom: 60px;
     left: 60px;
-    right: 60px;
+    right: 30px;
     padding: 24px;
     z-index: 3;
     overflow: hidden; }
@@ -65,7 +65,7 @@ ul.collapsible li.active .collapsible-header i {
   right: 0px; }
 
 svg.map {
-  width: 50vh;
+  width: 40vh;
   max-width: 100%;
   pointer-events: painted; }
   svg.map .group .area {
@@ -79,6 +79,8 @@ svg.map {
       transition: opacity 0.3s; }
   svg.map .group.active .area {
     fill: white; }
+    svg.map .group.active .area.region {
+      stroke-width: 0.15%; }
     svg.map .group.active .area.valid {
       fill: #b71c1c; }
     svg.map .group.active .area.selected, svg.map .group.active .area:hover {

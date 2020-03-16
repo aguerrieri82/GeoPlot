@@ -59,7 +59,7 @@ ul.collapsible li {
 
     .chart-container {
         position: relative;
-        height: 250px;
+        height: 25vh;
         transition-duration: 0.3s;
     }
 
@@ -68,7 +68,7 @@ ul.collapsible li {
         top: 80px;
         bottom: 60px;
         left: 60px;
-        right: 60px;
+        right: 30px;
         padding: 24px;
         z-index: 3;
         overflow: hidden;
@@ -95,7 +95,7 @@ ul.collapsible li {
 
 
 svg.map {
-    width: 50vh;
+    width: 40vh;
     max-width: 100%;
     pointer-events: painted;
 
@@ -119,6 +119,10 @@ svg.map {
         &.active {
             .area {
                 fill: white;
+
+                &.region {
+                    stroke-width: 0.15%;
+                }
 
                 &.valid {
                     fill: #b71c1c;

@@ -1576,6 +1576,7 @@ var GeoPlot;
                 state.view = "district";
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
             viewTabs.select(this.VIEW_MODES[state.view].tab);
+            document.body.scrollTop = 0;
             if (state.indicator)
                 this.selectedIndicator(GeoPlot.linq(this.INDICATORS).first(function (a) { return a.id == state.indicator; }));
             if (state.factor)
@@ -1794,7 +1795,7 @@ var GeoPlot;
                 var day = this_1._data.days[i];
                 var item = {};
                 var isInArea = this_1.VIEW_MODES[this_1.viewMode()].validateId;
-                item.topAreas = GeoPlot.linq(day.values).orderByDesc(function (a) { return a.value[_this.selectedIndicator().id]; }).where(function (a) { return isInArea(a.key); }).select(function (a) {
+                item.topAreas = GeoPlot.linq(day.values).orderByDesc(function (a) { return _this.selectedFactor().compute(a.value, _this._geo.areas[a.key.toLowerCase()], a.value[_this.selectedIndicator().id]); }).where(function (a) { return isInArea(a.key); }).select(function (a) {
                     var area = new AreaViewModel();
                     area.value = _this._geo.areas[a.key.toLowerCase()];
                     area.select = function () { return _this.selectedArea = area.value; };

@@ -298,6 +298,8 @@
             const viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
             viewTabs.select(this.VIEW_MODES[state.view].tab);
 
+            document.body.scrollTop = 0;
+
             if (state.indicator)
                 this.selectedIndicator(linq(this.INDICATORS).first(a => a.id == state.indicator));
 
@@ -591,7 +593,7 @@
 
                 const isInArea = this.VIEW_MODES[this.viewMode()].validateId;
 
-                item.topAreas = linq(day.values).orderByDesc(a => a.value[this.selectedIndicator().id]).where(a => isInArea(a.key)).select(a => {
+                item.topAreas = linq(day.values).orderByDesc(a => this.selectedFactor().compute(a.value, this._geo.areas[a.key.toLowerCase()], a.value[this.selectedIndicator().id])).where(a => isInArea(a.key)).select(a => {
 
                     const area = new AreaViewModel();
 
