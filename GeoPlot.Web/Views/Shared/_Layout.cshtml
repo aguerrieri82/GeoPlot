@@ -1,8 +1,8 @@
 ﻿@{
     var menu = new[]
     {
-        new MenuViewModel() { Name = "Panoramica", Action = "Overview", Controller = "Home" },
-        new MenuViewModel() { Name = "Studio", Action = "Studio", Controller = "Home" }
+        new MenuViewModel() { Name = "Panoramica", Action = "Overview", Controller = "Home", Icon = "map" },
+        new MenuViewModel() { Name = "Studio", Action = "Studio", Controller = "Home" , Icon = "insert_chart"}
     };
 }
 <!DOCTYPE html>
@@ -32,21 +32,38 @@
         <nav>
             <div class="nav-wrapper container">
                 <a asp-controller="Home" asp-action="Index" class="brand-logo">Coronavirus</a>
+                <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+
                 <ul id="nav-mobile" class="right hide-on-med-and-down">
                     @foreach (var item in menu)
                     {
-                        <li class="@Html.ActiveClass(item.Action, item.Controller)"><a asp-controller="@item.Controller" asp-action="@item.Action">@item.Name</a></li>
+                    <li class="@Html.ActiveClass(item.Action, item.Controller)">
+                    <a asp-controller="@item.Controller" asp-action="@item.Action">
+    @if (item.Icon != null)
+                        {
+        <i class="material-icons left">@item.Icon</i>
+    }
+    @item.Name
+</a></li>
                     }
                 </ul>
             </div>
         </nav>
-        <ul class="sidenav" id="mobile-demo">
-            @foreach (var item in menu)
-            {
-                <li class="@Html.ActiveClass(item.Action, item.Controller)"><a asp-controller="@item.Controller" asp-action="@item.Action">@item.Name</a></li>
-            }
-        </ul>
+
     </header>
+    <ul class="sidenav" id="mobile-menu">
+        @foreach (var item in menu)
+            {
+        <li class="@Html.ActiveClass(item.Action, item.Controller)">
+        <a asp-controller="@item.Controller" asp-action="@item.Action">
+    @if (item.Icon != null)
+                        {
+    <i class="material-icons left">@item.Icon</i>
+    }
+    @item.Name
+</a></li>
+            }
+    </ul>
     <main role="main">
         @RenderBody()
     </main>
