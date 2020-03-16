@@ -72,8 +72,12 @@ ul.collapsible li.active .collapsible-header i {
   position: absolute;
   right: 0px; }
 
+.card-map {
+  padding: 0;
+  padding-top: 16px; }
+
 svg.map {
-  width: 40vh;
+  width: 50vh;
   max-width: 100%;
   pointer-events: painted; }
   svg.map .group .area {

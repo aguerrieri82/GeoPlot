@@ -538,7 +538,7 @@
             if (this.isGraphDelta()) {
                 this._chart.data.datasets[0].data = [];
 
-                for (let i = 1; i < this._data.days.length - 1; i++) {
+                for (let i = 1; i < this._data.days.length; i++) {
                     const day = this._data.days[i];
                     const prevDay = this._data.days[i - 1];
                     const item : Chart.ChartPoint = {

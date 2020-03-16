@@ -107,6 +107,15 @@ namespace GeoPlot.Web.Controllers
                 ViewBox = adapters[0].ViewBox
             };
 
+            result.ViewBox = new Rect2D()
+            {
+                X = adapters[0].ViewBox.X,
+                Y = adapters[0].ViewBox.Y,
+                Width = adapters[0].ViewBox.Width,
+                Height = 1595892
+            };
+            
+
             return result;
         }
 

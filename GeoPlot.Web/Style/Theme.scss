@@ -8,6 +8,7 @@ main {
     flex: 1 0 auto;
 }
 
+
 .stack-horizontal {
     display: flex;
     flex-direction: row;
@@ -102,9 +103,13 @@ ul.collapsible li {
     right: 0px;
 }
 
+.card-map {
+    padding: 0;
+    padding-top: 16px;
+}
 
 svg.map {
-    width: 40vh;
+    width: 50vh;
     max-width: 100%;
     pointer-events: painted;
 
