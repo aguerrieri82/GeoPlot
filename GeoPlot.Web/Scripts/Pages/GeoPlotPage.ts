@@ -460,7 +460,6 @@
                 data: {
                     datasets: [
                         {
-                            label: "Infetti",
                             lineTension: 0,
                             data: [],
                             backgroundColor: "#5cd6d3",
@@ -531,6 +530,8 @@
             const area = this.currentArea().value;
             const areaId = area.id.toLowerCase();
             const field = this.selectedIndicator().id;
+
+            this._chart.data.datasets[0].label = this.factorDescription();
 
             if (this.isGraphDelta()) {
                 this._chart.data.datasets[0].data = [];

@@ -32,17 +32,15 @@ ul.collapsible li .collapsible-header {
 ul.collapsible li.active .collapsible-header i {
   transform: rotate(90deg); }
 
-.chart-container {
-  position: relative;
-  height: 250px;
-  box-sizing: border-box; }
-
 .chart {
-  transition-duration: 0.3s;
   position: relative;
-  margin-bottom: 24px; }
+  margin-bottom: 24px;
+  background-color: white; }
+  .chart .chart-container {
+    position: relative;
+    height: 250px;
+    transition-duration: 0.3s; }
   .chart.zoom {
-    background-color: white;
     position: fixed;
     top: 80px;
     bottom: 60px;

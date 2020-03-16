@@ -52,22 +52,18 @@ ul.collapsible li {
     }
 }
 
-.chart-container {
-    position: relative;
-    height: 250px;
-    box-sizing: border-box;
-
-    canvas {
-    }
-}
-
 .chart {
-    transition-duration: 0.3s;
     position: relative;
     margin-bottom: 24px;
+    background-color: white;
+
+    .chart-container {
+        position: relative;
+        height: 250px;
+        transition-duration: 0.3s;
+    }
 
     &.zoom {
-        background-color: white;
         position: fixed;
         top: 80px;
         bottom: 60px;

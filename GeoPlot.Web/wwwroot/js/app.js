@@ -1696,7 +1696,6 @@ var GeoPlot;
                 data: {
                     datasets: [
                         {
-                            label: "Infetti",
                             lineTension: 0,
                             data: [],
                             backgroundColor: "#5cd6d3",
@@ -1753,6 +1752,7 @@ var GeoPlot;
             var area = this.currentArea().value;
             var areaId = area.id.toLowerCase();
             var field = this.selectedIndicator().id;
+            this._chart.data.datasets[0].label = this.factorDescription();
             if (this.isGraphDelta()) {
                 this._chart.data.datasets[0].data = [];
                 for (var i = 1; i < this._data.days.length - 1; i++) {
