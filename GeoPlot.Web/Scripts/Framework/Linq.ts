@@ -99,7 +99,7 @@
 
         moveNext(): boolean {
             while (this._source.moveNext()) {
-                var item = this._selector(this._source.current);
+                const item = this._selector(this._source.current);
                 if (this._foundItems.indexOf(item) == -1) {
                     this._foundItems.push(item);
                     this._current = item;
@@ -491,7 +491,7 @@
 
         moveNext(): boolean {
 
-            let result = this._source.next();
+            const result = this._source.next();
             if (result.done)
                 return false;
             this._current = result.value;
@@ -588,7 +588,7 @@
                 return this.select(selector).max();
             let result = Number.NEGATIVE_INFINITY;
             this.foreach(a => {
-                let number = parseFloat(<any>a);
+                const number = parseFloat(<any>a);
                 if (number > result)
                     result = number; 
             });
@@ -658,10 +658,10 @@
 
         orderBy(selector: (item: T) => any): Linq<T> {
 
-            var result = this.toArray();
+            let result = this.toArray();
             result.sort((a, b) => {
-                var itemA = selector(a);
-                var itemB = selector(b);
+                const itemA = selector(a);
+                const itemB = selector(b);
                 return itemA - itemB;
             });
             return linq(result);
@@ -671,10 +671,10 @@
 
         orderByDesc(selector: (item: T) => any): Linq<T> {
 
-            var result = this.toArray();
+            let result = this.toArray();
             result.sort((a, b) => {
-                var itemA = selector(a);
-                var itemB = selector(b);
+                const itemA = selector(a);
+                const itemB = selector(b);
                 return itemB - itemA;
             });
             return linq(result);
@@ -695,16 +695,16 @@
 
         groupBy<TKey>(key: any): Linq<IGroupItem<TKey, T>> {
 
-            let keys = {};
+            const keys = {};
             let result: Array<IGroupItem<TKey, T>> = [];
 
             if (typeof key == "function") {
 
-                var keySelector = <(item: T) => TKey>key;
+                const keySelector = <(item: T) => TKey>key;
 
                 this.foreach(item => {
-                    var itemKey = keySelector(item);
-                    var groupItem = linq(result).first(a => a.key == itemKey);
+                    const itemKey = keySelector(item);
+                    const groupItem = linq(result).first(a => a.key == itemKey);
                     if (!groupItem) {
                         groupItem = {
                             key: itemKey,

@@ -240,6 +240,34 @@ var GeoPlot;
 })(GeoPlot || (GeoPlot = {}));
 var GeoPlot;
 (function (GeoPlot) {
+    var DomUtils = /** @class */ (function () {
+        function DomUtils() {
+        }
+        DomUtils.isParentOrSelf = function (element, parent) {
+            var curElement = element;
+            while (curElement) {
+                if (curElement == parent)
+                    return true;
+                curElement = curElement.parentElement;
+            }
+            return false;
+        };
+        /****************************************/
+        DomUtils.removeClass = function (element, className) {
+            if (element.classList.contains(className))
+                element.classList.remove(className);
+        };
+        /****************************************/
+        DomUtils.addClass = function (element, className) {
+            if (!element.classList.contains(className))
+                element.classList.add(className);
+        };
+        return DomUtils;
+    }());
+    GeoPlot.DomUtils = DomUtils;
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
     var Format;
     (function (Format) {
         function price(value) {
@@ -353,6 +381,141 @@ var GeoPlot;
         }
         Format.linkify = linkify;
     })(Format = GeoPlot.Format || (GeoPlot.Format = {}));
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    var Geo = /** @class */ (function () {
+        function Geo() {
+        }
+        Geo.project = function (point) {
+            var result = { x: 0, y: 0 };
+            result.x = point.lng * Geo.OriginShift / 180;
+            result.y = Math.log(Math.tan((90 + point.lat) * Math.PI / 360)) / (Math.PI / 180);
+            result.y = -(result.y * Geo.OriginShift / 180);
+            result.x -= Geo.OFFSET_X;
+            result.y -= Geo.OFFSET_Y;
+            return result;
+        };
+        Geo.EarthRadius = 6378137;
+        Geo.OriginShift = 2 * Math.PI * Geo.EarthRadius / 2;
+        Geo.OFFSET_X = 1263355;
+        Geo.OFFSET_Y = 5543162;
+        return Geo;
+    }());
+    GeoPlot.Geo = Geo;
+})(GeoPlot || (GeoPlot = {}));
+function formatNumber(value) {
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+/****************************************/
+function capitalizeFirst(value) {
+    return value.substr(0, 1).toUpperCase() + value.substr(1);
+}
+var GeoPlot;
+(function (GeoPlot) {
+    /****************************************/
+    var LinearGradient = /** @class */ (function () {
+        function LinearGradient() {
+            var values = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                values[_i] = arguments[_i];
+            }
+            if (values.length > 0) {
+                if (typeof values[0] == "string")
+                    this.colors = GeoPlot.linq(values).select(function (a) { return new RgbColor(a); }).toArray();
+                else
+                    this.colors = values;
+            }
+            else
+                this.colors = [];
+        }
+        /****************************************/
+        LinearGradient.prototype.valueAt = function (pos) {
+            if (pos < 0)
+                return this.colors[0];
+            if (pos > 1)
+                this.colors[this.colors.length - 1];
+            var stepSize = 1 / (this.colors.length - 1);
+            var minX = Math.floor(pos / stepSize);
+            var maxX = Math.ceil(pos / stepSize);
+            var minOfs = (pos - minX * stepSize) / stepSize;
+            var c1 = this.colors[minX];
+            var c2 = this.colors[maxX];
+            var c3 = new RgbColor();
+            c3.r = Math.round(c1.r + (c2.r - c1.r) * minOfs);
+            c3.g = Math.round(c1.g + (c2.g - c1.g) * minOfs);
+            c3.b = Math.round(c1.b + (c2.b - c1.b) * minOfs);
+            return c3;
+        };
+        return LinearGradient;
+    }());
+    GeoPlot.LinearGradient = LinearGradient;
+    /****************************************/
+    var RgbColor = /** @class */ (function () {
+        function RgbColor(value) {
+            /****************************************/
+            this.r = 0;
+            this.g = 0;
+            this.b = 0;
+            if (value)
+                this.fromHex(value);
+        }
+        /****************************************/
+        RgbColor.prototype.fromHex = function (value) {
+            if (value.length == 4) {
+                this.r = parseInt("0x" + value[1] + value[1]) / 255;
+                this.g = parseInt("0x" + value[2] + value[2]) / 255;
+                this.b = parseInt("0x" + value[3] + value[3]) / 255;
+            }
+            else {
+                this.r = parseInt("0x" + value[1] + value[2]) / 255;
+                this.g = parseInt("0x" + value[3] + value[4]) / 255;
+                this.b = parseInt("0x" + value[5] + value[6]) / 255;
+            }
+        };
+        /****************************************/
+        RgbColor.prototype.toString = function () {
+            function toHex(value) {
+                var res = Math.round(value * 255).toString(16);
+                if (res.length == 1)
+                    return "0" + res;
+                return res;
+            }
+            return "#" + toHex(this.r) + toHex(this.g) + toHex(this.b);
+        };
+        return RgbColor;
+    }());
+    GeoPlot.RgbColor = RgbColor;
+    /****************************************/
+    var Graphics = /** @class */ (function () {
+        function Graphics(svg) {
+            this._svg = svg;
+        }
+        /****************************************/
+        Graphics.prototype.setViewPort = function (minX, minY, maxX, maxY) {
+            this._svg.viewBox.baseVal.x = minX;
+            this._svg.viewBox.baseVal.y = minY;
+            this._svg.viewBox.baseVal.width = maxX - minX;
+            this._svg.viewBox.baseVal.height = maxY - minY;
+        };
+        /****************************************/
+        Graphics.prototype.drawPoly = function (poly) {
+            var polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            polygon.style.fill = poly.fillColor;
+            polygon.style.stroke = poly.strokeColor;
+            polygon.style.strokeWidth = poly.strokeSize + "%";
+            polygon.id = poly.id;
+            for (var i = 0; i < poly.geometry.points.length; i++) {
+                var point = this._svg.createSVGPoint();
+                point.x = poly.geometry.points[i].x;
+                point.y = poly.geometry.points[i].y;
+                polygon.points.appendItem(point);
+            }
+            this._svg.appendChild(polygon);
+        };
+        return Graphics;
+    }());
+    GeoPlot.Graphics = Graphics;
 })(GeoPlot || (GeoPlot = {}));
 var GeoPlot;
 (function (GeoPlot) {
@@ -821,9 +984,9 @@ var GeoPlot;
             var keys = {};
             var result = [];
             if (typeof key == "function") {
-                var keySelector = key;
+                var keySelector_1 = key;
                 this.foreach(function (item) {
-                    var itemKey = keySelector(item);
+                    var itemKey = keySelector_1(item);
                     var groupItem = linq(result).first(function (a) { return a.key == itemKey; });
                     if (!groupItem) {
                         groupItem = {
@@ -925,6 +1088,23 @@ var GeoPlot;
         return new Linq(enumerator);
     }
     GeoPlot.linq = linq;
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    var MathUtils = /** @class */ (function () {
+        function MathUtils() {
+        }
+        MathUtils.discretize = function (value, steps) {
+            return Math.round(value * steps) / steps;
+        };
+        /****************************************/
+        MathUtils.exponential = function (value, weight) {
+            if (weight === void 0) { weight = 2; }
+            return 1 - Math.pow(1 - value, weight);
+        };
+        return MathUtils;
+    }());
+    GeoPlot.MathUtils = MathUtils;
 })(GeoPlot || (GeoPlot = {}));
 var GeoPlot;
 (function (GeoPlot) {
@@ -1204,6 +1384,7 @@ var GeoPlot;
                         plural: "province"
                     },
                     mapGroup: "group_district",
+                    tab: "districtTab",
                     areaType: GeoPlot.GeoAreaType.District,
                     validateId: function (id) { return id[0].toLowerCase() == 'd'; }
                 },
@@ -1213,6 +1394,7 @@ var GeoPlot;
                         plural: "regioni"
                     },
                     mapGroup: "group_dregion",
+                    tab: "regionTab",
                     areaType: GeoPlot.GeoAreaType.Region,
                     validateId: function (id) { return id[0].toLowerCase() == 'r'; }
                 },
@@ -1255,28 +1437,33 @@ var GeoPlot;
             ];
             this.FACTORS = [
                 {
+                    id: "none",
                     name: "Nessuno",
                     compute: function (v, a, i) { return i; },
                     reference: function (v, a) { return "N/A"; }
                 },
                 {
+                    id: "population",
                     name: "Popolazione",
                     compute: function (v, a, i) { return (i / a.demography.total) * 100000; },
                     reference: function (v, a) { return formatNumber(a.demography.total); }
                 },
                 {
+                    id: "totalPositive",
                     name: "Positivi Totali",
                     validFor: ["region"],
                     compute: function (v, a, i) { return !v.totalPositive ? 0 : (i / v.totalPositive) * 100; },
                     reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); }
                 },
                 {
+                    id: "severe",
                     name: "Gravi",
                     validFor: ["region"],
                     compute: function (v, a, i) { return !v.totalSevere ? 0 : (i / v.totalSevere) * 100; },
                     reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); }
                 },
                 {
+                    id: "test",
                     name: "Tamponi",
                     validFor: ["region"],
                     compute: function (v, a, i) { return !v.toatlTests ? 0 : (i / v.toatlTests) * 100; },
@@ -1290,11 +1477,12 @@ var GeoPlot;
             this.isPlaying = ko.observable(false);
             this.currentArea = ko.observable();
             this.topAreas = ko.observable();
-            this.viewMode = ko.observable();
+            this.viewMode = ko.observable("district");
             this.selectedIndicator = ko.observable();
             this.selectedFactor = ko.observable();
             this.autoMaxFactor = ko.observable(true);
             this.maxFactor = ko.observable();
+            this.isGraphDelta = ko.observable(false);
             this._data = model.data;
             this._geo = model.geo;
             this.totalDays(this._data.days.length - 1);
@@ -1305,7 +1493,6 @@ var GeoPlot;
             instance1.options.onShow = function (el) {
                 _this.setViewMode(el.dataset["viewMode"]);
             };
-            instance1.select("districtTab");
             var instance2 = M.Collapsible.init(document.getElementById("topCases"));
             instance2.options.onOpenStart = function () {
                 if (!_this._daysData)
@@ -1315,9 +1502,6 @@ var GeoPlot;
             instance2.options.onCloseEnd = function () {
                 _this._topAreasVisible = false;
             };
-            this.dayNumber(model.day != undefined ? model.day : this._data.days.length - 1);
-            if (model.district)
-                this.selectedArea = this._geo.areas[model.district.toLowerCase()];
             this.indicators = ko.computed(function () { return GeoPlot.linq(_this.INDICATORS)
                 .where(function (a) { return !a.validFor || a.validFor.indexOf(_this.viewMode()) != -1; })
                 .toArray(); });
@@ -1339,12 +1523,58 @@ var GeoPlot;
                     _this.updateMaxFactor();
                     _this.updateMap();
                 }
+                _this.updateUrl();
             });
             this.maxFactor.subscribe(function () {
                 if (!_this.autoMaxFactor())
                     _this.updateMap();
+                _this.updateUrl();
             });
+            this.isGraphDelta.subscribe(function () {
+                _this.updateChart();
+                _this.updateUrl();
+            });
+            var urlParams = new URLSearchParams(window.location.search);
+            var stateRaw = urlParams.get("state");
+            var state;
+            if (stateRaw)
+                state = JSON.parse(atob(stateRaw));
+            else
+                state = {};
+            setTimeout(function () { return _this.loadState(state); }, 0);
         }
+        /****************************************/
+        GeoPlotPage.prototype.loadState = function (state) {
+            if (!state.view)
+                state.view = "district";
+            var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+            viewTabs.select(this.VIEW_MODES[state.view].tab);
+            if (state.indicator)
+                this.selectedIndicator(GeoPlot.linq(this.INDICATORS).first(function (a) { return a.id == state.indicator; }));
+            if (state.factor)
+                this.selectedFactor(GeoPlot.linq(this.FACTORS).first(function (a) { return a.id == state.factor; }));
+            if (state.graphDelta)
+                this.isGraphDelta(state.graphDelta);
+            if (state.maxFactor) {
+                this.autoMaxFactor(false);
+                this.maxFactor(state.maxFactor);
+            }
+            this.dayNumber(state.day != undefined ? state.day : this._data.days.length - 1);
+            if (state.area)
+                this.selectedArea = this._geo.areas[state.area.toLowerCase()];
+        };
+        /****************************************/
+        GeoPlotPage.prototype.saveStata = function () {
+            return {
+                view: this.viewMode(),
+                indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
+                factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
+                graphDelta: this.isGraphDelta(),
+                maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
+                day: this.dayNumber(),
+                area: this.selectedArea ? this.selectedArea.id : undefined
+            };
+        };
         /****************************************/
         GeoPlotPage.prototype.play = function () {
             this.isPlaying(true);
@@ -1424,7 +1654,6 @@ var GeoPlot;
                 this.currentArea(null);
             else {
                 var area = new AreaViewModel();
-                var day = this._data.days[this.dayNumber()];
                 area.value = this._selectedArea;
                 this.updateArea(area);
                 this.currentArea(area);
@@ -1479,9 +1708,10 @@ var GeoPlot;
             var _this = this;
             if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
                 return;
-            this.maxFactor(GeoPlot.linq(this._data.days)
+            var max = GeoPlot.linq(this._data.days)
                 .select(function (a) { return GeoPlot.linq(a.values).where(function (a) { return _this.VIEW_MODES[_this.viewMode()].validateId(a.key); })
-                .select(function (b) { return _this.selectedFactor().compute(b.value, _this._geo.areas[b.key], b.value[_this.selectedIndicator().id]); }).max(); }).max());
+                .select(function (b) { return _this.selectedFactor().compute(b.value, _this._geo.areas[b.key], b.value[_this.selectedIndicator().id]); }).max(); }).max();
+            this.maxFactor(parseFloat(max.toFixed(1)));
         };
         /****************************************/
         GeoPlotPage.prototype.updateChart = function () {
@@ -1493,10 +1723,25 @@ var GeoPlot;
             var area = this.currentArea().value;
             var areaId = area.id.toLowerCase();
             var field = this.selectedIndicator().id;
-            this._chart.data.datasets[0].data = GeoPlot.linq(this._data.days).select(function (a) { return ({
-                x: new Date(a.date),
-                y: _this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
-            }); }).toArray();
+            if (this.isGraphDelta()) {
+                this._chart.data.datasets[0].data = [];
+                for (var i = 1; i < this._data.days.length - 1; i++) {
+                    var day = this._data.days[i];
+                    var prevDay = this._data.days[i - 1];
+                    var item = {
+                        x: new Date(day.date),
+                        y: this.selectedFactor().compute(day.values[areaId], area, day.values[areaId][field]) -
+                            this.selectedFactor().compute(prevDay.values[areaId], area, prevDay.values[areaId][field])
+                    };
+                    this._chart.data.datasets[0].data.push(item);
+                }
+            }
+            else {
+                this._chart.data.datasets[0].data = GeoPlot.linq(this._data.days).select(function (a) { return ({
+                    x: new Date(a.date),
+                    y: _this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
+                }); }).toArray();
+            }
             this._chart.update();
         };
         /****************************************/
@@ -1515,7 +1760,7 @@ var GeoPlot;
         GeoPlotPage.prototype.updateTopAreas = function () {
             var _this = this;
             this._daysData = [];
-            var _loop_1 = function () {
+            var _loop_1 = function (i) {
                 var day = this_1._data.days[i];
                 var item = {};
                 var isInArea = this_1.VIEW_MODES[this_1.viewMode()].validateId;
@@ -1530,7 +1775,7 @@ var GeoPlot;
             };
             var this_1 = this;
             for (var i = 0; i < this._data.days.length; i++) {
-                _loop_1();
+                _loop_1(i);
             }
             this.topAreas(this._daysData[this.dayNumber()].topAreas);
         };
@@ -1546,9 +1791,7 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateUrl = function () {
-            var url = GeoPlot.Uri.appRoot + "?day=" + this.dayNumber();
-            if (this.selectedArea)
-                url += "&district=" + this.selectedArea.id;
+            var url = GeoPlot.Uri.appRoot + "Home/Overview?state=" + encodeURIComponent(btoa(JSON.stringify(this.saveStata())));
             history.replaceState(null, null, url);
         };
         /****************************************/
@@ -1584,185 +1827,5 @@ var GeoPlot;
         return GeoPlotPage;
     }());
     GeoPlot.GeoPlotPage = GeoPlotPage;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var DomUtils = /** @class */ (function () {
-        function DomUtils() {
-        }
-        DomUtils.isParentOrSelf = function (element, parent) {
-            var curElement = element;
-            while (curElement) {
-                if (curElement == parent)
-                    return true;
-                curElement = curElement.parentElement;
-            }
-            return false;
-        };
-        /****************************************/
-        DomUtils.removeClass = function (element, className) {
-            if (element.classList.contains(className))
-                element.classList.remove(className);
-        };
-        /****************************************/
-        DomUtils.addClass = function (element, className) {
-            if (!element.classList.contains(className))
-                element.classList.add(className);
-        };
-        return DomUtils;
-    }());
-    GeoPlot.DomUtils = DomUtils;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var Geo = /** @class */ (function () {
-        function Geo() {
-        }
-        Geo.project = function (point) {
-            var result = { x: 0, y: 0 };
-            result.x = point.lng * Geo.OriginShift / 180;
-            result.y = Math.log(Math.tan((90 + point.lat) * Math.PI / 360)) / (Math.PI / 180);
-            result.y = -(result.y * Geo.OriginShift / 180);
-            result.x -= Geo.OFFSET_X;
-            result.y -= Geo.OFFSET_Y;
-            return result;
-        };
-        Geo.EarthRadius = 6378137;
-        Geo.OriginShift = 2 * Math.PI * Geo.EarthRadius / 2;
-        Geo.OFFSET_X = 1263355;
-        Geo.OFFSET_Y = 5543162;
-        return Geo;
-    }());
-    GeoPlot.Geo = Geo;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    /****************************************/
-    var LinearGradient = /** @class */ (function () {
-        function LinearGradient() {
-            var values = [];
-            for (var _i = 0; _i < arguments.length; _i++) {
-                values[_i] = arguments[_i];
-            }
-            if (values.length > 0) {
-                if (typeof values[0] == "string")
-                    this.colors = GeoPlot.linq(values).select(function (a) { return new RgbColor(a); }).toArray();
-                else
-                    this.colors = values;
-            }
-            else
-                this.colors = [];
-        }
-        /****************************************/
-        LinearGradient.prototype.valueAt = function (pos) {
-            if (pos < 0)
-                return this.colors[0];
-            if (pos > 1)
-                this.colors[this.colors.length - 1];
-            var stepSize = 1 / (this.colors.length - 1);
-            var minX = Math.floor(pos / stepSize);
-            var maxX = Math.ceil(pos / stepSize);
-            var minOfs = (pos - minX * stepSize) / stepSize;
-            var c1 = this.colors[minX];
-            var c2 = this.colors[maxX];
-            var c3 = new RgbColor();
-            c3.r = Math.round(c1.r + (c2.r - c1.r) * minOfs);
-            c3.g = Math.round(c1.g + (c2.g - c1.g) * minOfs);
-            c3.b = Math.round(c1.b + (c2.b - c1.b) * minOfs);
-            return c3;
-        };
-        return LinearGradient;
-    }());
-    GeoPlot.LinearGradient = LinearGradient;
-    /****************************************/
-    var RgbColor = /** @class */ (function () {
-        function RgbColor(value) {
-            /****************************************/
-            this.r = 0;
-            this.g = 0;
-            this.b = 0;
-            if (value)
-                this.fromHex(value);
-        }
-        /****************************************/
-        RgbColor.prototype.fromHex = function (value) {
-            if (value.length == 4) {
-                this.r = parseInt("0x" + value[1] + value[1]) / 255;
-                this.g = parseInt("0x" + value[2] + value[2]) / 255;
-                this.b = parseInt("0x" + value[3] + value[3]) / 255;
-            }
-            else {
-                this.r = parseInt("0x" + value[1] + value[2]) / 255;
-                this.g = parseInt("0x" + value[3] + value[4]) / 255;
-                this.b = parseInt("0x" + value[5] + value[6]) / 255;
-            }
-        };
-        /****************************************/
-        RgbColor.prototype.toString = function () {
-            function toHex(value) {
-                var res = Math.round(value * 255).toString(16);
-                if (res.length == 1)
-                    return "0" + res;
-                return res;
-            }
-            return "#" + toHex(this.r) + toHex(this.g) + toHex(this.b);
-        };
-        return RgbColor;
-    }());
-    GeoPlot.RgbColor = RgbColor;
-    /****************************************/
-    var Graphics = /** @class */ (function () {
-        function Graphics(svg) {
-            this._svg = svg;
-        }
-        /****************************************/
-        Graphics.prototype.setViewPort = function (minX, minY, maxX, maxY) {
-            this._svg.viewBox.baseVal.x = minX;
-            this._svg.viewBox.baseVal.y = minY;
-            this._svg.viewBox.baseVal.width = maxX - minX;
-            this._svg.viewBox.baseVal.height = maxY - minY;
-        };
-        /****************************************/
-        Graphics.prototype.drawPoly = function (poly) {
-            var polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-            polygon.style.fill = poly.fillColor;
-            polygon.style.stroke = poly.strokeColor;
-            polygon.style.strokeWidth = poly.strokeSize + "%";
-            polygon.id = poly.id;
-            for (var i = 0; i < poly.geometry.points.length; i++) {
-                var point = this._svg.createSVGPoint();
-                point.x = poly.geometry.points[i].x;
-                point.y = poly.geometry.points[i].y;
-                polygon.points.appendItem(point);
-            }
-            this._svg.appendChild(polygon);
-        };
-        return Graphics;
-    }());
-    GeoPlot.Graphics = Graphics;
-})(GeoPlot || (GeoPlot = {}));
-function formatNumber(value) {
-    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
-/****************************************/
-function capitalizeFirst(value) {
-    return value.substr(0, 1).toUpperCase() + value.substr(1);
-}
-var GeoPlot;
-(function (GeoPlot) {
-    var MathUtils = /** @class */ (function () {
-        function MathUtils() {
-        }
-        MathUtils.discretize = function (value, steps) {
-            return Math.round(value * steps) / steps;
-        };
-        /****************************************/
-        MathUtils.exponential = function (value, weight) {
-            if (weight === void 0) { weight = 2; }
-            return 1 - Math.pow(1 - value, weight);
-        };
-        return MathUtils;
-    }());
-    GeoPlot.MathUtils = MathUtils;
 })(GeoPlot || (GeoPlot = {}));
 //# sourceMappingURL=app.js.map

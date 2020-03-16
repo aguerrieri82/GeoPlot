@@ -2,15 +2,25 @@
 
     type ViewMode = "district" | "region";
 
+    type FactorType = "none" | "population" | "totalPositive" | "severe" | "test";
+
     interface IDayData {
         topAreas?: AreaViewModel[];
     }
 
-    interface IGeoPlotViewModel {
-        geo: IGeoAreaSet;
-        data: IDayAreaDataSet<IInfectionData>;
+    interface IPageState {
         day?: number;
-        district?: string;
+        area?: string;
+        view?: ViewMode;
+        maxFactor?: number;
+        indicator?: keyof IInfectionData;
+        factor?: FactorType;
+        graphDelta?: boolean;
+    }
+
+    interface IGeoPlotViewModel  {
+        geo: IGeoAreaSet;
+        data: IDayAreaDataSet<IInfectionData>; 
     }
 
     interface IViewModeData {
@@ -18,6 +28,7 @@
         mapGroup: string,
         areaType: GeoAreaType
         validateId: (id: string) => boolean;
+        tab: string;
     }
 
     interface IIndicator {
@@ -27,6 +38,7 @@
     }
 
     interface IFactor {
+        id: FactorType;
         name: string;
         validFor?: ViewMode[];
         compute: (value: IInfectionData, area: IGeoArea, indicator: number) => number
@@ -54,7 +66,7 @@
 
     /****************************************/
 
-    export class GeoPlotPage {
+    export class GeoPlotPage<TData> {
 
         private readonly _data: IDayAreaDataSet<IInfectionData>;
         private readonly _geo: IGeoAreaSet;
@@ -72,6 +84,7 @@
                     plural: "province"
                 },
                 mapGroup: "group_district",
+                tab: "districtTab",
                 areaType: GeoAreaType.District,
                 validateId: (id: string) => id[0].toLowerCase() == 'd'
             },
@@ -81,6 +94,7 @@
                     plural: "regioni"
                 },
                 mapGroup: "group_dregion",
+                tab: "regionTab",
                 areaType: GeoAreaType.Region,
                 validateId: (id: string) => id[0].toLowerCase() == 'r'
             },
@@ -125,28 +139,33 @@
 
         readonly FACTORS: IFactor[] = [
             {
+                id: "none",
                 name: "Nessuno",
                 compute: (v, a, i) => i,
                 reference: (v, a) => "N/A"
             },
             {
+                id: "population",
                 name: "Popolazione",
                 compute: (v, a, i) => (i / a.demography.total) * 100000,
                 reference: (v, a) => formatNumber(a.demography.total)
             },
             {
+                id: "totalPositive",
                 name: "Positivi Totali",
                 validFor: ["region"],
                 compute: (v, a, i) => !v.totalPositive ? 0 : (i / v.totalPositive) * 100,
                 reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive)
             },
             {
+                id: "severe",
                 name: "Gravi",
                 validFor: ["region"],
                 compute: (v, a, i) => !v.totalSevere ? 0 : (i / v.totalSevere) * 100,
                 reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere)
             },
             {
+                id: "test",
                 name: "Tamponi",
                 validFor: ["region"],
                 compute: (v, a, i) => !v.toatlTests ? 0 : (i / v.toatlTests) * 100,
@@ -165,16 +184,14 @@
             this._mapSvg = document.getElementsByTagName("svg").item(0);
             this._mapSvg.addEventListener("click", e => this.onMapClick(e))
 
-            let instance1 = M.Tabs.init(document.getElementById("areaTabs"));
+            const instance1 = M.Tabs.init(document.getElementById("areaTabs"));
             
             instance1.options.onShow = (el: HTMLDivElement) => {
 
                 this.setViewMode(<ViewMode>el.dataset["viewMode"]);
-            };
+            };          
 
-            instance1.select("districtTab");
-
-            let instance2 = M.Collapsible.init(document.getElementById("topCases"));
+            const instance2 = M.Collapsible.init(document.getElementById("topCases"));
 
             instance2.options.onOpenStart = () => {
                 if (!this._daysData)
@@ -184,11 +201,6 @@
             instance2.options.onCloseEnd = () => {
                 this._topAreasVisible = false;
             }
-
-            this.dayNumber(model.day != undefined ? model.day : this._data.days.length - 1);
-
-            if (model.district)
-                this.selectedArea = this._geo.areas[model.district.toLowerCase()];
 
             this.indicators = ko.computed(() => linq(this.INDICATORS)
                 .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
@@ -216,13 +228,75 @@
                     this.updateMaxFactor();
                     this.updateMap();
                 }
-                
+                this.updateUrl();
             });
 
             this.maxFactor.subscribe(() => {
                 if (!this.autoMaxFactor())
                     this.updateMap();
+                this.updateUrl();
             });
+
+            this.isGraphDelta.subscribe(() => {
+                this.updateChart();
+                this.updateUrl();
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const stateRaw = urlParams.get("state");
+            let state: IPageState;
+
+            if (stateRaw)
+                state = <IPageState>JSON.parse(atob(stateRaw));
+            else
+                state = {};
+
+            setTimeout(() => this.loadState(state), 0);
+        }
+
+        /****************************************/
+
+        loadState(state: IPageState) {
+
+            if (!state.view)
+                state.view = "district";
+
+            const viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+            viewTabs.select(this.VIEW_MODES[state.view].tab);
+
+            if (state.indicator)
+                this.selectedIndicator(linq(this.INDICATORS).first(a => a.id == state.indicator));
+
+            if (state.factor)
+                this.selectedFactor(linq(this.FACTORS).first(a => a.id == state.factor));
+
+            if (state.graphDelta)
+                this.isGraphDelta(state.graphDelta);
+
+            if (state.maxFactor) {
+                this.autoMaxFactor(false);
+                this.maxFactor(state.maxFactor);
+            }
+
+            this.dayNumber(state.day != undefined ? state.day : this._data.days.length - 1);
+
+            if (state.area)
+                this.selectedArea = this._geo.areas[state.area.toLowerCase()];
+        }
+
+        /****************************************/
+
+        saveStata(): IPageState {
+
+            return {
+                view: this.viewMode(),
+                indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
+                factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
+                graphDelta: this.isGraphDelta(),
+                maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
+                day: this.dayNumber(),
+                area: this.selectedArea ? this.selectedArea.id : undefined
+            };
         }
 
         /****************************************/
@@ -244,7 +318,7 @@
 
             this.viewMode(mode);
 
-            let districtGroup = document.getElementById("group_district");
+            const districtGroup = document.getElementById("group_district");
 
             if (mode == "district")
                 districtGroup.style.removeProperty("display");
@@ -280,16 +354,16 @@
                 return;
 
             if (this._selectedArea) {
-                let element = document.getElementById(this._selectedArea.id.toUpperCase());
+                const element = document.getElementById(this._selectedArea.id.toUpperCase());
                 element.classList.remove("selected");
             }
 
             this._selectedArea = value;
 
             if (this._selectedArea) {
-                let element = document.getElementById(this._selectedArea.id.toUpperCase());
+                const element = document.getElementById(this._selectedArea.id.toUpperCase());
                 element.classList.add("selected");
-                let parent = element.parentElement;
+                const parent = element.parentElement;
                 element.remove();
                 parent.appendChild(element);
             }
@@ -299,9 +373,9 @@
         /****************************************/
 
         private onMapClick(e: MouseEvent) {
-            let item = <SVGPolygonElement>e.target;
+            const item = <SVGPolygonElement>e.target;
             if (item.parentElement.classList.contains(this.viewMode())) {
-                let area = this._geo.areas[item.parentElement.id.toLowerCase()];
+                const area = this._geo.areas[item.parentElement.id.toLowerCase()];
                 this.selectedArea = area;
             }
         }
@@ -328,9 +402,7 @@
                 this.currentArea(null);
             else {
 
-                let area = new AreaViewModel();
-
-                let day = this._data.days[this.dayNumber()];
+                const area = new AreaViewModel();
 
                 area.value = this._selectedArea;
 
@@ -347,7 +419,7 @@
         /****************************************/
 
         protected initChart() {
-            let canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
+            const canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
 
             this._chart = new Chart(canvas, {
                 type: "line",
@@ -400,10 +472,11 @@
 
             if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
                 return;
-
-            this.maxFactor(linq(this._data.days)
+            const max = linq(this._data.days)
                 .select(a => linq(a.values).where(a => this.VIEW_MODES[this.viewMode()].validateId(a.key))
-                    .select(b => this.selectedFactor().compute(b.value, this._geo.areas[b.key], b.value[this.selectedIndicator().id])).max()).max());
+                    .select(b => this.selectedFactor().compute(b.value, this._geo.areas[b.key], b.value[this.selectedIndicator().id])).max()).max();
+
+            this.maxFactor(parseFloat(max.toFixed(1)));
         }
 
         /****************************************/
@@ -416,14 +489,30 @@
             if (this._chart == null)
                 this.initChart();
 
-            let area = this.currentArea().value;
-            let areaId = area.id.toLowerCase();
-            let field = this.selectedIndicator().id;
+            const area = this.currentArea().value;
+            const areaId = area.id.toLowerCase();
+            const field = this.selectedIndicator().id;
 
-            this._chart.data.datasets[0].data = linq(this._data.days).select(a => ({
-                x: new Date(a.date),
-                y: this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
-            })).toArray();
+            if (this.isGraphDelta()) {
+                this._chart.data.datasets[0].data = [];
+
+                for (let i = 1; i < this._data.days.length - 1; i++) {
+                    const day = this._data.days[i];
+                    const prevDay = this._data.days[i - 1];
+                    const item : Chart.ChartPoint = {
+                        x: new Date(day.date),
+                        y: this.selectedFactor().compute(day.values[areaId], area, day.values[areaId][field]) -
+                            this.selectedFactor().compute(prevDay.values[areaId], area, prevDay.values[areaId][field])
+                    };
+                    this._chart.data.datasets[0].data.push(<any>item);
+                }
+            }
+            else {
+                this._chart.data.datasets[0].data = linq(this._data.days).select(a => ({
+                    x: new Date(a.date),
+                    y: this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
+                })).toArray();
+            }
 
             this._chart.update();
         }
@@ -435,10 +524,9 @@
             if (!viewModel || !this.selectedIndicator() || !this.selectedFactor())
                 return;
 
-            let id = viewModel.value.id.toLowerCase();
-            let area = viewModel.value;
-
-            let day = this._data.days[this.dayNumber()];
+            const id = viewModel.value.id.toLowerCase();
+            const area = viewModel.value;
+            const day = this._data.days[this.dayNumber()];
 
             viewModel.data(day.values[id]);
 
@@ -455,17 +543,17 @@
 
             this._daysData = [];
 
-            for (var i = 0; i < this._data.days.length; i++) {
+            for (let i = 0; i < this._data.days.length; i++) {
 
-                let day = this._data.days[i];
+                const day = this._data.days[i];
 
-                let item: IDayData = {};
+                const item: IDayData = {};
 
-                let isInArea = this.VIEW_MODES[this.viewMode()].validateId;
+                const isInArea = this.VIEW_MODES[this.viewMode()].validateId;
 
                 item.topAreas = linq(day.values).orderByDesc(a => a.value[this.selectedIndicator().id]).where(a => isInArea(a.key)).select(a => {
 
-                    let area = new AreaViewModel();
+                    const area = new AreaViewModel();
 
                     area.value = this._geo.areas[a.key.toLowerCase()];
 
@@ -487,7 +575,7 @@
 
         protected updateDayData() {
 
-            let day = this._data.days[this.dayNumber()];
+            const day = this._data.days[this.dayNumber()];
 
             this.currentData(DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
 
@@ -504,9 +592,8 @@
         /****************************************/
 
         protected updateUrl() {
-            let url = Uri.appRoot + "?day=" + this.dayNumber();
-            if (this.selectedArea)
-                url += "&district=" + this.selectedArea.id;
+            const url = Uri.appRoot + "Home/Overview?state=" + encodeURIComponent(btoa(JSON.stringify(this.saveStata())));
+
             history.replaceState(null, null, url);
         }
 
@@ -517,18 +604,18 @@
             if (!this.selectedIndicator() || !this.selectedFactor())
                 return;
 
-            let day = this._data.days[this.dayNumber()];
+            const day = this._data.days[this.dayNumber()];
 
-            for (let key in day.values) {
-                let element = document.getElementById(key.toUpperCase());
+            for (const key in day.values) {
+                const element = document.getElementById(key.toUpperCase());
                 if (element) {
 
-                    let area = this._geo.areas[key];
+                    const area = this._geo.areas[key];
 
                     if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
                         continue;
 
-                    let field = this.selectedIndicator().id;
+                    const field = this.selectedIndicator().id;
 
                     let factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
 
@@ -543,7 +630,7 @@
                     else {
                         if (!element.classList.contains("valid"))
                             element.classList.add("valid");
-                        let value = MathUtils.discretize(MathUtils.exponential(factor), 20);
+                        const value = MathUtils.discretize(MathUtils.exponential(factor), 20);
                         element.style.fillOpacity = value.toString();
                         //element.style.fill = this._gradient.valueAt(value).toString();
                     }
@@ -559,11 +646,12 @@
         isPlaying = ko.observable(false);
         currentArea = ko.observable<AreaViewModel>();
         topAreas = ko.observable<AreaViewModel[]>();
-        viewMode = ko.observable<ViewMode>();
+        viewMode = ko.observable<ViewMode>("district");
         selectedIndicator = ko.observable<IIndicator>();
         selectedFactor = ko.observable<IFactor>();
         autoMaxFactor = ko.observable<boolean>(true);
         maxFactor = ko.observable<number>();
+        isGraphDelta = ko.observable<boolean>(false);
         indicators: KnockoutObservable<IIndicator[]>;
         factors: KnockoutObservable<IFactor[]>;
     }

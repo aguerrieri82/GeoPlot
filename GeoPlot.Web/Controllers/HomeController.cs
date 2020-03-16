@@ -24,13 +24,16 @@ namespace GeoPlot.Web.Controllers
             _env = env;
         }
 
-        [ResponseCache(Duration = 3600, VaryByQueryKeys = new[] { "day", "district" })]
-        public async Task<IActionResult> Index(int? day, string district)
+        public IActionResult Index()
         {
-            var model = new GeoPlotViewModel
+            return RedirectToAction("Overview");
+        }
+
+        [ResponseCache(Duration = 3600)]
+        public async Task<IActionResult> Overview(string state)
+        {
+            var model = new GeoPlotViewModel() 
             {
-                District = district,
-                Day = day,
                 Geo = await LoadGeoAreas(),
                 Data = await LoadInfectionData()
             };

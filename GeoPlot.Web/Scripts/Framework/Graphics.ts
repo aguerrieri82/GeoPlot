@@ -68,15 +68,15 @@
             if (pos > 1)
                 this.colors[this.colors.length - 1];
 
-            let stepSize = 1 / (this.colors.length - 1);
-            let minX = Math.floor(pos / stepSize);
-            let maxX = Math.ceil(pos / stepSize);
-            let minOfs = (pos - minX * stepSize) / stepSize;
+            const stepSize = 1 / (this.colors.length - 1);
+            const minX = Math.floor(pos / stepSize);
+            const maxX = Math.ceil(pos / stepSize);
+            const minOfs = (pos - minX * stepSize) / stepSize;
 
-            let c1 = this.colors[minX];
-            let c2 = this.colors[maxX];
+            const c1 = this.colors[minX];
+            const c2 = this.colors[maxX];
 
-            let c3 = new RgbColor();
+            const c3 = new RgbColor();
             c3.r = Math.round(c1.r + (c2.r - c1.r) * minOfs);
             c3.g = Math.round(c1.g + (c2.g - c1.g) * minOfs);
             c3.b = Math.round(c1.b + (c2.b - c1.b) * minOfs);
