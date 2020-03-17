@@ -1496,8 +1496,11 @@ var GeoPlot;
             this.isZoomChart = ko.observable(false);
             this.groupSize = ko.observable(1);
             this.startDay = ko.observable(0);
-            this.factorDescription = ko.observable();
+            this.isNoFactorSelected = ko.computed(function () {
+                return _this.selectedFactor() && _this.selectedFactor().id == 'none';
+            });
             this.groupDays = [1, 2, 3, 4, 5, 6, 7];
+            this.factorDescription = ko.observable();
             this._data = model.data;
             this._geo = model.geo;
             this.totalDays(this._data.days.length - 1);
@@ -1537,6 +1540,7 @@ var GeoPlot;
                 if (!value)
                     return;
                 _this.updateIndicator();
+                setTimeout(function () { return M.FormSelect.init(document.querySelectorAll(".row-chart-group select")); });
             });
             this.autoMaxFactor.subscribe(function (value) {
                 if (value) {
@@ -1789,8 +1793,15 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateIndicator = function () {
-            if (this.selectedIndicator() && this.selectedFactor())
-                this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
+            if (!this.selectedIndicator() || !this.selectedFactor())
+                return;
+            this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
+            if (this.selectedFactor().id != "none") {
+                if (this.groupSize() != 1)
+                    this.groupSize(1);
+                if (this.isGraphDelta())
+                    this.isGraphDelta(false);
+            }
             this.updateMaxFactor();
             this.updateDayData();
             this.updateChart();

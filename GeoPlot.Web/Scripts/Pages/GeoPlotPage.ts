@@ -246,6 +246,7 @@
                 if (!value)
                     return;
                 this.updateIndicator();
+                setTimeout(() => M.FormSelect.init(document.querySelectorAll(".row-chart-group select")));
             });
 
             this.autoMaxFactor.subscribe(value => {
@@ -574,8 +575,20 @@
 
         protected updateIndicator() {
 
-            if (this.selectedIndicator() && this.selectedFactor())
-                this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
+            if (!this.selectedIndicator() || !this.selectedFactor())
+                return;
+
+            this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
+
+            if (this.selectedFactor().id != "none") {
+
+                if (this.groupSize() != 1) 
+                    this.groupSize(1);
+
+                if (this.isGraphDelta())
+                    this.isGraphDelta(false);
+            }
+
             this.updateMaxFactor();
             this.updateDayData();
             this.updateChart();
@@ -809,10 +822,12 @@
         isZoomChart = ko.observable<boolean>(false);
         groupSize = ko.observable<number>(1);
         startDay = ko.observable<number>(0);
-        indicators: KnockoutObservable<IIndicator[]>;
+        isNoFactorSelected = ko.computed(() =>
+            this.selectedFactor() && this.selectedFactor().id == 'none');
+        groupDays = [1, 2, 3, 4, 5, 6, 7];
         factorDescription = ko.observable<string>();
+        indicators: KnockoutObservable<IIndicator[]>;
         factors: KnockoutObservable<IFactor[]>;
         days: IGroupDay[];
-        groupDays = [1, 2, 3, 4, 5, 6, 7];
     }
 }
