@@ -35,9 +35,10 @@ namespace GeoPlot.Web
         }
         public static IHtmlContent Json<TModel>(this IHtmlHelper<TModel> html, object obj)
         {
-            return html.Raw(JsonConvert.SerializeObject(obj, new JsonSerializerSettings()
+            return html.Raw(JsonConvert.SerializeObject(obj, Formatting.None, new JsonSerializerSettings()
             {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
             }));
         }
     }

@@ -8,7 +8,6 @@ main {
     flex: 1 0 auto;
 }
 
-
 .stack-horizontal {
     display: flex;
     flex-direction: row;
@@ -25,6 +24,29 @@ main {
         &:last-child {
             margin-right: 0;
         }
+    }
+}
+
+.hidden {
+    display: none;
+}
+
+.flex-col-3 {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+
+    > * {
+        width: (100 /3) + %;
+        box-sizing: border-box;
+        margin-bottom: 16px;
+    }
+}
+
+.summary-field {
+    label {
+        display: block;
     }
 }
 
@@ -45,7 +67,8 @@ label.title {
 
 ul.collapsible li {
     .collapsible-header {
-        position:relative;
+        position: relative;
+
         i {
             position: absolute;
             right: 0;
@@ -98,12 +121,12 @@ ul.collapsible li {
     }
 }
 
-.material-tooltip{
+.material-tooltip {
     max-width: 300px !important;
     white-space: pre-wrap;
 }
 
-.relative{
+.relative {
     position: relative;
 }
 
@@ -111,8 +134,76 @@ ul.collapsible li {
     position: absolute;
     right: 0px;
 
-    a{
+    a {
         margin-right: 8px;
+    }
+}
+
+.selectable{
+    transition-duration: 0.2s;
+    cursor: pointer;
+
+    &:hover{
+        background-color: #eee;
+    }
+}
+
+.card {
+    .card-section {
+        border-bottom: solid 1px #ddd;
+
+        &:last-of-type {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 400;
+        }
+
+        .section-content {
+            margin-top: 16px;
+        }
+
+        &.expandable {
+            .section-title {
+                position: relative;
+                cursor: pointer;
+
+                i {
+                    position: absolute;
+                    right: 0;
+                    transition-duration: 0.3s;
+                    transform: rotate(90deg);
+                }
+            }
+
+            .section-content {
+                transition-duration: 0.3s;
+                overflow: hidden;
+            }
+
+            &.closed {
+                margin-bottom: 12px;
+                border-bottom: none;
+
+                .section-title {
+                    i {
+                        transform: rotate(0);
+                    }
+
+                    border-bottom: solid 1px #ddd;
+                    padding-bottom: 12px;
+                }
+
+                .section-content {
+                    opacity: 0;
+                    max-height: 0;
+                    margin: 0;
+                    margin-top: -20px;
+                }
+            }
+        }
     }
 }
 

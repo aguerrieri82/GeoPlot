@@ -8,7 +8,7 @@ using System.Text;
 
 namespace GeoPlot.Coronavirus
 {
-    public class InfectionDistrictItalyAdapter : BaseJsonDataAdapter<DayAreaItem<InfectionData>, DistrictInfectionItalyRawItem>
+    public class InfectionDistrictItalyAdapter : BaseJsonDataAdapter<DayAreaItem<InfectionData>, InfectionItalyDistrictRawItem>
     {
         public InfectionDistrictItalyAdapter()
             : this("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-province.json")
@@ -20,12 +20,12 @@ namespace GeoPlot.Coronavirus
         {
         }
 
-        protected override IEnumerable<DayAreaItem<InfectionData>> Process(DistrictInfectionItalyRawItem[] rows)
+        protected override IEnumerable<DayAreaItem<InfectionData>> Process(InfectionItalyDistrictRawItem[] rows)
         {
             return rows.Where(a => !string.IsNullOrEmpty(a.sigla_provincia)).Select(Convert);
         }
 
-        protected override DayAreaItem<InfectionData> Convert(DistrictInfectionItalyRawItem row)
+        protected override DayAreaItem<InfectionData> Convert(InfectionItalyDistrictRawItem row)
         {
             return new DayAreaItem<InfectionData>()
             {

@@ -1,5 +1,7 @@
 ﻿
 function formatNumber(value: number) {
+    if (!value)
+        return "";
     return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
@@ -29,6 +31,23 @@ if (!HTMLCanvasElement.prototype.toBlob) {
     });
 }
 
+/****************************************/
+
+function expandCollapse(elment: HTMLElement) {
+    let container = elment.parentElement;
+    let content = <HTMLElement>container.querySelector(".section-content");
+    if (container.classList.contains("closed")) {
+        content.style.removeProperty("display");
+        container.classList.remove("closed");
+    }
+    else {
+        container.classList.add("closed");
+        setTimeout(() => content.style.display = "none", 300);
+    }
+}
+
+/****************************************/
+/* Definitions
 /****************************************/
 
 interface Clipboard {

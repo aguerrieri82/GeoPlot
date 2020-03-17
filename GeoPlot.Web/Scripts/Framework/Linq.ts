@@ -737,12 +737,14 @@
 
         /****************************************/
 
-        foreach(action: (item: T) => void): void {
+        foreach(action: (item: T) => void): Linq<T> {
 
             this._enumerator.reset();
 
             while (this._enumerator.moveNext())
                 action(this._enumerator.current);
+
+            return this;
         }
 
         /****************************************/

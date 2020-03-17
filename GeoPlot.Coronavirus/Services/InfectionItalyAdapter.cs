@@ -8,29 +8,24 @@ using System.Text;
 
 namespace GeoPlot.Coronavirus
 {
-    public class InfectionRegionItalyAdapter : BaseJsonDataAdapter<DayAreaItem<InfectionData>, InfectionItalyRegionRawItem>
+    public class InfectionItalyAdapter : BaseJsonDataAdapter<DayAreaItem<InfectionData>, InfectionItalyRawItem>
     {
-        public InfectionRegionItalyAdapter()
-            : this("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-regioni.json")
+        public InfectionItalyAdapter()
+            : this("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-json/dpc-covid19-ita-andamento-nazionale.json")
         {
         }
 
-        public InfectionRegionItalyAdapter(string dataSource)
+        public InfectionItalyAdapter(string dataSource)
             : base(dataSource)
         {
         }
 
-        protected override IEnumerable<DayAreaItem<InfectionData>> Process(InfectionItalyRegionRawItem[] rows)
-        {
-            return rows.Where(a => !string.IsNullOrEmpty(a.denominazione_regione)).Select(Convert);
-        }
-
-        protected override DayAreaItem<InfectionData> Convert(InfectionItalyRegionRawItem row)
+        protected override DayAreaItem<InfectionData> Convert(InfectionItalyRawItem row)
         {
             return new DayAreaItem<InfectionData>()
             {
                 Date = row.data,
-                AreaId = "R" + row.codice_regione,
+                AreaId = "IT",
                 Value = new InfectionData()
                 {
                     TotalPositive = row.totale_casi,

@@ -5,15 +5,11 @@ using System.Threading.Tasks;
 
 namespace GeoPlot.Coronavirus.Entities
 {
-    public struct RegionInfectionItalyRawItem
+    public struct InfectionItalyRawItem
     {
         public DateTime data;
 
-        public int codice_regione;
-
-        public string sigla_provincia;
-
-        public string denominazione_regione;
+        public string stato;
 
         public int? ricoverati_con_sintomi;
 

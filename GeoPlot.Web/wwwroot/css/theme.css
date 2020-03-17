@@ -18,6 +18,22 @@ main {
     .stack-horizontal > *:last-child {
       margin-right: 0; }
 
+.hidden {
+  display: none; }
+
+.flex-col-3 {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  box-sizing: border-box; }
+  .flex-col-3 > * {
+    width: 33.33333%;
+    box-sizing: border-box;
+    margin-bottom: 16px; }
+
+.summary-field label {
+  display: block; }
+
 .empty-text {
   font-style: italic;
   color: #999; }
@@ -79,6 +95,46 @@ ul.collapsible li.active .collapsible-header i {
   right: 0px; }
   .action-right a {
     margin-right: 8px; }
+
+.selectable {
+  transition-duration: 0.2s;
+  cursor: pointer; }
+  .selectable:hover {
+    background-color: #eee; }
+
+.card .card-section {
+  border-bottom: solid 1px #ddd; }
+  .card .card-section:last-of-type {
+    border-bottom: none; }
+  .card .card-section .section-title {
+    font-size: 18px;
+    font-weight: 400; }
+  .card .card-section .section-content {
+    margin-top: 16px; }
+  .card .card-section.expandable .section-title {
+    position: relative;
+    cursor: pointer; }
+    .card .card-section.expandable .section-title i {
+      position: absolute;
+      right: 0;
+      transition-duration: 0.3s;
+      transform: rotate(90deg); }
+  .card .card-section.expandable .section-content {
+    transition-duration: 0.3s;
+    overflow: hidden; }
+  .card .card-section.expandable.closed {
+    margin-bottom: 12px;
+    border-bottom: none; }
+    .card .card-section.expandable.closed .section-title {
+      border-bottom: solid 1px #ddd;
+      padding-bottom: 12px; }
+      .card .card-section.expandable.closed .section-title i {
+        transform: rotate(0); }
+    .card .card-section.expandable.closed .section-content {
+      opacity: 0;
+      max-height: 0;
+      margin: 0;
+      margin-top: -20px; }
 
 .card-map {
   padding: 0;

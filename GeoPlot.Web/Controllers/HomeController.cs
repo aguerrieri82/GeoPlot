@@ -57,7 +57,8 @@ namespace GeoPlot.Web.Controllers
             var adapters = new IDataAdapter<DayAreaItem<InfectionData>>[]
             {
                 new InfectionDistrictItalyAdapter(),
-                new InfectionRegionItalyAdapter()
+                new InfectionRegionItalyAdapter(),
+                new InfectionItalyAdapter()
             };
 
             var items = await Task.WhenAll(adapters.Select(a => a.LoadAsync()));
@@ -105,6 +106,19 @@ namespace GeoPlot.Web.Controllers
             {
                 Areas = data.ToDictionary(a => a.Id, a => a),
                 ViewBox = adapters[0].ViewBox
+            };
+
+            result.Areas["IT"] = new GeoArea()
+            {
+                Id = "IT",
+                Name = "Italia",
+                Type = GeoAreaType.Country,
+                Demography = new Demography<int>()
+                {
+                    Female = result.Areas.Where(a=> a.Key[0] == 'R').Sum(a=> a.Value.Demography.Female),
+                    Male = result.Areas.Where(a => a.Key[0] == 'R').Sum(a => a.Value.Demography.Male),
+                    Total = result.Areas.Where(a => a.Key[0] == 'R').Sum(a => a.Value.Demography.Total)
+                }                                
             };
 
             result.ViewBox = new Rect2D()

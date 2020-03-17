@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace GeoPlot.Coronavirus.Entities
 {
-    public struct DistrictInfectionItalyRawItem
+    public struct InfectionItalyDistrictRawItem
     {
         public DateTime data;
 

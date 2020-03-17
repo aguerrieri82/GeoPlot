@@ -1,6 +1,6 @@
 ﻿namespace GeoPlot {
 
-    type ViewMode = "district" | "region";
+    type ViewMode = "district" | "region" | "country";
 
     type FactorType = "none" | "population" | "totalPositive" | "severe" | "test";
 
@@ -38,6 +38,7 @@
         id: keyof IInfectionData;
         name: string;
         validFor?: ViewMode[];
+        color: string;
     }
 
     interface IGroupDay {
@@ -57,6 +58,18 @@
 
     /****************************************/
 
+    class IndicatorViewModel {
+
+        select() {
+
+        }
+
+        indicator: IIndicator;
+        value = ko.observable<number>();
+    }
+
+    /****************************************/
+
     class AreaViewModel {
 
         select() {
@@ -71,6 +84,7 @@
         factor = ko.observable<number>();
         indicator = ko.observable<number>();
         reference = ko.observable<any>();
+        indicators = ko.observable<IndicatorViewModel[]>();
     }
 
 
@@ -84,6 +98,7 @@
         private _chart: Chart;
         private _daysData: IDayData[];
         private _topAreasVisible: boolean = false;
+        private _indicatorsVisible: boolean = false;
         private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
         private _mapSvg: SVGSVGElement;
 
@@ -104,47 +119,65 @@
                     singular: "regione",
                     plural: "regioni"
                 },
-                mapGroup: "group_dregion",
+                mapGroup: "group_region",
                 tab: "regionTab",
                 areaType: GeoAreaType.Region,
                 validateId: (id: string) => id[0].toLowerCase() == 'r'
             },
+            "country": {
+                label: {
+                    singular: "italiana",
+                    plural: "italiane"
+                },
+                mapGroup: "group_country",
+                tab: "italyTab",
+                areaType: GeoAreaType.Country,
+                validateId: (id: string) => id.toLowerCase() == 'it'
+            }
         }
 
         readonly INDICATORS: IIndicator[] = [
             {
                 id: "totalPositive",
-                name: "Positivi Totali"
+                name: "Positivi Totali",
+                color: ""
             },
             {
                 id: "currentPositive",
                 name: "Attuali Positivi",
-                validFor: ["region"]
+                validFor: ["region", "country"],
+                color: "deep-purple-text text-lighten-2"
             },
             {
                 id: "totalDeath",
                 name: "Deceduti",
-                validFor: ["region"]
+                validFor: ["region", "country"],
+                color: "red-text text-lighten-1"
             },
             {
                 id: "totalSevere",
                 name: "Gravi",
-                validFor: ["region"]
+                validFor: ["region", "country"],
+                color: "orange-text"
             },
             {
                 id: "totalHospedalized",
                 name: "Ricoverati",
-                validFor: ["region"]
+                validFor: ["region", "country"],
+                color: "yellow-text text-darken-2"
             },
             {
                 id: "totalHealed",
                 name: "Guariti",
-                validFor: ["region"]
+                validFor: ["region", "country"],
+                color: "green-text text-lighten-2"
             },
             {
                 id: "toatlTests",
                 name: "Tamponi",
-                validFor: ["region"]
+                validFor: ["region", "country"],
+                color: "blue-text"
+
             },
         ];
 
@@ -166,7 +199,7 @@
             {
                 id: "totalPositive",
                 name: "Positivi Totali",
-                validFor: ["region"],
+                validFor: ["region", "country"],
                 compute: (v, a, i) => !v.totalPositive ? 0 : (i / v.totalPositive) * 100,
                 reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive),
                 description: "% [indicator] su positivi totali"
@@ -174,7 +207,7 @@
             {
                 id: "severe",
                 name: "Gravi",
-                validFor: ["region"],
+                validFor: ["region", "country"],
                 compute: (v, a, i) => !v.totalSevere ? 0 : (i / v.totalSevere) * 100,
                 reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere),
                 description: "% [indicator] sui gravi totali"
@@ -182,7 +215,7 @@
             {
                 id: "test",
                 name: "Tamponi",
-                validFor: ["region"],
+                validFor: ["region", "country"],
                 compute: (v, a, i) => !v.toatlTests ? 0 : (i / v.toatlTests) * 100,
                 reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
                 description: "% [indicator] sui tamponi eseguiti"
@@ -215,15 +248,15 @@
                 this.setViewMode(<ViewMode>el.dataset["viewMode"]);
             };          
 
-            const topCases = M.Collapsible.init(document.getElementById("topCases"));
+            const topCasesView = M.Collapsible.init(document.getElementById("topCases"));
 
-            topCases.options.onOpenStart = () => {
+            topCasesView.options.onOpenStart = () => {
                 if (!this._daysData)
                     this.updateTopAreas();
                 this._topAreasVisible = true;
             }
-            
-            topCases.options.onCloseEnd = () => {
+
+            topCasesView.options.onCloseEnd = () => {
                 this._topAreasVisible = false;
             }
 
@@ -282,7 +315,7 @@
             this.groupSize.subscribe(value => {
                 this.computeStartDayForGroup();
                 this.updateChart();
-                this.updateUrl();
+                this.updateUrl(); 
             });
 
             this.startDay.subscribe(() => {
@@ -453,10 +486,15 @@
 
             this.updateDayData();
 
-            if (this._topAreasVisible)
-                this.updateTopAreas();
-            else
-                this._daysData = undefined;
+            if (this.viewMode() == "country") {
+                this.selectedArea = this._geo.areas["it"];
+            }
+            else {
+                if (this._topAreasVisible)
+                    this.updateTopAreas();
+                else
+                    this._daysData = undefined;
+            }
 
             setTimeout(() =>
                 M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
@@ -475,17 +513,20 @@
 
             if (this._selectedArea) {
                 const element = document.getElementById(this._selectedArea.id.toUpperCase());
-                element.classList.remove("selected");
+                if (element)
+                    element.classList.remove("selected");
             }
 
             this._selectedArea = value;
 
             if (this._selectedArea) {
                 const element = document.getElementById(this._selectedArea.id.toUpperCase());
-                element.classList.add("selected");
-                const parent = element.parentElement;
-                element.remove();
-                parent.appendChild(element);
+                if (element) {
+                    element.classList.add("selected");
+                    const parent = element.parentElement;
+                    element.remove();
+                    parent.appendChild(element);
+                }
             }
             this.changeArea();
         }
@@ -563,6 +604,29 @@
 
         /****************************************/
 
+        protected updateAreaIndicators() {
+            if (!this.currentArea())
+                return;
+            if (!this.currentArea().indicators()) {
+                const items: IndicatorViewModel[] = [];
+                for (let indicator of this.indicators()) {
+                    let item = new IndicatorViewModel();
+                    item.indicator = indicator;
+                    item.select = () => this.selectedIndicator(indicator);
+                    items.push(item);
+                }
+                this.currentArea().indicators(items);
+            }
+
+            const day = this._data.days[this.dayNumber()];
+            const areaId = this.currentArea().value.id.toLowerCase();
+
+            for (let item of this.currentArea().indicators())
+                item.value(day.values[areaId][item.indicator.id])
+        }
+
+        /****************************************/
+
         protected initChart() {
             const canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
 
@@ -624,9 +688,6 @@
 
                 if (this.groupSize() != 1) 
                     this.groupSize(1);
-
-                if (this.isGraphDelta())
-                    this.isGraphDelta(false);
             }
 
             this.updateMaxFactor();
@@ -717,25 +778,26 @@
 
         /****************************************/
 
-        protected updateArea(viewModel: AreaViewModel, dayNumber?: number) {
+        protected updateArea(value: AreaViewModel, dayNumber?: number) {
 
-            if (!viewModel || !this.selectedIndicator() || !this.selectedFactor())
+            if (!value || !this.selectedIndicator() || !this.selectedFactor())
                 return;
 
             if (dayNumber == undefined)
                 dayNumber = this.dayNumber();
 
-            const id = viewModel.value.id.toLowerCase();
-            const area = viewModel.value;
+            const id = value.value.id.toLowerCase();
+            const area = value.value;
             const day = this._data.days[dayNumber];
 
-            viewModel.data(day.values[id]);
+            value.data(day.values[id]);
 
-            viewModel.indicator(day.values[id][this.selectedIndicator().id]);
+            value.indicator(day.values[id][this.selectedIndicator().id]);
 
-            viewModel.factor(MathUtils.discretize(this.selectedFactor().compute(day.values[id], area, viewModel.indicator()), 10));
+            value.factor(MathUtils.discretize(this.selectedFactor().compute(day.values[id], area, value.indicator()), 10));
 
-            viewModel.reference(this.selectedFactor().reference(day.values[id], area));
+            value.reference(this.selectedFactor().reference(day.values[id], area));
+
         }
 
         /****************************************/
@@ -787,6 +849,8 @@
             this.updateMap();
 
             this.updateArea(this.currentArea());
+
+            this.updateAreaIndicators();
 
             if (this._daysData && this._topAreasVisible)
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
