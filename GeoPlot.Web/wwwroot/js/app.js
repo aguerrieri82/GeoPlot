@@ -1923,6 +1923,7 @@ var GeoPlot;
                 area.value = this._selectedArea;
                 this.updateArea(area);
                 this.currentArea(area);
+                this.updateAreaIndicators();
                 this.updateChart();
                 if (isEmptyArea) {
                     M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));

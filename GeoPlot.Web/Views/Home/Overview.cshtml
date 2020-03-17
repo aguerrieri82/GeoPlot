@@ -93,8 +93,21 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="card-section expandable">
+                    <div class="card-section expandable" data-bind="visible: viewMode() != 'district'">
+                        <h6 class="section-title" onclick="expandCollapse(this)">
+                            <span>Indicatori</span>
+                            <i class="material-icons">chevron_right</i>
+                        </h6>
+                        <div class="section-content">
+                            <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
+                                <div class="summary-field selectable" data-bind="css: indicator.color, click: select">
+                                    <label data-bind="text: indicator.name"></label>
+                                    <span data-bind="text: formatNumber(value())"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-section expandable closed">
                         <h6 class="section-title" onclick="expandCollapse(this)">
                             <span>Opzioni</span>
                             <i class="material-icons">chevron_right</i>
@@ -129,20 +142,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-section expandable" data-bind="visible: viewMode() != 'district'">
-                        <h6 class="section-title" onclick="expandCollapse(this)">
-                            <span>Indicatori</span>
-                            <i class="material-icons">chevron_right</i>
-                        </h6>
-                        <div class="section-content">
-                            <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
-                                <div class="summary-field selectable" data-bind="css: indicator.color, click: select">
-                                    <label data-bind="text: indicator.name"></label>
-                                    <span data-bind="text: formatNumber(value())"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
                     <!--/ko-->
                     <!--ko ifnot: currentArea-->
                     <span class="empty-text">Selezionare una <span data-bind="text: VIEW_MODES[viewMode()].label.singular"></span></span>

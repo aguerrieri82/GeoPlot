@@ -591,6 +591,8 @@
 
                 this.currentArea(area)
 
+                this.updateAreaIndicators();
+
                 this.updateChart();
 
                 if (isEmptyArea) {
