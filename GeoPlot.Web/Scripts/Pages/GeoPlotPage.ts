@@ -385,6 +385,18 @@
 
         /****************************************/
 
+        copySerie() {
+
+            const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
+            let text = "";
+            for (let i = 0; i < data.length; i++) 
+                text += DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + MathUtils.round(data[i].y, 1) + "\n";
+            DomUtils.copyText(text);
+            M.toast({ html: "Serie copiato sugli appunti." })
+        }
+
+        /****************************************/
+
         play() {
             this.isPlaying(true);
             this.nextFrame();
@@ -569,7 +581,7 @@
                     }
                 }
             });
-        }
+        }        
 
         /****************************************/
 
@@ -822,8 +834,7 @@
         isZoomChart = ko.observable<boolean>(false);
         groupSize = ko.observable<number>(1);
         startDay = ko.observable<number>(0);
-        isNoFactorSelected = ko.computed(() =>
-            this.selectedFactor() && this.selectedFactor().id == 'none');
+        isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
         groupDays = [1, 2, 3, 4, 5, 6, 7];
         factorDescription = ko.observable<string>();
         indicators: KnockoutObservable<IIndicator[]>;

@@ -27,6 +27,19 @@
             if (!element.classList.contains(className))
                 element.classList.add(className);
         }
+
+        /****************************************/
+
+        static copyText(value: string) {
+            let input = document.createElement("textarea");
+            document.body.appendChild(input);
+            input.value = value
+            input.select();
+            //input.setSelectionRange(0, input.value.length);
+            document.execCommand("copy");
+            document.body.removeChild(input);
+
+        }
     }
 }
 

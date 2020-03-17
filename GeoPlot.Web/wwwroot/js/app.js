@@ -262,6 +262,16 @@ var GeoPlot;
             if (!element.classList.contains(className))
                 element.classList.add(className);
         };
+        /****************************************/
+        DomUtils.copyText = function (value) {
+            var input = document.createElement("textarea");
+            document.body.appendChild(input);
+            input.value = value;
+            input.select();
+            //input.setSelectionRange(0, input.value.length);
+            document.execCommand("copy");
+            document.body.removeChild(input);
+        };
         return DomUtils;
     }());
     GeoPlot.DomUtils = DomUtils;
@@ -1496,9 +1506,7 @@ var GeoPlot;
             this.isZoomChart = ko.observable(false);
             this.groupSize = ko.observable(1);
             this.startDay = ko.observable(0);
-            this.isNoFactorSelected = ko.computed(function () {
-                return _this.selectedFactor() && _this.selectedFactor().id == 'none';
-            });
+            this.isNoFactorSelected = ko.computed(function () { return _this.selectedFactor() && _this.selectedFactor().id == 'none'; });
             this.groupDays = [1, 2, 3, 4, 5, 6, 7];
             this.factorDescription = ko.observable();
             this._data = model.data;
@@ -1643,6 +1651,15 @@ var GeoPlot;
                 startDay: this.startDay(),
                 logScale: this.isLogScale()
             };
+        };
+        /****************************************/
+        GeoPlotPage.prototype.copySerie = function () {
+            var data = this._chart.data.datasets[0].data;
+            var text = "";
+            for (var i = 0; i < data.length; i++)
+                text += GeoPlot.DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + GeoPlot.MathUtils.round(data[i].y, 1) + "\n";
+            GeoPlot.DomUtils.copyText(text);
+            M.toast({ html: "Serie copiato sugli appunti." });
         };
         /****************************************/
         GeoPlotPage.prototype.play = function () {

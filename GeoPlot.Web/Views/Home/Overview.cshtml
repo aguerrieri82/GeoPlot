@@ -74,7 +74,10 @@
                         </div>
                         <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
                             <div class="relative">
-                                <a href="#!" title="Espandi grafico" class="action-right" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
+                                <div class="action-right">
+                                    <a href="#!" title="Copia serie" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
+                                    <a href="#!" title="Espandi grafico" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
+                                </div>
                                 <label class="title">
                                     <span data-bind="text: factorDescription"></span>
                                 </label>
