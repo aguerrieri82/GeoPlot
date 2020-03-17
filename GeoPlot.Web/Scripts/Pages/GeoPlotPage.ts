@@ -38,7 +38,8 @@
         id: keyof IInfectionData;
         name: string;
         validFor?: ViewMode[];
-        color: string;
+        colorLight?: string;
+        colorDark?: string;
     }
 
     interface IGroupDay {
@@ -140,43 +141,50 @@
             {
                 id: "totalPositive",
                 name: "Positivi Totali",
-                color: ""
+                colorLight: "#f44336",
+                colorDark: "#b71c1c"
             },
             {
                 id: "currentPositive",
                 name: "Attuali Positivi",
                 validFor: ["region", "country"],
-                color: "deep-purple-text text-lighten-2"
+                colorLight: "#e91e63",
+                colorDark: "#880e4f"
             },
             {
                 id: "totalDeath",
                 name: "Deceduti",
                 validFor: ["region", "country"],
-                color: "red-text text-lighten-1"
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c"
             },
             {
                 id: "totalSevere",
                 name: "Gravi",
                 validFor: ["region", "country"],
-                color: "orange-text"
+                colorLight: "#ff9800",
+                colorDark: "#e65100"
             },
             {
                 id: "totalHospedalized",
                 name: "Ricoverati",
                 validFor: ["region", "country"],
-                color: "yellow-text text-darken-2"
+                colorLight: "#fdd835",
+                colorDark: "#fbc02d"
             },
             {
                 id: "totalHealed",
                 name: "Guariti",
                 validFor: ["region", "country"],
-                color: "green-text text-lighten-2"
+                colorLight: "#4caf50",
+                colorDark: "#1b5e20"
             },
             {
                 id: "toatlTests",
                 name: "Tamponi",
                 validFor: ["region", "country"],
-                color: "blue-text"
+                colorLight: "#03a9f4",
+                colorDark: "#01579b"
 
             },
         ];
@@ -482,6 +490,8 @@
 
             this._chart = null;
 
+            this.clearMap();
+
             this.updateMaxFactor();
 
             this.updateDayData();
@@ -614,7 +624,11 @@
                 for (let indicator of this.indicators()) {
                     let item = new IndicatorViewModel();
                     item.indicator = indicator;
-                    item.select = () => this.selectedIndicator(indicator);
+                    item.select = () => {
+                        this.selectedIndicator(indicator);
+                        setTimeout(() =>
+                            M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
+                    }
                     items.push(item);
                 }
                 this.currentArea().indicators(items);
@@ -626,56 +640,6 @@
             for (let item of this.currentArea().indicators())
                 item.value(day.values[areaId][item.indicator.id])
         }
-
-        /****************************************/
-
-        protected initChart() {
-            const canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
-
-            this._chart = new Chart(canvas, {
-                type: "line",
-                data: {
-                    datasets: [
-                        {
-                            lineTension: 0,
-                            data: [],
-                            backgroundColor: "#5cd6d3",
-                            borderColor: "#00a59d",
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    legend: {
-                        display: true,
-                        position: "bottom"
-                    },
-                    title: {
-                        display: false,
-                    },
-                    tooltips: {
-                        callbacks: {
-                            label: (t,d) => {
-                                return t.xLabel + ": " + MathUtils.round(parseFloat(t.value), 1);
-                            }
-                        }
-                    },
-                    scales: {
-                        xAxes: [{
-                            type: "time",
-                            distribution: "linear",
-                            time: {
-                                unit: "day",
-                                tooltipFormat: "DD/MMM"
-                            }
-
-                        }],
-
-                    }
-                }
-            });
-        }        
 
         /****************************************/
 
@@ -714,6 +678,55 @@
             this.maxFactor(parseFloat(max.toFixed(1)));
         }
 
+
+        /****************************************/
+
+        protected initChart() {
+            const canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
+
+            this._chart = new Chart(canvas, {
+                type: "line",
+                data: {
+                    datasets: [
+                        {
+                            lineTension: 0,
+                            data: [],
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    legend: {
+                        display: true,
+                        position: "bottom"
+                    },
+                    title: {
+                        display: false,
+                    },
+                    tooltips: {
+                        callbacks: {
+                            label: (t, d) => {
+                                return t.xLabel + ": " + MathUtils.round(parseFloat(t.value), 1);
+                            }
+                        }
+                    },
+                    scales: {
+                        xAxes: [{
+                            type: "time",
+                            distribution: "linear",
+                            time: {
+                                unit: "day",
+                                tooltipFormat: "DD/MMM"
+                            }
+
+                        }],
+
+                    }
+                }
+            });
+        }        
+
         /****************************************/
 
         protected updateChart() {
@@ -735,6 +748,9 @@
                 this._chart.options.scales.yAxes[0].type = "logarithmic";
             else
                 this._chart.options.scales.yAxes[0].type = "linear";
+
+            this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
+            this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
 
             if (this.isGraphDelta()) {
                 this._chart.data.datasets[0].data = [];
@@ -791,6 +807,11 @@
             const id = value.value.id.toLowerCase();
             const area = value.value;
             const day = this._data.days[dayNumber];
+
+            if (!day || !day.values[id]) {
+                M.toast({ html: "Dati non disponibili" });
+                return;
+            }
 
             value.data(day.values[id]);
 
@@ -872,40 +893,57 @@
 
         /****************************************/
 
+        protected clearMap() {
+            const day = this._data.days[this.dayNumber()];
+
+            for (const key in day.values) {
+                const element = document.getElementById(key.toUpperCase());
+                if (element)
+                    element.style.removeProperty("fill");
+            }
+        }
+
+        /****************************************/
+
         protected updateMap() {
 
             if (!this.selectedIndicator() || !this.selectedFactor())
                 return;
 
-            const day = this._data.days[this.dayNumber()];
 
-            for (const key in day.values) {
-                const element = document.getElementById(key.toUpperCase());
-                if (element) {
+            if (this.viewMode() != "country") {
 
-                    const area = this._geo.areas[key];
+                const day = this._data.days[this.dayNumber()];
 
-                    if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
-                        continue;
+                for (const key in day.values) {
+                    const element = document.getElementById(key.toUpperCase());
+                    if (element) {
 
-                    const field = this.selectedIndicator().id;
+                        const area = this._geo.areas[key];
 
-                    let factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
+                        if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
+                            continue;
 
-                    factor = Math.min(1, factor / this.maxFactor());
+                        const field = this.selectedIndicator().id;
 
-                    if (day.values[key][field] == 0 || isNaN(factor)) {
-                        if (element.classList.contains("valid"))
-                            element.classList.remove("valid");
-                        element.style.fillOpacity = "1";
-                        element.style.removeProperty("fill");
-                    }
-                    else {
-                        if (!element.classList.contains("valid"))
-                            element.classList.add("valid");
-                        const value = MathUtils.discretize(MathUtils.exponential(factor), 20);
-                        element.style.fillOpacity = value.toString();
-                        //element.style.fill = this._gradient.valueAt(value).toString();
+                        let factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
+
+                        factor = Math.min(1, factor / this.maxFactor());
+
+                        if (day.values[key][field] == 0 || isNaN(factor)) {
+                            if (element.classList.contains("valid"))
+                                element.classList.remove("valid");
+                            element.style.fillOpacity = "1";
+                            element.style.removeProperty("fill");
+                        }
+                        else {
+                            if (!element.classList.contains("valid"))
+                                element.classList.add("valid");
+                            const value = MathUtils.discretize(MathUtils.exponential(factor), 20);
+                            element.style.fillOpacity = value.toString();
+                            element.style.fill = this.selectedIndicator().colorDark;
+                            //element.style.fill = this._gradient.valueAt(value).toString();
+                        }
                     }
                 }
             }

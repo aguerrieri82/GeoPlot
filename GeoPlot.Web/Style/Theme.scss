@@ -1,69 +1,27 @@
-﻿body {
+﻿/****************************************/
+/* Theme                                */
+/****************************************/
+
+body {
     display: flex;
     min-height: 100vh;
     flex-direction: column;
 }
 
+/****************************************/
+
 main {
     flex: 1 0 auto;
 }
 
-.stack-horizontal {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+/****************************************/
 
-    > * {
-        margin-right: 25px;
-
-        &.stack-fit {
-            flex-grow: 1;
-            flex-basis: 0;
-        }
-
-        &:last-child {
-            margin-right: 0;
-        }
-    }
+.material-tooltip {
+    max-width: 300px !important;
+    white-space: pre-wrap;
 }
 
-.hidden {
-    display: none;
-}
-
-.flex-col-3 {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    box-sizing: border-box;
-
-    > * {
-        width: (100 /3) + %;
-        box-sizing: border-box;
-        margin-bottom: 16px;
-    }
-}
-
-.summary-field {
-    label {
-        display: block;
-    }
-}
-
-.empty-text {
-    font-style: italic;
-    color: #999;
-}
-
-.no-margin {
-    margin: 0 !important;
-}
-
-label.title {
-    margin-bottom: 8px;
-    display: block;
-    font-size: 15px;
-}
+/****************************************/
 
 ul.collapsible li {
     .collapsible-header {
@@ -85,45 +43,74 @@ ul.collapsible li {
     }
 }
 
-.chart {
-    position: relative;
-    margin-bottom: 24px;
-    background-color: white;
+/****************************************/
+/* Components                           */
+/****************************************/
 
-    .chart-container {
-        position: relative;
-        height: 28vh;
-        transition-duration: 0.3s;
+.flex-col-3 {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    box-sizing: border-box;
 
-        canvas {
-            background-color: white;
-        }
+    > * {
+        width: (100 /3) + %;
+        box-sizing: border-box;
+        margin-bottom: 16px;
     }
+}
 
-    &.zoom {
-        position: fixed;
-        top: 80px;
-        bottom: 60px;
-        left: 60px;
-        right: 30px;
-        padding: 24px;
-        z-index: 3;
-        overflow: hidden;
+/****************************************/
 
-        .chart-container {
-            position: absolute;
-            top: 60px;
-            right: 24px;
-            left: 24px;
-            bottom: 24px;
-            height: auto;
+.stack-horizontal {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    > * {
+        margin-right: 25px;
+
+        &.stack-fit {
+            flex-grow: 1;
+            flex-basis: 0;
+        }
+
+        &:last-child {
+            margin-right: 0;
         }
     }
 }
 
-.material-tooltip {
-    max-width: 300px !important;
-    white-space: pre-wrap;
+/****************************************/
+
+.summary-field {
+    label {
+        display: block;
+    }
+}
+
+
+/****************************************/
+/* Helpers                              */
+/****************************************/
+
+label.title {
+    margin-bottom: 8px;
+    display: block;
+    font-size: 15px;
+}
+
+.hidden {
+    display: none;
+}
+
+.empty-text {
+    font-style: italic;
+    color: #999;
+}
+
+.no-margin {
+    margin: 0 !important;
 }
 
 .relative {
@@ -147,6 +134,10 @@ ul.collapsible li {
         background-color: #eee;
     }
 }
+
+/****************************************/
+/* Cars Section                         */
+/****************************************/
 
 .card {
     .card-section {
@@ -180,7 +171,6 @@ ul.collapsible li {
 
             .section-content {
                 transition-duration: 0.3s;
-                overflow: hidden;
             }
 
             &.closed {
@@ -197,6 +187,7 @@ ul.collapsible li {
                 }
 
                 .section-content {
+                    overflow: hidden;
                     opacity: 0;
                     max-height: 0;
                     margin: 0;
@@ -207,10 +198,57 @@ ul.collapsible li {
     }
 }
 
+/****************************************/
+/* Custom                               */
+/****************************************/
+
 .card-map {
     padding: 0;
-    padding-top: 16px;
+
+    .tabs {
+        margin-bottom: 8px;
+    }
 }
+
+/****************************************/
+
+.chart {
+    position: relative;
+    margin-bottom: 24px;
+    background-color: white;
+
+    .chart-container {
+        position: relative;
+        height: 30vh;
+        transition-duration: 0.3s;
+
+        canvas {
+            background-color: white;
+        }
+    }
+
+    &.zoom {
+        position: fixed;
+        top: 20px;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        padding: 24px;
+        z-index: 2000;
+        overflow: hidden;
+
+        .chart-container {
+            position: absolute;
+            top: 60px;
+            right: 24px;
+            left: 24px;
+            bottom: 24px;
+            height: auto;
+        }
+    }
+}
+
+/****************************************/
 
 svg.map {
     width: 50vh;
@@ -240,10 +278,6 @@ svg.map {
 
                 &.region {
                     stroke-width: 0.15%;
-                }
-
-                &.valid {
-                    fill: #b71c1c;
                 }
 
                 &.selected, &:hover {

@@ -70,7 +70,8 @@ namespace GeoPlot.Web.Controllers
                 Days = new List<DayAreaGroupItem<InfectionData>>()
             };
 
-            foreach (var day in data.GroupBy(a => a.Date.Date))
+            var tomorrow = DateTime.Today.AddDays(1);
+            foreach (var day in data.GroupBy(a => a.Date.Date).Where(a=> a.Key < tomorrow))
             {
                 var item = new DayAreaGroupItem<InfectionData>()
                 {

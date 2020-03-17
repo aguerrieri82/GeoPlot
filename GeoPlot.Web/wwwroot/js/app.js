@@ -1530,43 +1530,50 @@ var GeoPlot;
                 {
                     id: "totalPositive",
                     name: "Positivi Totali",
-                    color: ""
+                    colorLight: "#f44336",
+                    colorDark: "#b71c1c"
                 },
                 {
                     id: "currentPositive",
                     name: "Attuali Positivi",
                     validFor: ["region", "country"],
-                    color: "deep-purple-text text-lighten-2"
+                    colorLight: "#e91e63",
+                    colorDark: "#880e4f"
                 },
                 {
                     id: "totalDeath",
                     name: "Deceduti",
                     validFor: ["region", "country"],
-                    color: "red-text text-lighten-1"
+                    colorLight: "#9c27b0",
+                    colorDark: "#4a148c"
                 },
                 {
                     id: "totalSevere",
                     name: "Gravi",
                     validFor: ["region", "country"],
-                    color: "orange-text"
+                    colorLight: "#ff9800",
+                    colorDark: "#e65100"
                 },
                 {
                     id: "totalHospedalized",
                     name: "Ricoverati",
                     validFor: ["region", "country"],
-                    color: "yellow-text text-darken-2"
+                    colorLight: "#fdd835",
+                    colorDark: "#fbc02d"
                 },
                 {
                     id: "totalHealed",
                     name: "Guariti",
                     validFor: ["region", "country"],
-                    color: "green-text text-lighten-2"
+                    colorLight: "#4caf50",
+                    colorDark: "#1b5e20"
                 },
                 {
                     id: "toatlTests",
                     name: "Tamponi",
                     validFor: ["region", "country"],
-                    color: "blue-text"
+                    colorLight: "#03a9f4",
+                    colorDark: "#01579b"
                 },
             ];
             this.FACTORS = [
@@ -1836,6 +1843,7 @@ var GeoPlot;
                 districtGroup.style.display = "none";
             this.selectedArea = null;
             this._chart = null;
+            this.clearMap();
             this.updateMaxFactor();
             this.updateDayData();
             if (this.viewMode() == "country") {
@@ -1942,7 +1950,12 @@ var GeoPlot;
                 var _loop_1 = function (indicator) {
                     var item = new IndicatorViewModel();
                     item.indicator = indicator;
-                    item.select = function () { return _this.selectedIndicator(indicator); };
+                    item.select = function () {
+                        _this.selectedIndicator(indicator);
+                        setTimeout(function () {
+                            return M.FormSelect.init(document.querySelectorAll(".row-indicator select"));
+                        });
+                    };
                     items.push(item);
                 };
                 for (var _i = 0, _a = this.indicators(); _i < _a.length; _i++) {
@@ -1959,6 +1972,31 @@ var GeoPlot;
             }
         };
         /****************************************/
+        GeoPlotPage.prototype.updateIndicator = function () {
+            if (!this.selectedIndicator() || !this.selectedFactor())
+                return;
+            this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
+            if (this.selectedFactor().id != "none") {
+                if (this.groupSize() != 1)
+                    this.groupSize(1);
+            }
+            this.updateMaxFactor();
+            this.updateDayData();
+            this.updateChart();
+            if (this._topAreasVisible)
+                this.updateTopAreas();
+        };
+        /****************************************/
+        GeoPlotPage.prototype.updateMaxFactor = function () {
+            var _this = this;
+            if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
+                return;
+            var max = GeoPlot.linq(this._data.days)
+                .select(function (a) { return GeoPlot.linq(a.values).where(function (a) { return _this.VIEW_MODES[_this.viewMode()].validateId(a.key); })
+                .select(function (b) { return _this.selectedFactor().compute(b.value, _this._geo.areas[b.key], b.value[_this.selectedIndicator().id]); }).max(); }).max();
+            this.maxFactor(parseFloat(max.toFixed(1)));
+        };
+        /****************************************/
         GeoPlotPage.prototype.initChart = function () {
             var canvas = document.querySelector("#areaGraph");
             this._chart = new Chart(canvas, {
@@ -1968,8 +2006,6 @@ var GeoPlot;
                         {
                             lineTension: 0,
                             data: [],
-                            backgroundColor: "#5cd6d3",
-                            borderColor: "#00a59d",
                             borderWidth: 1
                         }
                     ]
@@ -2004,31 +2040,6 @@ var GeoPlot;
             });
         };
         /****************************************/
-        GeoPlotPage.prototype.updateIndicator = function () {
-            if (!this.selectedIndicator() || !this.selectedFactor())
-                return;
-            this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
-            if (this.selectedFactor().id != "none") {
-                if (this.groupSize() != 1)
-                    this.groupSize(1);
-            }
-            this.updateMaxFactor();
-            this.updateDayData();
-            this.updateChart();
-            if (this._topAreasVisible)
-                this.updateTopAreas();
-        };
-        /****************************************/
-        GeoPlotPage.prototype.updateMaxFactor = function () {
-            var _this = this;
-            if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
-                return;
-            var max = GeoPlot.linq(this._data.days)
-                .select(function (a) { return GeoPlot.linq(a.values).where(function (a) { return _this.VIEW_MODES[_this.viewMode()].validateId(a.key); })
-                .select(function (b) { return _this.selectedFactor().compute(b.value, _this._geo.areas[b.key], b.value[_this.selectedIndicator().id]); }).max(); }).max();
-            this.maxFactor(parseFloat(max.toFixed(1)));
-        };
-        /****************************************/
         GeoPlotPage.prototype.updateChart = function () {
             var _this = this;
             if (!this.selectedIndicator() || !this.currentArea() || !this.selectedFactor())
@@ -2045,6 +2056,8 @@ var GeoPlot;
                 this._chart.options.scales.yAxes[0].type = "logarithmic";
             else
                 this._chart.options.scales.yAxes[0].type = "linear";
+            this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
+            this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
             if (this.isGraphDelta()) {
                 this._chart.data.datasets[0].data = [];
                 for (var i = 1 + this.startDay(); i < this._data.days.length; i++) {
@@ -2092,6 +2105,10 @@ var GeoPlot;
             var id = value.value.id.toLowerCase();
             var area = value.value;
             var day = this._data.days[dayNumber];
+            if (!day || !day.values[id]) {
+                M.toast({ html: "Dati non disponibili" });
+                return;
+            }
             value.data(day.values[id]);
             value.indicator(day.values[id][this.selectedIndicator().id]);
             value.factor(GeoPlot.MathUtils.discretize(this.selectedFactor().compute(day.values[id], area, value.indicator()), 10));
@@ -2144,31 +2161,43 @@ var GeoPlot;
             history.replaceState(null, null, url);
         };
         /****************************************/
-        GeoPlotPage.prototype.updateMap = function () {
-            if (!this.selectedIndicator() || !this.selectedFactor())
-                return;
+        GeoPlotPage.prototype.clearMap = function () {
             var day = this._data.days[this.dayNumber()];
             for (var key in day.values) {
                 var element = document.getElementById(key.toUpperCase());
-                if (element) {
-                    var area = this._geo.areas[key];
-                    if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
-                        continue;
-                    var field = this.selectedIndicator().id;
-                    var factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
-                    factor = Math.min(1, factor / this.maxFactor());
-                    if (day.values[key][field] == 0 || isNaN(factor)) {
-                        if (element.classList.contains("valid"))
-                            element.classList.remove("valid");
-                        element.style.fillOpacity = "1";
-                        element.style.removeProperty("fill");
-                    }
-                    else {
-                        if (!element.classList.contains("valid"))
-                            element.classList.add("valid");
-                        var value = GeoPlot.MathUtils.discretize(GeoPlot.MathUtils.exponential(factor), 20);
-                        element.style.fillOpacity = value.toString();
-                        //element.style.fill = this._gradient.valueAt(value).toString();
+                if (element)
+                    element.style.removeProperty("fill");
+            }
+        };
+        /****************************************/
+        GeoPlotPage.prototype.updateMap = function () {
+            if (!this.selectedIndicator() || !this.selectedFactor())
+                return;
+            if (this.viewMode() != "country") {
+                var day = this._data.days[this.dayNumber()];
+                for (var key in day.values) {
+                    var element = document.getElementById(key.toUpperCase());
+                    if (element) {
+                        var area = this._geo.areas[key];
+                        if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
+                            continue;
+                        var field = this.selectedIndicator().id;
+                        var factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
+                        factor = Math.min(1, factor / this.maxFactor());
+                        if (day.values[key][field] == 0 || isNaN(factor)) {
+                            if (element.classList.contains("valid"))
+                                element.classList.remove("valid");
+                            element.style.fillOpacity = "1";
+                            element.style.removeProperty("fill");
+                        }
+                        else {
+                            if (!element.classList.contains("valid"))
+                                element.classList.add("valid");
+                            var value = GeoPlot.MathUtils.discretize(GeoPlot.MathUtils.exponential(factor), 20);
+                            element.style.fillOpacity = value.toString();
+                            element.style.fill = this.selectedIndicator().colorDark;
+                            //element.style.fill = this._gradient.valueAt(value).toString();
+                        }
                     }
                 }
             }

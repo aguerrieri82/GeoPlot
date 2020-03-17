@@ -1,11 +1,45 @@
-﻿body {
+﻿/****************************************/
+/* Theme                                */
+/****************************************/
+body {
   display: flex;
   min-height: 100vh;
   flex-direction: column; }
 
+/****************************************/
 main {
   flex: 1 0 auto; }
 
+/****************************************/
+.material-tooltip {
+  max-width: 300px !important;
+  white-space: pre-wrap; }
+
+/****************************************/
+ul.collapsible li .collapsible-header {
+  position: relative; }
+  ul.collapsible li .collapsible-header i {
+    position: absolute;
+    right: 0;
+    transition-duration: 0.3s; }
+
+ul.collapsible li.active .collapsible-header i {
+  transform: rotate(90deg); }
+
+/****************************************/
+/* Components                           */
+/****************************************/
+.flex-col-3 {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  box-sizing: border-box; }
+  .flex-col-3 > * {
+    width: 33.33333%;
+    box-sizing: border-box;
+    margin-bottom: 16px; }
+
+/****************************************/
 .stack-horizontal {
   display: flex;
   flex-direction: row;
@@ -18,21 +52,20 @@ main {
     .stack-horizontal > *:last-child {
       margin-right: 0; }
 
-.hidden {
-  display: none; }
-
-.flex-col-3 {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  box-sizing: border-box; }
-  .flex-col-3 > * {
-    width: 33.33333%;
-    box-sizing: border-box;
-    margin-bottom: 16px; }
-
+/****************************************/
 .summary-field label {
   display: block; }
+
+/****************************************/
+/* Helpers                              */
+/****************************************/
+label.title {
+  margin-bottom: 8px;
+  display: block;
+  font-size: 15px; }
+
+.hidden {
+  display: none; }
 
 .empty-text {
   font-style: italic;
@@ -40,52 +73,6 @@ main {
 
 .no-margin {
   margin: 0 !important; }
-
-label.title {
-  margin-bottom: 8px;
-  display: block;
-  font-size: 15px; }
-
-ul.collapsible li .collapsible-header {
-  position: relative; }
-  ul.collapsible li .collapsible-header i {
-    position: absolute;
-    right: 0;
-    transition-duration: 0.3s; }
-
-ul.collapsible li.active .collapsible-header i {
-  transform: rotate(90deg); }
-
-.chart {
-  position: relative;
-  margin-bottom: 24px;
-  background-color: white; }
-  .chart .chart-container {
-    position: relative;
-    height: 28vh;
-    transition-duration: 0.3s; }
-    .chart .chart-container canvas {
-      background-color: white; }
-  .chart.zoom {
-    position: fixed;
-    top: 80px;
-    bottom: 60px;
-    left: 60px;
-    right: 30px;
-    padding: 24px;
-    z-index: 3;
-    overflow: hidden; }
-    .chart.zoom .chart-container {
-      position: absolute;
-      top: 60px;
-      right: 24px;
-      left: 24px;
-      bottom: 24px;
-      height: auto; }
-
-.material-tooltip {
-  max-width: 300px !important;
-  white-space: pre-wrap; }
 
 .relative {
   position: relative; }
@@ -102,6 +89,9 @@ ul.collapsible li.active .collapsible-header i {
   .selectable:hover {
     background-color: #eee; }
 
+/****************************************/
+/* Cars Section                         */
+/****************************************/
 .card .card-section {
   border-bottom: solid 1px #ddd; }
   .card .card-section:last-of-type {
@@ -120,8 +110,7 @@ ul.collapsible li.active .collapsible-header i {
       transition-duration: 0.3s;
       transform: rotate(90deg); }
   .card .card-section.expandable .section-content {
-    transition-duration: 0.3s;
-    overflow: hidden; }
+    transition-duration: 0.3s; }
   .card .card-section.expandable.closed {
     margin-bottom: 12px;
     border-bottom: none; }
@@ -131,15 +120,49 @@ ul.collapsible li.active .collapsible-header i {
       .card .card-section.expandable.closed .section-title i {
         transform: rotate(0); }
     .card .card-section.expandable.closed .section-content {
+      overflow: hidden;
       opacity: 0;
       max-height: 0;
       margin: 0;
       margin-top: -20px; }
 
+/****************************************/
+/* Custom                               */
+/****************************************/
 .card-map {
-  padding: 0;
-  padding-top: 16px; }
+  padding: 0; }
+  .card-map .tabs {
+    margin-bottom: 8px; }
 
+/****************************************/
+.chart {
+  position: relative;
+  margin-bottom: 24px;
+  background-color: white; }
+  .chart .chart-container {
+    position: relative;
+    height: 30vh;
+    transition-duration: 0.3s; }
+    .chart .chart-container canvas {
+      background-color: white; }
+  .chart.zoom {
+    position: fixed;
+    top: 20px;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    padding: 24px;
+    z-index: 2000;
+    overflow: hidden; }
+    .chart.zoom .chart-container {
+      position: absolute;
+      top: 60px;
+      right: 24px;
+      left: 24px;
+      bottom: 24px;
+      height: auto; }
+
+/****************************************/
 svg.map {
   width: 50vh;
   max-width: 100%;
@@ -157,8 +180,6 @@ svg.map {
     fill: white; }
     svg.map .group.active .area.region {
       stroke-width: 0.15%; }
-    svg.map .group.active .area.valid {
-      fill: #b71c1c; }
     svg.map .group.active .area.selected, svg.map .group.active .area:hover {
       stroke: #F57F17;
       stroke-width: 0.3%; }

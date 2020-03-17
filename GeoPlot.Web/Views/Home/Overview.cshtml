@@ -63,7 +63,7 @@
 
                     <div class="card-section">
                         <div class="row">
-                            <div class="col s4" data-bind="css: selectedIndicator().color">
+                            <div class="col s4" data-bind="style: { color: selectedIndicator().colorLight}">
                                 <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
                                 <div data-bind="text: formatNumber(currentArea().indicator())"></div>
                             </div>
@@ -100,7 +100,7 @@
                         </h6>
                         <div class="section-content">
                             <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
-                                <div class="summary-field selectable" data-bind="css: indicator.color, click: select">
+                                <div class="summary-field selectable" data-bind="style: {color: indicator.colorLight}, click: select">
                                     <label data-bind="text: indicator.name"></label>
                                     <span data-bind="text: formatNumber(value())"></span>
                                 </div>
