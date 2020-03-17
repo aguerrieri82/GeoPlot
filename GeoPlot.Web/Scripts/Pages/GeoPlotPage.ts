@@ -263,6 +263,7 @@
             });
 
             this.isGraphDelta.subscribe(() => {
+                this.computeStartDayForGroup();
                 this.updateChart();
                 this.updateUrl();
             });
@@ -277,7 +278,8 @@
                 this.updateUrl();
             });
 
-            this.groupSize.subscribe(() => {
+            this.groupSize.subscribe(value => {
+                this.computeStartDayForGroup();
                 this.updateChart();
                 this.updateUrl();
             });
@@ -336,11 +338,11 @@
             if (state.logScale != undefined)
                 this.isLogScale(state.logScale);
 
-            if (state.startDay != undefined)
-                this.startDay(state.startDay);
-
             if (state.groupSize)
                 this.groupSize(state.groupSize);
+
+            if (state.startDay != undefined)
+                this.startDay(state.startDay);
 
             if (state.graphDelta != undefined)
                 this.isGraphDelta(state.graphDelta);
@@ -453,6 +455,25 @@
 
         /****************************************/
 
+        protected computeStartDayForGroup() {
+
+            let totDays = this.days.length - this.startDay();
+            if (this.isGraphDelta())
+                totDays--;
+            const module = (totDays % this.groupSize());
+            if (module != 0) {
+                const invModule = this.groupSize() - module;
+                if (this.startDay() - invModule >= 0)
+                    this.startDay(this.startDay() - invModule);
+                else if (this.startDay() + module < this.days.length - 1)
+                    this.startDay(this.startDay() + module);
+
+                M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+            }
+        }
+
+        /****************************************/
+
         private onMapClick(e: MouseEvent) {
             const item = <SVGPolygonElement>e.target;
             if (item.parentElement.classList.contains(this.viewMode())) {
@@ -494,8 +515,10 @@
 
                 this.updateChart();
 
-                if (isEmptyArea)
+                if (isEmptyArea) {
                     M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+                    M.Tooltip.init(document.querySelectorAll(".row-chart-group .tooltipped"));
+                }
             }
 
             this.updateUrl();
@@ -622,7 +645,7 @@
                 const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
                 let count = this.groupSize();
                 let curPoint: { x?: Date, y: number } = {y: 0};
-                for (let i = data.length - 1; i >= 0; i--) {
+                for (let i = 0; i < data.length; i++) {
                     curPoint.y += data[i].y;
                     count--;
                     if (count == 0) {

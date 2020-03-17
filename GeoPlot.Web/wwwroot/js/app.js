@@ -1551,6 +1551,7 @@ var GeoPlot;
                 _this.updateUrl();
             });
             this.isGraphDelta.subscribe(function () {
+                _this.computeStartDayForGroup();
                 _this.updateChart();
                 _this.updateUrl();
             });
@@ -1562,7 +1563,8 @@ var GeoPlot;
                 _this.updateChart();
                 _this.updateUrl();
             });
-            this.groupSize.subscribe(function () {
+            this.groupSize.subscribe(function (value) {
+                _this.computeStartDayForGroup();
                 _this.updateChart();
                 _this.updateUrl();
             });
@@ -1605,10 +1607,10 @@ var GeoPlot;
             document.body.scrollTop = 0;
             if (state.logScale != undefined)
                 this.isLogScale(state.logScale);
-            if (state.startDay != undefined)
-                this.startDay(state.startDay);
             if (state.groupSize)
                 this.groupSize(state.groupSize);
+            if (state.startDay != undefined)
+                this.startDay(state.startDay);
             if (state.graphDelta != undefined)
                 this.isGraphDelta(state.graphDelta);
             if (state.maxFactor) {
@@ -1693,6 +1695,21 @@ var GeoPlot;
             configurable: true
         });
         /****************************************/
+        GeoPlotPage.prototype.computeStartDayForGroup = function () {
+            var totDays = this.days.length - this.startDay();
+            if (this.isGraphDelta())
+                totDays--;
+            var module = (totDays % this.groupSize());
+            if (module != 0) {
+                var invModule = this.groupSize() - module;
+                if (this.startDay() - invModule >= 0)
+                    this.startDay(this.startDay() - invModule);
+                else if (this.startDay() + module < this.days.length - 1)
+                    this.startDay(this.startDay() + module);
+                M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+            }
+        };
+        /****************************************/
         GeoPlotPage.prototype.onMapClick = function (e) {
             var item = e.target;
             if (item.parentElement.classList.contains(this.viewMode())) {
@@ -1722,8 +1739,10 @@ var GeoPlot;
                 this.updateArea(area);
                 this.currentArea(area);
                 this.updateChart();
-                if (isEmptyArea)
+                if (isEmptyArea) {
                     M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+                    M.Tooltip.init(document.querySelectorAll(".row-chart-group .tooltipped"));
+                }
             }
             this.updateUrl();
         };
@@ -1827,7 +1846,7 @@ var GeoPlot;
                 var data = this._chart.data.datasets[0].data;
                 var count = this.groupSize();
                 var curPoint = { y: 0 };
-                for (var i = data.length - 1; i >= 0; i--) {
+                for (var i = 0; i < data.length; i++) {
                     curPoint.y += data[i].y;
                     count--;
                     if (count == 0) {
