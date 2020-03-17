@@ -46,8 +46,10 @@ ul.collapsible li.active .collapsible-header i {
   background-color: white; }
   .chart .chart-container {
     position: relative;
-    height: 25vh;
+    height: 28vh;
     transition-duration: 0.3s; }
+    .chart .chart-container canvas {
+      background-color: white; }
   .chart.zoom {
     position: fixed;
     top: 80px;
@@ -75,6 +77,8 @@ ul.collapsible li.active .collapsible-header i {
 .action-right {
   position: absolute;
   right: 0px; }
+  .action-right a {
+    margin-right: 8px; }
 
 .card-map {
   padding: 0;

@@ -378,20 +378,44 @@
                 day: this.dayNumber(),
                 area: this.selectedArea ? this.selectedArea.id : undefined,
                 groupSize: this.groupSize(),
-                startDay: this.startDay(),
+                startDay: this.startDay(), 
                 logScale: this.isLogScale()
-            };
+            }; 
         }
 
         /****************************************/
 
-        copySerie() {
+        copyChart() {
+            this._chart.canvas.toBlob(async blob => {
+                if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
+                    let item = new ClipboardItem({ [blob.type]: blob });
+                    await navigator.clipboard.write([item]);
+                    M.toast({ html: "Grafico copiato negli appunti." })
+                }
+                else {
+                    const url = window.URL.createObjectURL(blob);
+                    const element = document.createElement("a");
+                    element.href = url;
+                    element.target = "_blan";
+                    element.download = this._chart.options.title.text + ".png";
+                    element.click();
+                    M.toast({ html: "Funzionalità non supportata, download in corso." })
+                }
+            });
+
+        }
+
+        /****************************************/
+
+        async copySerie() {
 
             const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
             let text = "";
             for (let i = 0; i < data.length; i++) 
                 text += DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + MathUtils.round(data[i].y, 1) + "\n";
+
             DomUtils.copyText(text);
+
             M.toast({ html: "Serie copiato sugli appunti." })
         }
 
@@ -558,7 +582,11 @@
                 options: {
                     maintainAspectRatio: false,
                     legend: {
-                        display: false
+                        display: true,
+                        position: "bottom"
+                    },
+                    title: {
+                        display: false,
                     },
                     tooltips: {
                         callbacks: {
@@ -637,7 +665,8 @@
             const areaId = area.id.toLowerCase();
             const field = this.selectedIndicator().id;
 
-            this._chart.data.datasets[0].label = this.factorDescription();
+                this._chart.data.datasets[0].label = this.factorDescription() + " - " + area.name;;
+            this._chart.options.title.text = this._chart.data.datasets[0].label;
 
             if (this.isLogScale())
                 this._chart.options.scales.yAxes[0].type = "logarithmic";

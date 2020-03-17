@@ -4,9 +4,9 @@
     "noEmitOnError": false,
     "removeComments": false,
     "sourceMap": true,
-    "target": "es5",
+    "target": "ES5",
     "outFile": "wwwroot/js/app.js",
-    "lib": [ "es5", "es2015.promise", "dom", "es2015.iterable", "es2017.string" ]
+    "lib": [ "es5", "es2015.promise", "dom", "es2015.iterable", "es2017.string" , "ES2020"]
   },
   "compileOnSave": true,
   "exclude": [
