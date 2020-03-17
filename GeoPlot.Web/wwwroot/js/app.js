@@ -1494,6 +1494,14 @@ var GeoPlot;
             this._topAreasVisible = false;
             this._indicatorsVisible = false;
             this._gradient = new GeoPlot.LinearGradient("#18ffff", "#ffff00", "#ff3d00");
+            this._specialDates = {
+                current: {
+                    date: undefined,
+                    color: "#000",
+                    width: 0.5,
+                    label: "Giorno corrente"
+                }
+            };
             this.VIEW_MODES = {
                 "district": {
                     label: {
@@ -1639,7 +1647,11 @@ var GeoPlot;
             this._data = model.data;
             this._geo = model.geo;
             this.totalDays(this._data.days.length - 1);
-            this.dayNumber.subscribe(function (a) { return _this.updateDayData(); });
+            this.dayNumber.subscribe(function (a) {
+                _this.updateDayData();
+                _this._specialDates.current.date = new Date(_this._data.days[a].date);
+                _this.updateChart();
+            });
             this._mapSvg = document.getElementsByTagName("svg").item(0);
             this._mapSvg.addEventListener("click", function (e) { return _this.onMapClick(e); });
             this.days = [];
@@ -1819,7 +1831,7 @@ var GeoPlot;
                     for (i = 0; i < data.length; i++)
                         text += GeoPlot.DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + GeoPlot.MathUtils.round(data[i].y, 1) + "\n";
                     GeoPlot.DomUtils.copyText(text);
-                    M.toast({ html: "Serie copiato sugli appunti." });
+                    M.toast({ html: "Serie copiata sugli appunti." });
                     return [2 /*return*/];
                 });
             });
@@ -1919,7 +1931,7 @@ var GeoPlot;
                 this.dayNumber(0);
             else
                 this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
-            setTimeout(function () { return _this.nextFrame(); }, 300);
+            setTimeout(function () { return _this.nextFrame(); }, 100);
         };
         /****************************************/
         GeoPlotPage.prototype.changeArea = function () {
@@ -1998,8 +2010,35 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.initChart = function () {
+            var _this = this;
             var canvas = document.querySelector("#areaGraph");
+            var referencesPlugIn = {
+                afterDraw: function (chart) {
+                    var data = chart.data.datasets[0].data;
+                    if (!data || data.length == 0)
+                        return;
+                    var xScale = chart["scales"]["x-axis-0"];
+                    var ctx = chart.ctx;
+                    for (var key in _this._specialDates) {
+                        var item = _this._specialDates[key];
+                        if (!item.date || item.visible === false)
+                            continue;
+                        var offset = xScale["getPixelForValue"]({ x: item.date });
+                        ctx.lineWidth = item.width || 1;
+                        ctx.beginPath();
+                        ctx.moveTo(offset, chart.chartArea.top);
+                        ctx.lineTo(offset, chart.chartArea.bottom);
+                        ctx.strokeStyle = item.color || "#000";
+                        if (item.dash)
+                            ctx.setLineDash(item.dash);
+                        if (item.dashOffset)
+                            ctx.lineDashOffset = item.dashOffset;
+                        ctx.stroke();
+                    }
+                }
+            };
             this._chart = new Chart(canvas, {
+                plugins: [referencesPlugIn],
                 type: "line",
                 data: {
                     datasets: [

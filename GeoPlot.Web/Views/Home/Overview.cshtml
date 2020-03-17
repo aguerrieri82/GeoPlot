@@ -4,213 +4,217 @@
 
     var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region};
 }
-<div class="container">
+    <div class="container">
 
-    <h6>Giorno <span data-bind="text: currentData"></span></h6>
-    <div class="row">
-        <div class="col s12 m6 l7">
-            <section class="card card-map">
-                <ul class="tabs" id="areaTabs">
-                    <li class="tab"><a href="#districtTab">Province</a></li>
-                    <li class="tab"><a href="#regionTab">Regioni</a></li>
-                    <li class="tab"><a href="#italyTab">Italia</a></li>
-                </ul>
-                <div class="card-content">
-                    <div id="regionTab" data-view-mode="region"></div>
-                    <div id="districtTab" data-view-mode="district"></div>
-                    <div id="italyTab" data-view-mode="country"></div>
-                    <div class="center-align">
-                        <svg class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
-                            @foreach (var areaType in typeOrder)
+        <h6>Giorno <span data-bind="text: currentData"></span></h6>
+        <div class="row">
+            <div class="col s12 m6 l7">
+                <section class="card card-map">
+                    <ul class="tabs" id="areaTabs">
+                        <li class="tab"><a href="#districtTab">Province</a></li>
+                        <li class="tab"><a href="#regionTab">Regioni</a></li>
+                        <li class="tab"><a href="#italyTab">Italia</a></li>
+                    </ul>
+                    <div class="card-content">
+                        <div id="regionTab" data-view-mode="region"></div>
+                        <div id="districtTab" data-view-mode="district"></div>
+                        <div id="italyTab" data-view-mode="country"></div>
+                        <div class="center-align">
+                            <svg class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+                                @foreach (var areaType in typeOrder)
                             {
-                            <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: viewMode() == '@(areaType.ToString().ToLower())'}">
-                                @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
+                                <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: viewMode() == '@(areaType.ToString().ToLower())'}">
+                                    @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
                                     {
-                                <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">
-                                    @foreach (var poly in area.Value.Geometry)
+                                    <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">
+                                        @foreach (var poly in area.Value.Geometry)
                                             {
-                                    <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                                        <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
                                             }
-                                </g>
+                                    </g>
                                         area.Value.Geometry = null;
                                     }
-                            </g>
+                                </g>
                             }
-                        </svg>
-                    </div>
-                </div>
-            </section>
-
-            <section class="day">
-                <div class="stack-horizontal">
-                    <span data-bind="text: dayNumber"></span>
-                    <div class="range-field stack-fit">
-                        <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
-                    </div>
-                    <div>
-                        <button title="Play" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
-                        <button title="Pause" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <div class="col s12 m6 l5 ">
-            <section class="card">
-                <div class="card-content">
-                    <!--ko if: currentArea-->
-                    <span class="card-title" data-bind="text: currentArea().value.name"></span>
-
-                    <div class="card-section">
-                        <div class="row">
-                            <div class="col s4" data-bind="style: { color: selectedIndicator().colorLight}">
-                                <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
-                                <div data-bind="text: formatNumber(currentArea().indicator())"></div>
-                            </div>
-                            <div class="col s4">
-                                <label data-bind="text: selectedFactor().name"></label>
-                                <div data-bind="text: currentArea().reference"></div>
-                            </div>
-                            <div class="col s4">
-                                <label data-bind="attr: {title: factorDescription}">Fattore</label>
-                                <div data-bind="text: currentArea().factor"></div>
-                            </div>
-                        </div>
-                        <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
-                            <div class="relative">
-                                <div class="action-right">
-                                    <a href="#!" title="Copia grafico" data-bind="click: copyChart"><i class="material-icons">image</i></a>
-                                    <a href="#!" title="Copia serie" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
-                                    <a href="#!" title="Espandi grafico" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
-                                </div>
-                                <label class="title">
-                                    <span data-bind="text: factorDescription"></span>
-                                </label>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="areaGraph">
-                                </canvas>
-                            </div>
+                            </svg>
                         </div>
                     </div>
-                    <div class="card-section expandable" data-bind="visible: viewMode() != 'district'">
-                        <h6 class="section-title" onclick="expandCollapse(this)">
-                            <span>Indicatori</span>
-                            <i class="material-icons">chevron_right</i>
-                        </h6>
-                        <div class="section-content">
-                            <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
-                                <div class="summary-field selectable" data-bind="style: {color: indicator.colorLight}, click: select">
-                                    <label data-bind="text: indicator.name"></label>
-                                    <span data-bind="text: formatNumber(value())"></span>
-                                </div>
-                            </div>
+                </section>
+
+                <section class="day">
+                    <div class="stack-horizontal">
+                        <span data-bind="text: dayNumber"></span>
+                        <div class="range-field stack-fit">
+                            <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
+                        </div>
+                        <div>
+                            <button title="Play" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
+                            <button title="Pause" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
                         </div>
                     </div>
-                    <div class="card-section expandable closed">
-                        <h6 class="section-title" onclick="expandCollapse(this)">
-                            <span>Opzioni</span>
-                            <i class="material-icons">chevron_right</i>
-                        </h6>
-                        <div class="section-content">
+                </section>
+            </div>
+
+            <div class="col s12 m6 l5 ">
+                <section class="card">
+                    <div class="card-content">
+                        <!--ko if: currentArea-->
+                        <span class="card-title" data-bind="text: currentArea().value.name"></span>
+
+                        <div class="card-section">
                             <div class="row">
-                                <div class="col s12">
-                                    <label>
-                                        <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
-                                        <span>Incremento giornaliero</span>
-                                    </label>
+                                <div class="col s4" data-bind="style: { color: selectedIndicator().colorLight}">
+                                    <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
+                                    <div data-bind="text: formatNumber(currentArea().indicator())"></div>
                                 </div>
-                                <div class="col s12">
-                                    <label>
-                                        <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
-                                        <span>Scala logaritmica</span>
-                                    </label>
+                                <div class="col s4">
+                                    <label data-bind="text: selectedFactor().name"></label>
+                                    <div data-bind="text: currentArea().reference"></div>
+                                </div>
+                                <div class="col s4">
+                                    <label data-bind="attr: {title: factorDescription}">Fattore</label>
+                                    <div data-bind="text: currentArea().factor"></div>
                                 </div>
                             </div>
-                            <div class="row no-margin row-chart-group">
-                                <div class="col s6 input-field">
-                                    <select data-bind="enable: isNoFactorSelected, options: groupDays, value: groupSize"></select>
-                                    <label>
-                                        <span>Ragruppa (giorni)</span>
-                                        <i class="material-icons tooltipped" data-position="top" data-tooltip="Raggruppa i dati sommandoli per gli N° giorni consecutivi. Nel caso la dimensione del gruppo non sia divisibile con il numero dei giorni saranno troncati i dati più recenti. Spostare la data di inizio per avere i dati attuali.">info</i>
+                            <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
+                                <div class="relative">
+                                    <div class="action-right">
+                                        <a href="#!" title="Copia grafico" data-bind="click: copyChart"><i class="material-icons">image</i></a>
+                                        <a href="#!" title="Copia serie" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
+                                        <a href="#!" title="Espandi grafico" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
+                                    </div>
+                                    <label class="title">
+                                        <span data-bind="text: factorDescription"></span>
                                     </label>
                                 </div>
-                                <div class="col s6 input-field">
-                                    <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
-                                    <label>A partire da</label>
+                                <div class="chart-container">
+                                    <canvas id="areaGraph">
+                                    </canvas>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        <div class="card-section expandable" data-bind="visible: viewMode() != 'district'">
+                            <h6 class="section-title" onclick="expandCollapse(this)">
+                                <span>Indicatori</span>
+                                <i class="material-icons">chevron_right</i>
+                            </h6>
+                            <div class="section-content">
+                                <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
+                                    <div class="summary-field selectable" data-bind="style: {color: indicator.colorLight}, click: select">
+                                        <label data-bind="text: indicator.name"></label>
+                                        <span data-bind="text: formatNumber(value())"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-section expandable closed">
+                            <h6 class="section-title" onclick="expandCollapse(this)">
+                                <span>Opzioni</span>
+                                <i class="material-icons">chevron_right</i>
+                            </h6>
+                            <div class="section-content">
+                                <div class="row">
+                                    <div class="col s12">
+                                        <label>
+                                            <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
+                                            <span>Incremento giornaliero</span>
+                                        </label>
+                                    </div>
+                                    <div class="col s12">
+                                        <label>
+                                            <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
+                                            <span>Scala logaritmica</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="row no-margin row-chart-group">
+                                    <div class="col s6 input-field">
+                                        <select data-bind="enable: isNoFactorSelected, options: groupDays, value: groupSize"></select>
+                                        <label>
+                                            <span>Ragruppa (giorni)</span>
+                                            <i class="material-icons tooltipped" data-position="top" data-tooltip="Raggruppa i dati sommandoli per gli N° giorni consecutivi. Nel caso la dimensione del gruppo non sia divisibile con il numero dei giorni saranno troncati i dati più recenti. Spostare la data di inizio per avere i dati attuali.">info</i>
+                                        </label>
+                                    </div>
+                                    <div class="col s6 input-field">
+                                        <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
+                                        <label>A partire da</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                    <!--/ko-->
-                    <!--ko ifnot: currentArea-->
-                    <span class="empty-text">Selezionare una <span data-bind="text: VIEW_MODES[viewMode()].label.singular"></span></span>
-                    <!--/ko-->
-                </div>
-            </section>
-            <section class="card">
-                <div class="card-content">
-                    <span class="card-title">Filtro</span>
-                    <div class="row no-margin row-indicator">
-                        <div class="col s6 input-field">
-                            <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
-                            <label>Indicatore</label>
-                        </div>
-                        <div class="col s6 input-field">
-                            <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
-                            <label>In rapporto a</label>
-                        </div>
-                    </div>
-                    <div class="row no-margin row-factor">
-                        <div class="col s6 input-field">
-                            <label>
-                                <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor" />
-                                <span>Soglia automatica</span>
-                                <i class="material-icons tooltipped" data-position="top" data-tooltip="La colorazione nella mappa è relativa al valore più alto dell'indicatore che si ha avuto in un area geografica (rosso scuro = soglia, bianco = 0).&#013; E' possibile impostare manualmente il valore di riferimento (soglia massima) e rendere i colori relativi a quel valore.">info</i>
-                            </label>
-                        </div>
-                        <div class="input-field col s6">
-                            <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
-                            <label for="limit">Soglia fattore</label>
-                        </div>
-                    </div>
-                </div>
-            </section>
- 
-            <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
-                <li>
-                    <div class="card-title collapsible-header">
-                        <span data-bind="text: capitalizeFirst(VIEW_MODES[viewMode()].label.plural)"></span>&nbsp;più colpite
-                        <i class="material-icons">chevron_right</i>
-                    </div>
-                    <div class="collapsible-body">
-                        <!--ko if topAreas-->
-                        <table class="responsive-table highlight">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
-                                    <th data-bind="text: selectedFactor().name"></th>
-                                    <th data-bind="attr: {title: factorDescription}">Fatt.</th>
-                                </tr>
-                            </thead>
-                            <tbody data-bind="foreach: topAreas">
-                                <tr data-bind="click: select">
-                                    <td data-bind="text: value.name"></td>
-                                    <td data-bind="text: formatNumber(indicator())"></td>
-                                    <td><span data-bind="text: reference"></span></td>
-                                    <td><span data-bind="text: factor"></span></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <!--/ko-->
+                        <!--ko ifnot: currentArea-->
+                        <span class="empty-text">Selezionare una <span data-bind="text: VIEW_MODES[viewMode()].label.singular"></span></span>
                         <!--/ko-->
                     </div>
-                </li>
-            </ul>
+                </section>
+                <section class="card">
+                    <div class="card-content">
+                        <span class="card-title">Filtro</span>
+                        <div class="row no-margin row-indicator">
+                            <div class="col s6 input-field">
+                                <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
+                                <label>Indicatore</label>
+                            </div>
+                            <div class="col s6 input-field">
+                                <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
+                                <label>In rapporto a</label>
+                            </div>
+                        </div>
+                        <div class="row no-margin row-factor">
+                            <div class="col s6 input-field">
+                                <label>
+                                    <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor" />
+                                    <span>Soglia automatica</span>
+                                    <i class="material-icons tooltipped" data-position="top" data-tooltip="La colorazione nella mappa è relativa al valore più alto dell'indicatore che si ha avuto in un area geografica (rosso scuro = soglia, bianco = 0).&#013; E' possibile impostare manualmente il valore di riferimento (soglia massima) e rendere i colori relativi a quel valore.">info</i>
+                                </label>
+                            </div>
+                            <div class="input-field col s6">
+                                <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
+                                <label for="limit">Soglia fattore</label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
+                    <li>
+                        <div class="card-title collapsible-header">
+                            <span data-bind="text: capitalizeFirst(VIEW_MODES[viewMode()].label.plural)"></span>&nbsp;più colpite
+                            <i class="material-icons">chevron_right</i>
+                        </div>
+                        <div class="collapsible-body">
+                            <!--ko if topAreas-->
+                            <table class="responsive-table highlight">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
+                                        <th data-bind="text: selectedFactor().name"></th>
+                                        <th data-bind="attr: {title: factorDescription}">Fatt.</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: topAreas">
+                                    <tr data-bind="click: select">
+                                        <td data-bind="text: value.name"></td>
+                                        <td data-bind="text: formatNumber(indicator())"></td>
+                                        <td><span data-bind="text: reference"></span></td>
+                                        <td><span data-bind="text: factor"></span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <!--/ko-->
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
+        <div class="data-source">
+            <b>Fonte Dati:</b> <a href="https://github.com/pcm-dpc/COVID-19/tree/master/dati-json" target="_blank">Protezione civile</a> - aggiornati al @string.Format("{0:dd/MM/yyyy HH:mm:ss}", Model.LastUpdate)
+        </div>
+
     </div>
-</div>
 
 
 @section Head{

@@ -13,5 +13,7 @@ namespace GeoPlot.Web.Models
         public GeoAreaSet Geo { get; set; }
 
         public DayAreaDataSet<InfectionData> Data { get; set; }
+
+        public DateTime LastUpdate { get; set; }
     }
 }

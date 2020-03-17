@@ -8,6 +8,16 @@
         topAreas?: AreaViewModel[];
     }
 
+    interface ISpecialDate {
+        date: Date;
+        visible?: boolean;
+        label?: string;
+        color?: string;
+        width?: number;
+        dash?: number[];
+        dashOffset?: number;
+    }
+
     interface IPageState {
         day?: number;
         area?: string;
@@ -102,6 +112,15 @@
         private _indicatorsVisible: boolean = false;
         private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
         private _mapSvg: SVGSVGElement;
+
+        private _specialDates: IDictionary<ISpecialDate> = {
+            current: {
+                date: undefined,
+                color: "#000",
+                width: 0.5,
+                label: "Giorno corrente"
+            }
+        };
 
 
         readonly VIEW_MODES: { [K in ViewMode]: IViewModeData } = {
@@ -236,7 +255,12 @@
             this._geo = model.geo;
 
             this.totalDays(this._data.days.length - 1);
-            this.dayNumber.subscribe(a => this.updateDayData());
+
+            this.dayNumber.subscribe(a => {
+                this.updateDayData();
+                this._specialDates.current.date = new Date(this._data.days[a].date);
+                this.updateChart();
+            });
 
             this._mapSvg = document.getElementsByTagName("svg").item(0);
             this._mapSvg.addEventListener("click", e => this.onMapClick(e))
@@ -457,7 +481,7 @@
 
             DomUtils.copyText(text);
 
-            M.toast({ html: "Serie copiato sugli appunti." })
+            M.toast({ html: "Serie copiata sugli appunti." })
         }
 
         /****************************************/
@@ -582,7 +606,7 @@
             else
                 this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
 
-            setTimeout(() => this.nextFrame(), 300);
+            setTimeout(() => this.nextFrame(), 100);
         }
 
         /****************************************/
@@ -684,7 +708,42 @@
         protected initChart() {
             const canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
 
+            const referencesPlugIn: Chart.PluginServiceRegistrationOptions = {
+                afterDraw: chart => {
+
+                    const data = chart.data.datasets[0].data;
+
+                    if (!data || data.length == 0)
+                        return;
+
+                    const xScale = chart["scales"]["x-axis-0"];
+                    const ctx = chart.ctx;
+
+                    for (let key in this._specialDates) {
+
+                        let item = this._specialDates[key];
+                        if (!item.date || item.visible === false)
+                            continue;
+
+                        let offset = <number>xScale["getPixelForValue"]({ x: item.date });
+
+                        ctx.lineWidth = item.width || 1;
+
+                        ctx.beginPath();
+                        ctx.moveTo(offset, chart.chartArea.top);
+                        ctx.lineTo(offset, chart.chartArea.bottom);
+                        ctx.strokeStyle = item.color || "#000";
+                        if (item.dash)
+                            ctx.setLineDash(item.dash);
+                        if (item.dashOffset)
+                            ctx.lineDashOffset = item.dashOffset;
+                        ctx.stroke();
+                    }
+                }
+            };
+
             this._chart = new Chart(canvas, {
+                plugins: [referencesPlugIn],
                 type: "line",
                 data: {
                     datasets: [
@@ -867,6 +926,7 @@
 
             const day = this._data.days[this.dayNumber()];
 
+
             this.currentData(DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
 
             this.updateMap();
@@ -874,6 +934,7 @@
             this.updateArea(this.currentArea());
 
             this.updateAreaIndicators();
+
 
             if (this._daysData && this._topAreasVisible)
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
