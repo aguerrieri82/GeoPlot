@@ -109,9 +109,9 @@
         private _chart: Chart;
         private _daysData: IDayData[];
         private _topAreasVisible: boolean = false;
-        private _indicatorsVisible: boolean = false;
         private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
         private _mapSvg: SVGSVGElement;
+        private _execludedArea = new Map<string, IGeoArea>();
 
         private _specialDates: IDictionary<ISpecialDate> = {
             current: {
@@ -514,6 +514,8 @@
 
             this._chart = null;
 
+            this._execludedArea.clear();
+
             this.clearMap();
 
             this.updateMaxFactor();
@@ -567,6 +569,35 @@
 
         /****************************************/
 
+        protected getFactorValue(dayOrNumber: number | IDayAreaGroupItem<IInfectionData>, areaOrId: string|IGeoArea, indicator: keyof IInfectionData): number {
+
+            const day = typeof dayOrNumber == "number" ? this._data.days[dayOrNumber] : dayOrNumber;
+
+            const area = typeof areaOrId == "string" ? this._geo.areas[areaOrId.toLowerCase()] : areaOrId;
+
+            return this.selectedFactor().compute(day[area.id.toLowerCase()], area, this.getIndicatorValue(day, area, indicator));
+        }
+
+        /****************************************/
+
+        protected getIndicatorValue(dayOrNumber: number | IDayAreaGroupItem<IInfectionData>, areaOrId: string | IGeoArea, indicator: keyof IInfectionData): number {
+
+            const day = typeof dayOrNumber == "number" ? this._data.days[<number>dayOrNumber] : dayOrNumber;
+
+            const areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;
+
+            let curValue = day.values[areaId.toLowerCase()][indicator];
+            if (this._execludedArea.size > 0) {
+                this._execludedArea.forEach(a => {
+                    curValue -= day.values[a.id.toLowerCase()][indicator];
+                });
+            }
+
+            return curValue;
+        }
+
+        /****************************************/
+
         protected computeStartDayForGroup() {
 
             let totDays = this.days.length - this.startDay();
@@ -588,9 +619,22 @@
 
         private onMapClick(e: MouseEvent) {
             const item = <SVGPolygonElement>e.target;
-            if (item.parentElement.classList.contains(this.viewMode())) {
-                const area = this._geo.areas[item.parentElement.id.toLowerCase()];
-                this.selectedArea = area;
+            if (this.viewMode() == "country") {
+                const areaId = item.parentElement.id;
+                if (this._execludedArea.has(areaId))
+                    this._execludedArea.delete(areaId);
+                else {
+                    const area = this._geo.areas[areaId.toLowerCase()];
+                    this._execludedArea.set(areaId, area);
+                    M.toast({ html: "Regione " + area.name + " esclusa dai conteggi." });
+                }
+                this.updateIndicator();
+            }
+            else {
+                if (item.parentElement.classList.contains(this.viewMode())) {
+                    const area = this._geo.areas[item.parentElement.id.toLowerCase()];
+                    this.selectedArea = area;
+                }
             }
         }
 
@@ -662,7 +706,7 @@
             const areaId = this.currentArea().value.id.toLowerCase();
 
             for (let item of this.currentArea().indicators())
-                item.value(day.values[areaId][item.indicator.id])
+                item.value(this.getIndicatorValue(day, areaId, item.indicator.id))
         }
 
         /****************************************/
@@ -695,11 +739,22 @@
 
             if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
                 return;
-            const max = linq(this._data.days)
-                .select(a => linq(a.values).where(a => this.VIEW_MODES[this.viewMode()].validateId(a.key))
-                    .select(b => this.selectedFactor().compute(b.value, this._geo.areas[b.key], b.value[this.selectedIndicator().id])).max()).max();
 
-            this.maxFactor(parseFloat(max.toFixed(1)));
+            let result = Number.NEGATIVE_INFINITY;
+            let curView = this.VIEW_MODES[this.viewMode()];
+
+            for (let i = 0; i < this._data.days.length; i++) {
+                const day = this._data.days[i];
+                for (let areaId in day.values) {
+                    if (!curView.validateId(areaId))
+                        continue;
+                    const factor = this.getFactorValue(day, areaId, this.selectedIndicator().id);
+                    if (factor > result)
+                        result = factor;
+                }
+            }
+
+            this.maxFactor(parseFloat(result.toFixed(1)));
         }
 
 
@@ -800,7 +855,7 @@
             const areaId = area.id.toLowerCase();
             const field = this.selectedIndicator().id;
 
-                this._chart.data.datasets[0].label = this.factorDescription() + " - " + area.name;;
+            this._chart.data.datasets[0].label = this.factorDescription() + " - " + area.name;;
             this._chart.options.title.text = this._chart.data.datasets[0].label;
 
             if (this.isLogScale())
@@ -819,8 +874,7 @@
                     const prevDay = this._data.days[i - 1];
                     const item : Chart.ChartPoint = {
                         x: new Date(day.date),
-                        y: this.selectedFactor().compute(day.values[areaId], area, day.values[areaId][field]) -
-                            this.selectedFactor().compute(prevDay.values[areaId], area, prevDay.values[areaId][field])
+                        y: this.getFactorValue(day, area, field) - this.getFactorValue(prevDay, area, field)
                     };
                     this._chart.data.datasets[0].data.push(<any>item);
                 }
@@ -828,7 +882,7 @@
             else {
                 this._chart.data.datasets[0].data = linq(this._data.days).skip(this.startDay()).select(a => ({
                     x: new Date(a.date),
-                    y: this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
+                    y: this.getFactorValue(a, area, field)
                 })).toArray();
             }
 
@@ -874,9 +928,9 @@
 
             value.data(day.values[id]);
 
-            value.indicator(day.values[id][this.selectedIndicator().id]);
+            value.indicator(this.getIndicatorValue(day, id, this.selectedIndicator().id));
 
-            value.factor(MathUtils.discretize(this.selectedFactor().compute(day.values[id], area, value.indicator()), 10));
+            value.factor(MathUtils.round(this.getFactorValue(day, area, this.selectedIndicator().id), 1));
 
             value.reference(this.selectedFactor().reference(day.values[id], area));
 
@@ -897,7 +951,7 @@
                 const isInArea = this.VIEW_MODES[this.viewMode()].validateId;
 
                 item.topAreas = linq(day.values).select(a => ({
-                        factor: this.selectedFactor().compute(a.value, this._geo.areas[a.key.toLowerCase()], a.value[this.selectedIndicator().id]),
+                    factor: this.getFactorValue(day, a.key, this.selectedIndicator().id),
                         value: a
                     }))
                     .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
@@ -926,7 +980,6 @@
 
             const day = this._data.days[this.dayNumber()];
 
-
             this.currentData(DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
 
             this.updateMap();
@@ -934,7 +987,6 @@
             this.updateArea(this.currentArea());
 
             this.updateAreaIndicators();
-
 
             if (this._daysData && this._topAreasVisible)
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
@@ -959,8 +1011,10 @@
 
             for (const key in day.values) {
                 const element = document.getElementById(key.toUpperCase());
-                if (element)
+                if (element) {
+                    element.style.removeProperty("opacity");
                     element.style.removeProperty("fill");
+                }
             }
         }
 
@@ -987,11 +1041,12 @@
 
                         const field = this.selectedIndicator().id;
 
-                        let factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
+                        let factor = this.getFactorValue(day, area, field);
+                        let indicator = this.getIndicatorValue(day, area, field);
 
                         factor = Math.min(1, factor / this.maxFactor());
 
-                        if (day.values[key][field] == 0 || isNaN(factor)) {
+                        if (indicator == 0 || isNaN(factor)) {
                             if (element.classList.contains("valid"))
                                 element.classList.remove("valid");
                             element.style.fillOpacity = "1";
@@ -1007,6 +1062,14 @@
                         }
                     }
                 }
+            }
+            else {
+                linq(document.querySelectorAll("g.region")).foreach((element: HTMLElement) => {
+                    if (this._execludedArea.has(element.id))
+                        element.style.fill = "#444";
+                    else
+                        element.style.fill = "#FFF";
+                });
             }
         }
 

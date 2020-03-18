@@ -822,6 +822,24 @@
 
             return this._enumerator;
         }
+
+        /****************************************/
+
+        [Symbol.iterator]() {
+            this._enumerator.reset();
+            return ({
+                next: (value?: any): IteratorResult<T> => {
+                    return {
+                        done: !this._enumerator.moveNext(),
+                        value: this._enumerator.current
+                    };
+                }
+            });
+        }
+
+        /****************************************/
+
+       
     }
 
     /****************************************/
@@ -832,6 +850,7 @@
     export function linq<T>(list: ICollection<T>): Linq<T>;
     export function linq<T>(iterator: Iterator<T>): Linq<T>;
     export function linq<T>(dictionary: IDictionary<T>): Linq<IKeyValue<T>>;
+    export function linq<T extends Node>(nodeList: NodeListOf<T>): Linq<T>;
 
     export function linq<T>(value: any): Linq<any> {
 

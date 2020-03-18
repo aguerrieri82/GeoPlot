@@ -5,6 +5,7 @@
     "removeComments": false,
     "sourceMap": true,
     "target": "ES5",
+    "downlevelIteration": true,
     "outFile": "wwwroot/js/app.js",
     "lib": [ "es5", "es2015.promise", "dom", "es2015.iterable", "es2017.string" , "ES2020"]
   },

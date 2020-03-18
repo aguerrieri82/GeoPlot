@@ -1168,6 +1168,19 @@ var GeoPlot;
         Linq.prototype.getEnumerator = function () {
             return this._enumerator;
         };
+        /****************************************/
+        Linq.prototype[Symbol.iterator] = function () {
+            var _this = this;
+            this._enumerator.reset();
+            return ({
+                next: function (value) {
+                    return {
+                        done: !_this._enumerator.moveNext(),
+                        value: _this._enumerator.current
+                    };
+                }
+            });
+        };
         return Linq;
     }());
     GeoPlot.Linq = Linq;
@@ -1492,8 +1505,8 @@ var GeoPlot;
         function GeoPlotPage(model) {
             var _this = this;
             this._topAreasVisible = false;
-            this._indicatorsVisible = false;
             this._gradient = new GeoPlot.LinearGradient("#18ffff", "#ffff00", "#ff3d00");
+            this._execludedArea = new Map();
             this._specialDates = {
                 current: {
                     date: undefined,
@@ -1855,6 +1868,7 @@ var GeoPlot;
                 districtGroup.style.display = "none";
             this.selectedArea = null;
             this._chart = null;
+            this._execludedArea.clear();
             this.clearMap();
             this.updateMaxFactor();
             this.updateDayData();
@@ -1900,6 +1914,24 @@ var GeoPlot;
             configurable: true
         });
         /****************************************/
+        GeoPlotPage.prototype.getFactorValue = function (dayOrNumber, areaOrId, indicator) {
+            var day = typeof dayOrNumber == "number" ? this._data.days[dayOrNumber] : dayOrNumber;
+            var area = typeof areaOrId == "string" ? this._geo.areas[areaOrId.toLowerCase()] : areaOrId;
+            return this.selectedFactor().compute(day[area.id.toLowerCase()], area, this.getIndicatorValue(day, area, indicator));
+        };
+        /****************************************/
+        GeoPlotPage.prototype.getIndicatorValue = function (dayOrNumber, areaOrId, indicator) {
+            var day = typeof dayOrNumber == "number" ? this._data.days[dayOrNumber] : dayOrNumber;
+            var areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;
+            var curValue = day.values[areaId.toLowerCase()][indicator];
+            if (this._execludedArea.size > 0) {
+                this._execludedArea.forEach(function (a) {
+                    curValue -= day.values[a.id.toLowerCase()][indicator];
+                });
+            }
+            return curValue;
+        };
+        /****************************************/
         GeoPlotPage.prototype.computeStartDayForGroup = function () {
             var totDays = this.days.length - this.startDay();
             if (this.isGraphDelta())
@@ -1917,9 +1949,22 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.onMapClick = function (e) {
             var item = e.target;
-            if (item.parentElement.classList.contains(this.viewMode())) {
-                var area = this._geo.areas[item.parentElement.id.toLowerCase()];
-                this.selectedArea = area;
+            if (this.viewMode() == "country") {
+                var areaId = item.parentElement.id;
+                if (this._execludedArea.has(areaId))
+                    this._execludedArea.delete(areaId);
+                else {
+                    var area = this._geo.areas[areaId.toLowerCase()];
+                    this._execludedArea.set(areaId, area);
+                    M.toast({ html: "Regione " + area.name + " esclusa dai conteggi." });
+                }
+                this.updateIndicator();
+            }
+            else {
+                if (item.parentElement.classList.contains(this.viewMode())) {
+                    var area = this._geo.areas[item.parentElement.id.toLowerCase()];
+                    this.selectedArea = area;
+                }
             }
         };
         /****************************************/
@@ -1980,7 +2025,7 @@ var GeoPlot;
             var areaId = this.currentArea().value.id.toLowerCase();
             for (var _b = 0, _c = this.currentArea().indicators(); _b < _c.length; _b++) {
                 var item = _c[_b];
-                item.value(day.values[areaId][item.indicator.id]);
+                item.value(this.getIndicatorValue(day, areaId, item.indicator.id));
             }
         };
         /****************************************/
@@ -2000,13 +2045,21 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateMaxFactor = function () {
-            var _this = this;
             if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
                 return;
-            var max = GeoPlot.linq(this._data.days)
-                .select(function (a) { return GeoPlot.linq(a.values).where(function (a) { return _this.VIEW_MODES[_this.viewMode()].validateId(a.key); })
-                .select(function (b) { return _this.selectedFactor().compute(b.value, _this._geo.areas[b.key], b.value[_this.selectedIndicator().id]); }).max(); }).max();
-            this.maxFactor(parseFloat(max.toFixed(1)));
+            var result = Number.NEGATIVE_INFINITY;
+            var curView = this.VIEW_MODES[this.viewMode()];
+            for (var i = 0; i < this._data.days.length; i++) {
+                var day = this._data.days[i];
+                for (var areaId in day.values) {
+                    if (!curView.validateId(areaId))
+                        continue;
+                    var factor = this.getFactorValue(day, areaId, this.selectedIndicator().id);
+                    if (factor > result)
+                        result = factor;
+                }
+            }
+            this.maxFactor(parseFloat(result.toFixed(1)));
         };
         /****************************************/
         GeoPlotPage.prototype.initChart = function () {
@@ -2104,8 +2157,7 @@ var GeoPlot;
                     var prevDay = this._data.days[i - 1];
                     var item = {
                         x: new Date(day.date),
-                        y: this.selectedFactor().compute(day.values[areaId], area, day.values[areaId][field]) -
-                            this.selectedFactor().compute(prevDay.values[areaId], area, prevDay.values[areaId][field])
+                        y: this.getFactorValue(day, area, field) - this.getFactorValue(prevDay, area, field)
                     };
                     this._chart.data.datasets[0].data.push(item);
                 }
@@ -2113,7 +2165,7 @@ var GeoPlot;
             else {
                 this._chart.data.datasets[0].data = GeoPlot.linq(this._data.days).skip(this.startDay()).select(function (a) { return ({
                     x: new Date(a.date),
-                    y: _this.selectedFactor().compute(a.values[areaId], area, a.values[areaId][field])
+                    y: _this.getFactorValue(a, area, field)
                 }); }).toArray();
             }
             if (this.groupSize() > 1) {
@@ -2149,8 +2201,8 @@ var GeoPlot;
                 return;
             }
             value.data(day.values[id]);
-            value.indicator(day.values[id][this.selectedIndicator().id]);
-            value.factor(GeoPlot.MathUtils.discretize(this.selectedFactor().compute(day.values[id], area, value.indicator()), 10));
+            value.indicator(this.getIndicatorValue(day, id, this.selectedIndicator().id));
+            value.factor(GeoPlot.MathUtils.round(this.getFactorValue(day, area, this.selectedIndicator().id), 1));
             value.reference(this.selectedFactor().reference(day.values[id], area));
         };
         /****************************************/
@@ -2162,7 +2214,7 @@ var GeoPlot;
                 var item = {};
                 var isInArea = this_1.VIEW_MODES[this_1.viewMode()].validateId;
                 item.topAreas = GeoPlot.linq(day.values).select(function (a) { return ({
-                    factor: _this.selectedFactor().compute(a.value, _this._geo.areas[a.key.toLowerCase()], a.value[_this.selectedIndicator().id]),
+                    factor: _this.getFactorValue(day, a.key, _this.selectedIndicator().id),
                     value: a
                 }); })
                     .orderByDesc(function (a) { return a.factor; }).where(function (a) { return isInArea(a.value.key); }).select(function (a) {
@@ -2204,12 +2256,15 @@ var GeoPlot;
             var day = this._data.days[this.dayNumber()];
             for (var key in day.values) {
                 var element = document.getElementById(key.toUpperCase());
-                if (element)
+                if (element) {
+                    element.style.removeProperty("opacity");
                     element.style.removeProperty("fill");
+                }
             }
         };
         /****************************************/
         GeoPlotPage.prototype.updateMap = function () {
+            var _this = this;
             if (!this.selectedIndicator() || !this.selectedFactor())
                 return;
             if (this.viewMode() != "country") {
@@ -2221,9 +2276,10 @@ var GeoPlot;
                         if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
                             continue;
                         var field = this.selectedIndicator().id;
-                        var factor = this.selectedFactor().compute(day.values[key], area, day.values[key][field]);
+                        var factor = this.getFactorValue(day, area, field);
+                        var indicator = this.getIndicatorValue(day, area, field);
                         factor = Math.min(1, factor / this.maxFactor());
-                        if (day.values[key][field] == 0 || isNaN(factor)) {
+                        if (indicator == 0 || isNaN(factor)) {
                             if (element.classList.contains("valid"))
                                 element.classList.remove("valid");
                             element.style.fillOpacity = "1";
@@ -2239,6 +2295,14 @@ var GeoPlot;
                         }
                     }
                 }
+            }
+            else {
+                GeoPlot.linq(document.querySelectorAll("g.region")).foreach(function (element) {
+                    if (_this._execludedArea.has(element.id))
+                        element.style.fill = "#444";
+                    else
+                        element.style.fill = "#FFF";
+                });
             }
         };
         return GeoPlotPage;
