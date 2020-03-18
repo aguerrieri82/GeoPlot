@@ -193,16 +193,20 @@
                                     <tr>
                                         <th>Nome</th>
                                         <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
+                                        <!--ko if: selectedFactor().id != 'none'-->
                                         <th data-bind="text: selectedFactor().name"></th>
                                         <th data-bind="attr: {title: factorDescription}">Fatt.</th>
+                                        <!--/ko-->
                                     </tr>
                                 </thead>
                                 <tbody data-bind="foreach: topAreas">
                                     <tr data-bind="click: select">
                                         <td data-bind="text: value.name"></td>
                                         <td data-bind="text: formatNumber(indicator())"></td>
+                                        <!--ko if: $parent.selectedFactor().id != 'none'-->
                                         <td><span data-bind="text: reference"></span></td>
                                         <td><span data-bind="text: factor"></span></td>
+                                        <!--/ko-->
                                     </tr>
                                 </tbody>
                             </table>

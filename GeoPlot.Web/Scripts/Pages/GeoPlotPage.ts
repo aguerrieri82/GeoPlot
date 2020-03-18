@@ -29,6 +29,7 @@
         groupSize?: number;
         startDay?: number;
         logScale?: boolean;
+        excludedArea?: string[];
     }
 
     interface IGeoPlotViewModel  {
@@ -340,7 +341,6 @@
 
             this.isZoomChart.subscribe(() => {
                 this.updateChart();
-                this.updateUrl();
             });
 
             this.groupSize.subscribe(value => {
@@ -378,7 +378,8 @@
                 !state.graphDelta &&
                 !state.logScale &&
                 (!state.groupSize || state.groupSize == 1) &&
-                (state.startDay == undefined || state.startDay == 0);
+                (state.startDay == undefined || state.startDay == 0) &&
+                (!state.excludedArea);
         }
 
         /****************************************/
@@ -419,6 +420,12 @@
 
             this.dayNumber(state.day != undefined ? state.day : this._data.days.length - 1);
 
+            if (state.excludedArea) {
+                this._execludedArea.clear();
+                for (let areaId of state.excludedArea)
+                    this._execludedArea.set(areaId, this._geo.areas[areaId.toLowerCase()]);
+            }
+
             if (state.indicator)
                 this.selectedIndicator(linq(this.INDICATORS).first(a => a.id == state.indicator));
 
@@ -427,6 +434,8 @@
 
             if (state.area)
                 this.selectedArea = this._geo.areas[state.area.toLowerCase()];
+
+          
         }
 
         /****************************************/
@@ -443,7 +452,8 @@
                 area: this.selectedArea ? this.selectedArea.id : undefined,
                 groupSize: this.groupSize(),
                 startDay: this.startDay(), 
-                logScale: this.isLogScale()
+                logScale: this.isLogScale(),
+                excludedArea: linq(this._execludedArea.keys()).toArray()
             }; 
         }
 
@@ -748,7 +758,7 @@
 
         protected updateIndicator() {
 
-            if (!this.selectedIndicator() || !this.selectedFactor() || !this.currentArea())
+            if (!this.selectedIndicator() || !this.selectedFactor())
                 return;
 
             this.updateFactorDescription();
@@ -762,6 +772,8 @@
             this.updateMaxFactor();
             this.updateDayData();
             this.updateChart();
+            this.updateUrl();
+
             if (this._topAreasVisible)
                 this.updateTopAreas();
         }

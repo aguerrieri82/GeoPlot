@@ -1735,7 +1735,6 @@ var GeoPlot;
             });
             this.isZoomChart.subscribe(function () {
                 _this.updateChart();
-                _this.updateUrl();
             });
             this.groupSize.subscribe(function (value) {
                 _this.computeStartDayForGroup();
@@ -1766,7 +1765,8 @@ var GeoPlot;
                 !state.graphDelta &&
                 !state.logScale &&
                 (!state.groupSize || state.groupSize == 1) &&
-                (state.startDay == undefined || state.startDay == 0);
+                (state.startDay == undefined || state.startDay == 0) &&
+                (!state.excludedArea);
         };
         /****************************************/
         GeoPlotPage.prototype.toggleChartZoom = function () {
@@ -1774,6 +1774,7 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.loadState = function (state) {
+            var e_1, _a;
             if (!state.view)
                 state.view = "district";
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
@@ -1792,6 +1793,22 @@ var GeoPlot;
                 this.maxFactor(state.maxFactor);
             }
             this.dayNumber(state.day != undefined ? state.day : this._data.days.length - 1);
+            if (state.excludedArea) {
+                this._execludedArea.clear();
+                try {
+                    for (var _b = __values(state.excludedArea), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var areaId = _c.value;
+                        this._execludedArea.set(areaId, this._geo.areas[areaId.toLowerCase()]);
+                    }
+                }
+                catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_1) throw e_1.error; }
+                }
+            }
             if (state.indicator)
                 this.selectedIndicator(GeoPlot.linq(this.INDICATORS).first(function (a) { return a.id == state.indicator; }));
             if (state.factor)
@@ -1811,7 +1828,8 @@ var GeoPlot;
                 area: this.selectedArea ? this.selectedArea.id : undefined,
                 groupSize: this.groupSize(),
                 startDay: this.startDay(),
-                logScale: this.isLogScale()
+                logScale: this.isLogScale(),
+                excludedArea: GeoPlot.linq(this._execludedArea.keys()).toArray()
             };
         };
         /****************************************/
@@ -2016,7 +2034,7 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateAreaIndicators = function () {
-            var e_1, _a, e_2, _b;
+            var e_2, _a, e_3, _b;
             var _this = this;
             if (!this.currentArea())
                 return;
@@ -2039,12 +2057,12 @@ var GeoPlot;
                         _loop_1(indicator);
                     }
                 }
-                catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                catch (e_2_1) { e_2 = { error: e_2_1 }; }
                 finally {
                     try {
                         if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                     }
-                    finally { if (e_1) throw e_1.error; }
+                    finally { if (e_2) throw e_2.error; }
                 }
                 this.currentArea().indicators(items);
             }
@@ -2055,17 +2073,17 @@ var GeoPlot;
                     item.value(this.getIndicatorValue(this.dayNumber(), areaId, item.indicator.id));
                 }
             }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            catch (e_3_1) { e_3 = { error: e_3_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_3) throw e_3.error; }
             }
         };
         /****************************************/
         GeoPlotPage.prototype.updateFactorDescription = function () {
-            var e_3, _a;
+            var e_4, _a;
             var desc = "";
             if (this.isGraphDelta())
                 desc = "Nuovi ";
@@ -2084,12 +2102,12 @@ var GeoPlot;
                         i++;
                     }
                 }
-                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_4) throw e_4.error; }
                 }
                 desc += ")";
             }
@@ -2097,7 +2115,7 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateIndicator = function () {
-            if (!this.selectedIndicator() || !this.selectedFactor() || !this.currentArea())
+            if (!this.selectedIndicator() || !this.selectedFactor())
                 return;
             this.updateFactorDescription();
             if (this.selectedFactor().id != "none") {
@@ -2107,6 +2125,7 @@ var GeoPlot;
             this.updateMaxFactor();
             this.updateDayData();
             this.updateChart();
+            this.updateUrl();
             if (this._topAreasVisible)
                 this.updateTopAreas();
         };
