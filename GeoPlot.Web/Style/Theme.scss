@@ -1,6 +1,19 @@
 ﻿/****************************************/
 /* Theme                                */
 /****************************************/
+$small-screen-up: 601px !default;
+$medium-screen-up: 993px !default;
+$large-screen-up: 1201px !default;
+$small-screen: 600px !default;
+$medium-screen: 992px !default;
+$large-screen: 1200px !default;
+
+$medium-and-up: "only screen and (min-width : #{$small-screen-up})" !default;
+$large-and-up: "only screen and (min-width : #{$medium-screen-up})" !default;
+$extra-large-and-up: "only screen and (min-width : #{$large-screen-up})" !default;
+$small-and-down: "only screen and (max-width : #{$small-screen})" !default;
+$medium-and-down: "only screen and (max-width : #{$medium-screen})" !default;
+$medium-only: "only screen and (min-width : #{$small-screen-up}) and (max-width : #{$medium-screen})" !default;
 
 body {
     display: flex;
@@ -40,6 +53,48 @@ ul.collapsible li {
             i {
                 transform: rotate(90deg);
             }
+        }
+    }
+}
+
+@media #{$small-and-down} {
+    
+    .container {
+        width: auto;
+    }
+
+    main {
+        background-color: #eee;
+
+        .container {
+            margin: 0;
+            width: auto;
+        }
+
+        .card, .collapsible {
+            background-color: white;
+            box-shadow: none;
+            border: none;
+            border-radius: 0;
+            border-bottom: solid 1px #bbb;
+            border-top: solid 1px #bbb;
+            margin-left: 0;
+            margin-right: 0;
+            padding: 0;
+
+            .card-content {
+                padding: 1rem;
+            }
+        }
+
+        .row .col {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        section.main {
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
     }
 }
@@ -137,7 +192,7 @@ label.title {
 }
 
 /****************************************/
-/* Cars Section                         */
+/* Card Section                         */
 /****************************************/
 
 .card {

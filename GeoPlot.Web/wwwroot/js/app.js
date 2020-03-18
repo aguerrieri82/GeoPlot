@@ -34,6 +34,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 var GeoPlot;
 (function (GeoPlot) {
     var Http = /** @class */ (function () {
@@ -1999,6 +2010,7 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateAreaIndicators = function () {
+            var e_1, _a, e_2, _b;
             var _this = this;
             if (!this.currentArea())
                 return;
@@ -2015,17 +2027,35 @@ var GeoPlot;
                     };
                     items.push(item);
                 };
-                for (var _i = 0, _a = this.indicators(); _i < _a.length; _i++) {
-                    var indicator = _a[_i];
-                    _loop_1(indicator);
+                try {
+                    for (var _c = __values(this.indicators()), _d = _c.next(); !_d.done; _d = _c.next()) {
+                        var indicator = _d.value;
+                        _loop_1(indicator);
+                    }
+                }
+                catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                finally {
+                    try {
+                        if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                    }
+                    finally { if (e_1) throw e_1.error; }
                 }
                 this.currentArea().indicators(items);
             }
             var day = this._data.days[this.dayNumber()];
             var areaId = this.currentArea().value.id.toLowerCase();
-            for (var _b = 0, _c = this.currentArea().indicators(); _b < _c.length; _b++) {
-                var item = _c[_b];
-                item.value(this.getIndicatorValue(day, areaId, item.indicator.id));
+            try {
+                for (var _e = __values(this.currentArea().indicators()), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var item = _f.value;
+                    item.value(this.getIndicatorValue(day, areaId, item.indicator.id));
+                }
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_2) throw e_2.error; }
             }
         };
         /****************************************/
@@ -2257,7 +2287,7 @@ var GeoPlot;
             for (var key in day.values) {
                 var element = document.getElementById(key.toUpperCase());
                 if (element) {
-                    element.style.removeProperty("opacity");
+                    element.style.fillOpacity = "1";
                     element.style.removeProperty("fill");
                 }
             }

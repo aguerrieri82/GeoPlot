@@ -5,8 +5,9 @@
     var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region};
 }
     <div class="container">
-
-        <h6>Giorno <span data-bind="text: currentData"></span></h6>
+        <section class="main title">
+            <h6>Giorno <span data-bind="text: currentData"></span></h6>
+        </section>
         <div class="row">
             <div class="col s12 m6 l7">
                 <section class="card card-map">
@@ -41,7 +42,7 @@
                     </div>
                 </section>
 
-                <section class="day">
+                <section class="main day">
                     <div class="stack-horizontal">
                         <span data-bind="text: dayNumber"></span>
                         <div class="range-field stack-fit">
@@ -62,16 +63,16 @@
                         <span class="card-title" data-bind="text: currentArea().value.name"></span>
 
                         <div class="card-section">
-                            <div class="row">
-                                <div class="col s4" data-bind="style: { color: selectedIndicator().colorLight}">
+                            <div class="flex-col-3">
+                                <div class="summary-field">
                                     <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
-                                    <div data-bind="text: formatNumber(currentArea().indicator())"></div>
+                                    <span data-bind="text: formatNumber(currentArea().indicator())"></span>
                                 </div>
-                                <div class="col s4">
+                                <div class="summary-field">
                                     <label data-bind="text: selectedFactor().name"></label>
                                     <div data-bind="text: currentArea().reference"></div>
                                 </div>
-                                <div class="col s4">
+                                <div class="summary-field">
                                     <label data-bind="attr: {title: factorDescription}">Fattore</label>
                                     <div data-bind="text: currentArea().factor"></div>
                                 </div>
@@ -93,61 +94,61 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="card-section expandable" data-bind="visible: viewMode() != 'district'">
-                            <h6 class="section-title" onclick="expandCollapse(this)">
-                                <span>Indicatori</span>
-                                <i class="material-icons">chevron_right</i>
-                            </h6>
-                            <div class="section-content">
-                                <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
-                                    <div class="summary-field selectable" data-bind="style: {color: indicator.colorLight}, click: select">
-                                        <label data-bind="text: indicator.name"></label>
-                                        <span data-bind="text: formatNumber(value())"></span>
+                            <div class="card-section expandable" data-bind="visible: viewMode() != 'district'">
+                                <h6 class="section-title" onclick="expandCollapse(this)">
+                                    <span>Indicatori</span>
+                                    <i class="material-icons">chevron_right</i>
+                                </h6>
+                                <div class="section-content">
+                                    <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
+                                        <div class="summary-field selectable" data-bind="style: {color: indicator.colorLight}, click: select">
+                                            <label data-bind="text: indicator.name"></label>
+                                            <span data-bind="text: formatNumber(value())"></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-section expandable closed">
-                            <h6 class="section-title" onclick="expandCollapse(this)">
-                                <span>Opzioni</span>
-                                <i class="material-icons">chevron_right</i>
-                            </h6>
-                            <div class="section-content">
-                                <div class="row">
-                                    <div class="col s12">
-                                        <label>
-                                            <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
-                                            <span>Incremento giornaliero</span>
-                                        </label>
+                            <div class="card-section expandable closed">
+                                <h6 class="section-title" onclick="expandCollapse(this)">
+                                    <span>Opzioni</span>
+                                    <i class="material-icons">chevron_right</i>
+                                </h6>
+                                <div class="section-content">
+                                    <div class="row">
+                                        <div class="col s12">
+                                            <label>
+                                                <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
+                                                <span>Incremento giornaliero</span>
+                                            </label>
+                                        </div>
+                                        <div class="col s12">
+                                            <label>
+                                                <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
+                                                <span>Scala logaritmica</span>
+                                            </label>
+                                        </div>
                                     </div>
-                                    <div class="col s12">
-                                        <label>
-                                            <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
-                                            <span>Scala logaritmica</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="row no-margin row-chart-group">
-                                    <div class="col s6 input-field">
-                                        <select data-bind="enable: isNoFactorSelected, options: groupDays, value: groupSize"></select>
-                                        <label>
-                                            <span>Ragruppa (giorni)</span>
-                                            <i class="material-icons tooltipped" data-position="top" data-tooltip="Raggruppa i dati sommandoli per gli N° giorni consecutivi. Nel caso la dimensione del gruppo non sia divisibile con il numero dei giorni saranno troncati i dati più recenti. Spostare la data di inizio per avere i dati attuali.">info</i>
-                                        </label>
-                                    </div>
-                                    <div class="col s6 input-field">
-                                        <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
-                                        <label>A partire da</label>
+                                    <div class="row no-margin row-chart-group">
+                                        <div class="col s6 input-field">
+                                            <select data-bind="enable: isNoFactorSelected, options: groupDays, value: groupSize"></select>
+                                            <label>
+                                                <span>Ragruppa (giorni)</span>
+                                                <i class="material-icons tooltipped" data-position="top" data-tooltip="Raggruppa i dati sommandoli per gli N° giorni consecutivi. Nel caso la dimensione del gruppo non sia divisibile con il numero dei giorni saranno troncati i dati più recenti. Spostare la data di inizio per avere i dati attuali.">info</i>
+                                            </label>
+                                        </div>
+                                        <div class="col s6 input-field">
+                                            <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
+                                            <label>A partire da</label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!--/ko-->
-                        <!--ko ifnot: currentArea-->
-                        <span class="empty-text">Selezionare una <span data-bind="text: VIEW_MODES[viewMode()].label.singular"></span></span>
-                        <!--/ko-->
-                    </div>
+                            <!--/ko-->
+                            <!--ko ifnot: currentArea-->
+                            <span class="empty-text">Selezionare una <span data-bind="text: VIEW_MODES[viewMode()].label.singular"></span></span>
+                            <!--/ko-->
+                        </div>
                 </section>
                 <section class="card">
                     <div class="card-content">
@@ -210,9 +211,9 @@
                 </ul>
             </div>
         </div>
-        <div class="data-source">
+        <section class="main data-source">
             <b>Fonte Dati:</b> <a href="https://github.com/pcm-dpc/COVID-19/tree/master/dati-json" target="_blank">Protezione civile</a> - aggiornati al @string.Format("{0:dd/MM/yyyy HH:mm:ss}", Model.LastUpdate)
-        </div>
+        </section>
 
     </div>
 

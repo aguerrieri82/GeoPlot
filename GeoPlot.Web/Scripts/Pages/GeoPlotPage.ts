@@ -1012,7 +1012,7 @@
             for (const key in day.values) {
                 const element = document.getElementById(key.toUpperCase());
                 if (element) {
-                    element.style.removeProperty("opacity");
+                    element.style.fillOpacity = "1";
                     element.style.removeProperty("fill");
                 }
             }

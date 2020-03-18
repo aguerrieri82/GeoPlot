@@ -27,6 +27,33 @@ ul.collapsible li .collapsible-header {
 ul.collapsible li.active .collapsible-header i {
   transform: rotate(90deg); }
 
+@media only screen and (max-width: 600px) {
+  .container {
+    width: auto; }
+  main {
+    background-color: #eee; }
+    main .container {
+      margin: 0;
+      width: auto; }
+    main .card, main .collapsible {
+      background-color: white;
+      box-shadow: none;
+      border: none;
+      border-radius: 0;
+      border-bottom: solid 1px #bbb;
+      border-top: solid 1px #bbb;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 0; }
+      main .card .card-content, main .collapsible .card-content {
+        padding: 1rem; }
+    main .row .col {
+      padding-left: 0 !important;
+      padding-right: 0 !important; }
+    main section.main {
+      padding-left: 1rem;
+      padding-right: 1rem; } }
+
 /****************************************/
 /* Components                           */
 /****************************************/
@@ -91,7 +118,7 @@ label.title {
     background-color: #eee; }
 
 /****************************************/
-/* Cars Section                         */
+/* Card Section                         */
 /****************************************/
 .card .card-section {
   border-bottom: solid 1px #ddd; }

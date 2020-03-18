@@ -8,6 +8,6 @@
     "@types/geojson": "7946.0.7",
     "@types/materialize-css": "1.0.7",
     "chartjs-plugin-zoom": "0.7.5",
-    "simplify-geojson": "1.0.3"
+    "materialize-css": "1.0.0"
   }
 }
