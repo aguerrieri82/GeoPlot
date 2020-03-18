@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (web)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/GeoPlot.Web/bin/Debug/netcoreapp5.0/GeoPlot.Web.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/GeoPlot.Web/",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "debugWithChrome",
+                "pattern": "^\\s*Now listening on:\\s+(https?://\\S+)",
+                "webRoot": "${workspaceFolder}/GeoPlot.Web/wwwroot"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/GeoPlot.Web/Views"
+            }
+        }
+    ]
+}
