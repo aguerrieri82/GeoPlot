@@ -330,8 +330,7 @@
 
             this.isGraphDelta.subscribe(() => {
                 this.computeStartDayForGroup();
-                this.updateChart();
-                this.updateUrl();
+                this.updateIndicator();
             });
 
             this.isLogScale.subscribe(() => {
@@ -569,27 +568,32 @@
 
         /****************************************/
 
-        protected getFactorValue(dayOrNumber: number | IDayAreaGroupItem<IInfectionData>, areaOrId: string|IGeoArea, indicator: keyof IInfectionData): number {
+        protected getFactorValue(dayNumber: number, areaOrId: string|IGeoArea, indicator: keyof IInfectionData): number {
 
-            const day = typeof dayOrNumber == "number" ? this._data.days[dayOrNumber] : dayOrNumber;
+            const day = this._data.days[dayNumber]
 
             const area = typeof areaOrId == "string" ? this._geo.areas[areaOrId.toLowerCase()] : areaOrId;
 
-            return this.selectedFactor().compute(day[area.id.toLowerCase()], area, this.getIndicatorValue(day, area, indicator));
+            return this.selectedFactor().compute(day.values[area.id.toLowerCase()], area, this.getIndicatorValue(dayNumber, area, indicator));
         }
 
         /****************************************/
 
-        protected getIndicatorValue(dayOrNumber: number | IDayAreaGroupItem<IInfectionData>, areaOrId: string | IGeoArea, indicator: keyof IInfectionData): number {
+        protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicator: keyof IInfectionData, ignoreExcluded: boolean = false): number {
 
-            const day = typeof dayOrNumber == "number" ? this._data.days[<number>dayOrNumber] : dayOrNumber;
+            const areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;            
 
-            const areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;
+            let curValue = this._data.days[dayNumber].values[areaId.toLowerCase()][indicator];
 
-            let curValue = day.values[areaId.toLowerCase()][indicator];
-            if (this._execludedArea.size > 0) {
+            if (this.isGraphDelta()) {
+                if (dayNumber == 0)
+                    return 0;
+                curValue -= this._data.days[dayNumber - 1].values[areaId.toLowerCase()][indicator];
+            }
+
+            if (!ignoreExcluded && this._execludedArea.size > 0) {
                 this._execludedArea.forEach(a => {
-                    curValue -= day.values[a.id.toLowerCase()][indicator];
+                    curValue -= this.getIndicatorValue(dayNumber, a.id, indicator, true);
                 });
             }
 
@@ -619,22 +623,23 @@
 
         private onMapClick(e: MouseEvent) {
             const item = <SVGPolygonElement>e.target;
+            const areaId = item.parentElement.id;
+            const area = this._geo.areas[areaId.toLowerCase()];
+            if (!area)
+                return;
+
             if (this.viewMode() == "country") {
-                const areaId = item.parentElement.id;
                 if (this._execludedArea.has(areaId))
                     this._execludedArea.delete(areaId);
                 else {
-                    const area = this._geo.areas[areaId.toLowerCase()];
                     this._execludedArea.set(areaId, area);
                     M.toast({ html: "Regione " + area.name + " esclusa dai conteggi." });
                 }
                 this.updateIndicator();
             }
             else {
-                if (item.parentElement.classList.contains(this.viewMode())) {
-                    const area = this._geo.areas[item.parentElement.id.toLowerCase()];
+                if (item.parentElement.classList.contains(this.viewMode()))
                     this.selectedArea = area;
-                }
             }
         }
 
@@ -669,10 +674,13 @@
 
                 this.currentArea(area)
 
+                this.updateFactorDescription();
+
                 this.updateAreaIndicators();
 
                 this.updateChart();
 
+                
                 if (isEmptyArea) {
                     M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
                     M.Tooltip.init(document.querySelectorAll(".row-chart-group .tooltipped"));
@@ -702,21 +710,48 @@
                 this.currentArea().indicators(items);
             }
 
-            const day = this._data.days[this.dayNumber()];
             const areaId = this.currentArea().value.id.toLowerCase();
 
             for (let item of this.currentArea().indicators())
-                item.value(this.getIndicatorValue(day, areaId, item.indicator.id))
+                item.value(this.getIndicatorValue(this.dayNumber(), areaId, item.indicator.id))
+        }
+
+        /****************************************/
+
+        protected updateFactorDescription() {
+
+            let desc = "";
+            
+            if (this.isGraphDelta())
+                desc = "Nuovi ";
+
+            desc += this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name);
+            if (this.currentArea())
+                desc += " - " + this.currentArea().value.name;
+
+            if (this._execludedArea.size > 0) {
+                desc += " - Escluso (";
+                let i = 0;
+                for (let key of this._execludedArea.keys()) {
+                    if (i > 0)
+                        desc += ", ";
+                    desc += this._execludedArea.get(key).name;
+                    i++;
+                }
+                desc += ")";
+            }
+
+            this.factorDescription(desc);
         }
 
         /****************************************/
 
         protected updateIndicator() {
 
-            if (!this.selectedIndicator() || !this.selectedFactor())
+            if (!this.selectedIndicator() || !this.selectedFactor() || !this.currentArea())
                 return;
 
-            this.factorDescription(this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name));
+            this.updateFactorDescription();
 
             if (this.selectedFactor().id != "none") {
 
@@ -729,8 +764,6 @@
             this.updateChart();
             if (this._topAreasVisible)
                 this.updateTopAreas();
-
-
         }
 
         /****************************************/
@@ -748,7 +781,7 @@
                 for (let areaId in day.values) {
                     if (!curView.validateId(areaId))
                         continue;
-                    const factor = this.getFactorValue(day, areaId, this.selectedIndicator().id);
+                    const factor = this.getFactorValue(i, areaId, this.selectedIndicator().id);
                     if (factor > result)
                         result = factor;
                 }
@@ -855,7 +888,7 @@
             const areaId = area.id.toLowerCase();
             const field = this.selectedIndicator().id;
 
-            this._chart.data.datasets[0].label = this.factorDescription() + " - " + area.name;;
+            this._chart.data.datasets[0].label = this.factorDescription();
             this._chart.options.title.text = this._chart.data.datasets[0].label;
 
             if (this.isLogScale())
@@ -866,24 +899,15 @@
             this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
             this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
 
-            if (this.isGraphDelta()) {
-                this._chart.data.datasets[0].data = [];
+            this._chart.data.datasets[0].data = [];
 
-                for (let i = 1 + this.startDay(); i < this._data.days.length; i++) {
-                    const day = this._data.days[i];
-                    const prevDay = this._data.days[i - 1];
-                    const item : Chart.ChartPoint = {
-                        x: new Date(day.date),
-                        y: this.getFactorValue(day, area, field) - this.getFactorValue(prevDay, area, field)
-                    };
-                    this._chart.data.datasets[0].data.push(<any>item);
-                }
-            }
-            else {
-                this._chart.data.datasets[0].data = linq(this._data.days).skip(this.startDay()).select(a => ({
-                    x: new Date(a.date),
-                    y: this.getFactorValue(a, area, field)
-                })).toArray();
+            for (let i = 0 + this.startDay(); i < this._data.days.length; i++) {
+
+                const item: Chart.ChartPoint = {
+                    x: new Date(this._data.days[i].date),
+                    y: this.getFactorValue(i, area, field)
+                };
+                this._chart.data.datasets[0].data.push(<any>item);
             }
 
             if (this.groupSize() > 1) {
@@ -928,9 +952,9 @@
 
             value.data(day.values[id]);
 
-            value.indicator(this.getIndicatorValue(day, id, this.selectedIndicator().id));
+            value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
 
-            value.factor(MathUtils.round(this.getFactorValue(day, area, this.selectedIndicator().id), 1));
+            value.factor(MathUtils.round(this.getFactorValue(dayNumber, area, this.selectedIndicator().id), 1));
 
             value.reference(this.selectedFactor().reference(day.values[id], area));
 
@@ -951,7 +975,7 @@
                 const isInArea = this.VIEW_MODES[this.viewMode()].validateId;
 
                 item.topAreas = linq(day.values).select(a => ({
-                    factor: this.getFactorValue(day, a.key, this.selectedIndicator().id),
+                    factor: this.getFactorValue(i, a.key, this.selectedIndicator().id),
                         value: a
                     }))
                     .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
@@ -1041,8 +1065,8 @@
 
                         const field = this.selectedIndicator().id;
 
-                        let factor = this.getFactorValue(day, area, field);
-                        let indicator = this.getIndicatorValue(day, area, field);
+                        let factor = this.getFactorValue(this.dayNumber(), area, field);
+                        let indicator = this.getIndicatorValue(this.dayNumber(), area, field);
 
                         factor = Math.min(1, factor / this.maxFactor());
 

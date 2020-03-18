@@ -29,7 +29,7 @@ ul.collapsible li.active .collapsible-header i {
 
 @media only screen and (max-width: 600px) {
   .container {
-    width: auto; }
+    width: auto !important; }
   main {
     background-color: #eee; }
     main .container {
@@ -47,7 +47,7 @@ ul.collapsible li.active .collapsible-header i {
       padding: 0; }
       main .card .card-content, main .collapsible .card-content {
         padding: 1rem; }
-    main .row .col {
+    main .row .col.main {
       padding-left: 0 !important;
       padding-right: 0 !important; }
     main section.main {
@@ -87,11 +87,6 @@ ul.collapsible li.active .collapsible-header i {
 /****************************************/
 /* Helpers                              */
 /****************************************/
-label.title {
-  margin-bottom: 8px;
-  display: block;
-  font-size: 15px; }
-
 .hidden {
   display: none; }
 
@@ -105,10 +100,17 @@ label.title {
 .relative {
   position: relative; }
 
-.action-right {
-  position: absolute;
-  right: 0px; }
-  .action-right a {
+.title-actions {
+  display: flex;
+  flex-direction: row; }
+  .title-actions label.title {
+    margin-bottom: 8px;
+    display: block;
+    font-size: 15px;
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 16px; }
+  .title-actions .actions a {
     margin-right: 8px; }
 
 .selectable {

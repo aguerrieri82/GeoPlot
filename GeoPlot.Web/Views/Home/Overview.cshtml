@@ -9,7 +9,7 @@
             <h6>Giorno <span data-bind="text: currentData"></span></h6>
         </section>
         <div class="row">
-            <div class="col s12 m6 l7">
+            <div class="main col s12 m6 l7">
                 <section class="card card-map">
                     <ul class="tabs" id="areaTabs">
                         <li class="tab"><a href="#districtTab">Province</a></li>
@@ -56,7 +56,7 @@
                 </section>
             </div>
 
-            <div class="col s12 m6 l5 ">
+            <div class="main col s12 m6 l5 ">
                 <section class="card">
                     <div class="card-content">
                         <!--ko if: currentArea-->
@@ -78,15 +78,16 @@
                                 </div>
                             </div>
                             <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
-                                <div class="relative">
-                                    <div class="action-right">
+                                <div class="title-actions">
+                                    <label class="title">
+                                        <span data-bind="text: factorDescription"></span>
+                                    </label>
+                                    <div class="actions">
                                         <a href="#!" title="Copia grafico" data-bind="click: copyChart"><i class="material-icons">image</i></a>
                                         <a href="#!" title="Copia serie" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
                                         <a href="#!" title="Espandi grafico" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
                                     </div>
-                                    <label class="title">
-                                        <span data-bind="text: factorDescription"></span>
-                                    </label>
+
                                 </div>
                                 <div class="chart-container">
                                     <canvas id="areaGraph">
@@ -110,17 +111,11 @@
                             </div>
                             <div class="card-section expandable closed">
                                 <h6 class="section-title" onclick="expandCollapse(this)">
-                                    <span>Opzioni</span>
+                                    <span>Opzioni grafico</span>
                                     <i class="material-icons">chevron_right</i>
                                 </h6>
                                 <div class="section-content">
                                     <div class="row">
-                                        <div class="col s12">
-                                            <label>
-                                                <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
-                                                <span>Incremento giornaliero</span>
-                                            </label>
-                                        </div>
                                         <div class="col s12">
                                             <label>
                                                 <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
@@ -164,6 +159,12 @@
                             </div>
                         </div>
                         <div class="row no-margin row-factor">
+                            <div class="col s12">
+                                <label>
+                                    <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
+                                    <span>Incremento giornaliero</span>
+                                </label>
+                            </div>
                             <div class="col s6 input-field">
                                 <label>
                                     <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor" />
