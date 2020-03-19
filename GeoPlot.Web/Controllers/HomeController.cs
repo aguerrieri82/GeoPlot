@@ -34,11 +34,13 @@ namespace GeoPlot.Web.Controllers
         [ResponseCache(Duration = 3600, VaryByHeader ="X-App-Version")]
         public async Task<IActionResult> Overview(string state)
         {
+            var lastUpdate = await GetLastCommit();
+
             var model = new GeoPlotViewModel() 
             {
                 Geo = await LoadGeoAreas(),
-                Data = await LoadInfectionData(),
-                LastUpdate = await GetLastCommit()
+                Data = await LoadInfectionData(lastUpdate),
+                LastUpdate = lastUpdate
             };
 
             return View(model);
@@ -54,8 +56,14 @@ namespace GeoPlot.Web.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
-        async Task<DayAreaDataSet<InfectionData>> LoadInfectionData()
+
+        async Task<DayAreaDataSet<InfectionData>> LoadInfectionData(DateTime lastUpdate)
         {
+            var cacheFile = _env.WebRootPath + "\\data\\infection_data.json";
+            var file = new System.IO.FileInfo(cacheFile);
+            if (file.Exists && file.LastWriteTime >= lastUpdate)
+                return JsonConvert.DeserializeObject<DayAreaDataSet<InfectionData>>(await System.IO.File.ReadAllTextAsync(cacheFile));            
+
             var sources = new IDataSource<DayAreaItem<InfectionData>>[]
             {
                 new ItalyInfectionDistrictSource(),
@@ -90,11 +98,17 @@ namespace GeoPlot.Web.Controllers
                 result.Days.Add(item);
             };
 
+            await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
+
             return result;
         }
 
         async Task<GeoAreaSet> LoadGeoAreas()
         {
+            var cacheFile = _env.WebRootPath + "\\data\\italy_geo.json";
+            if (System.IO.File.Exists(cacheFile))
+                return JsonConvert.DeserializeObject<GeoAreaSet>(await System.IO.File.ReadAllTextAsync(cacheFile));
+
             var source = new ItalyGeoSource(_env.WebRootPath + "\\data\\province_demo.csv", _env.WebRootPath + "\\data\\province_superficie.csv");
 
             var data = await source.LoadAsync();
@@ -103,7 +117,9 @@ namespace GeoPlot.Web.Controllers
             {
                 Areas = data.ToDictionary(a => a.Id, a => a),
                 ViewBox = source.ViewBox
-            };                             
+            };
+
+            await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore } ));
 
             return result;
         }

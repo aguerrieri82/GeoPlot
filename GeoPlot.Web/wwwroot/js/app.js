@@ -176,6 +176,183 @@ var GeoPlot;
 })(GeoPlot || (GeoPlot = {}));
 var GeoPlot;
 (function (GeoPlot) {
+    GeoPlot.InfectionDataSet = {
+        name: "COVID-19",
+        indicators: [
+            {
+                id: "totalPositive",
+                name: "Positivi Totali",
+                colorLight: "#f44336",
+                colorDark: "#b71c1c"
+            },
+            {
+                id: "currentPositive",
+                name: "Attuali Positivi",
+                validFor: ["region", "country"],
+                colorLight: "#e91e63",
+                colorDark: "#880e4f"
+            },
+            {
+                id: "totalDeath",
+                name: "Deceduti",
+                validFor: ["region", "country"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c"
+            },
+            {
+                id: "totalSevere",
+                name: "Gravi",
+                validFor: ["region", "country"],
+                colorLight: "#ff9800",
+                colorDark: "#e65100"
+            },
+            {
+                id: "totalHospedalized",
+                name: "Ricoverati",
+                validFor: ["region", "country"],
+                colorLight: "#fdd835",
+                colorDark: "#fbc02d"
+            },
+            {
+                id: "totalHealed",
+                name: "Guariti",
+                validFor: ["region", "country"],
+                colorLight: "#4caf50",
+                colorDark: "#1b5e20"
+            },
+            {
+                id: "toatlTests",
+                name: "Tamponi",
+                validFor: ["region", "country"],
+                colorLight: "#03a9f4",
+                colorDark: "#01579b"
+            },
+            {
+                id: "surface",
+                name: "Superfice (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return GeoPlot.MathUtils.round(a.surface, 0); }
+            },
+            {
+                id: "density",
+                name: "Densita (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return GeoPlot.MathUtils.round(a.demography.total / a.surface, 0); }
+            },
+            {
+                id: "population",
+                name: "Popolazione (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return a.demography.total; }
+            },
+            {
+                id: "populationOld",
+                name: "Popolazione +65 (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return a.demography.over65; }
+            },
+        ],
+        factors: [
+            {
+                id: "none",
+                name: "Nessuno",
+                compute: function (v, a, i) { return i; },
+                reference: function (v, a) { return "N/A"; },
+                description: "[indicator]"
+            },
+            {
+                id: "population",
+                name: "Popolazione",
+                compute: function (v, a, i) { return (i / a.demography.total) * 100000; },
+                reference: function (v, a) { return formatNumber(a.demography.total); },
+                description: "[indicator] ogni 100.000 abitanti"
+            },
+            {
+                id: "population",
+                name: "Popolazione +65",
+                compute: function (v, a, i) { return (i / a.demography.over65) * 100000; },
+                reference: function (v, a) { return formatNumber(a.demography.over65); },
+                description: "[indicator] ogni 100.000 abitanti +65"
+            },
+            {
+                id: "density",
+                name: "Densità",
+                compute: function (v, a, i) { return (i / (a.demography.total / a.surface)); },
+                reference: function (v, a) { return formatNumber(GeoPlot.MathUtils.round(a.demography.total / a.surface, 1)); },
+                description: "[indicator] rispetto densità territorio"
+            },
+            {
+                id: "totalPositive",
+                name: "Positivi Totali",
+                validFor: ["region", "country"],
+                compute: function (v, a, i) { return !v.totalPositive ? 0 : (i / v.totalPositive) * 100; },
+                reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
+                description: "% [indicator] su positivi totali"
+            },
+            {
+                id: "severe",
+                name: "Gravi",
+                validFor: ["region", "country"],
+                compute: function (v, a, i) { return !v.totalSevere ? 0 : (i / v.totalSevere) * 100; },
+                reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
+                description: "% [indicator] sui gravi totali"
+            },
+            {
+                id: "test",
+                name: "Tamponi",
+                validFor: ["region", "country"],
+                compute: function (v, a, i) { return !v.toatlTests ? 0 : (i / v.toatlTests) * 100; },
+                reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
+                description: "% [indicator] sui tamponi eseguiti"
+            }
+        ]
+    };
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    GeoPlot.ViewModes = {
+        "district": {
+            label: {
+                singular: "provincia",
+                plural: "province"
+            },
+            mapGroup: "group_district",
+            tab: "districtTab",
+            areaType: GeoPlot.GeoAreaType.District,
+            validateId: function (id) { return id[0].toLowerCase() == 'd'; }
+        },
+        "region": {
+            label: {
+                singular: "regione",
+                plural: "regioni"
+            },
+            mapGroup: "group_region",
+            tab: "regionTab",
+            areaType: GeoPlot.GeoAreaType.Region,
+            validateId: function (id) { return id[0].toLowerCase() == 'r'; }
+        },
+        "country": {
+            label: {
+                singular: "italiana",
+                plural: "italiane"
+            },
+            mapGroup: "group_country",
+            tab: "italyTab",
+            areaType: GeoPlot.GeoAreaType.Country,
+            validateId: function (id) { return id.toLowerCase() == 'it'; }
+        }
+    };
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
     var DateUtils = /** @class */ (function () {
         function DateUtils() {
         }
@@ -2271,182 +2448,5 @@ var GeoPlot;
         return GeoPlotPage;
     }());
     GeoPlot.GeoPlotPage = GeoPlotPage;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    GeoPlot.InfectionDataSet = {
-        name: "COVID-19",
-        indicators: [
-            {
-                id: "totalPositive",
-                name: "Positivi Totali",
-                colorLight: "#f44336",
-                colorDark: "#b71c1c"
-            },
-            {
-                id: "currentPositive",
-                name: "Attuali Positivi",
-                validFor: ["region", "country"],
-                colorLight: "#e91e63",
-                colorDark: "#880e4f"
-            },
-            {
-                id: "totalDeath",
-                name: "Deceduti",
-                validFor: ["region", "country"],
-                colorLight: "#9c27b0",
-                colorDark: "#4a148c"
-            },
-            {
-                id: "totalSevere",
-                name: "Gravi",
-                validFor: ["region", "country"],
-                colorLight: "#ff9800",
-                colorDark: "#e65100"
-            },
-            {
-                id: "totalHospedalized",
-                name: "Ricoverati",
-                validFor: ["region", "country"],
-                colorLight: "#fdd835",
-                colorDark: "#fbc02d"
-            },
-            {
-                id: "totalHealed",
-                name: "Guariti",
-                validFor: ["region", "country"],
-                colorLight: "#4caf50",
-                colorDark: "#1b5e20"
-            },
-            {
-                id: "toatlTests",
-                name: "Tamponi",
-                validFor: ["region", "country"],
-                colorLight: "#03a9f4",
-                colorDark: "#01579b"
-            },
-            {
-                id: "surface",
-                name: "Superfice (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: function (v, a) { return GeoPlot.MathUtils.round(a.surface, 0); }
-            },
-            {
-                id: "density",
-                name: "Densita (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: function (v, a) { return GeoPlot.MathUtils.round(a.demography.total / a.surface, 0); }
-            },
-            {
-                id: "population",
-                name: "Popolazione (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: function (v, a) { return a.demography.total; }
-            },
-            {
-                id: "populationOld",
-                name: "Popolazione +65 (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: function (v, a) { return a.demography.over65; }
-            },
-        ],
-        factors: [
-            {
-                id: "none",
-                name: "Nessuno",
-                compute: function (v, a, i) { return i; },
-                reference: function (v, a) { return "N/A"; },
-                description: "[indicator]"
-            },
-            {
-                id: "population",
-                name: "Popolazione",
-                compute: function (v, a, i) { return (i / a.demography.total) * 100000; },
-                reference: function (v, a) { return formatNumber(a.demography.total); },
-                description: "[indicator] ogni 100.000 abitanti"
-            },
-            {
-                id: "population",
-                name: "Popolazione +65",
-                compute: function (v, a, i) { return (i / a.demography.over65) * 100000; },
-                reference: function (v, a) { return formatNumber(a.demography.over65); },
-                description: "[indicator] ogni 100.000 abitanti +65"
-            },
-            {
-                id: "density",
-                name: "Densità",
-                compute: function (v, a, i) { return (i / (a.demography.total / a.surface)); },
-                reference: function (v, a) { return formatNumber(GeoPlot.MathUtils.round(a.demography.total / a.surface, 1)); },
-                description: "[indicator] rispetto densità territorio"
-            },
-            {
-                id: "totalPositive",
-                name: "Positivi Totali",
-                validFor: ["region", "country"],
-                compute: function (v, a, i) { return !v.totalPositive ? 0 : (i / v.totalPositive) * 100; },
-                reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
-                description: "% [indicator] su positivi totali"
-            },
-            {
-                id: "severe",
-                name: "Gravi",
-                validFor: ["region", "country"],
-                compute: function (v, a, i) { return !v.totalSevere ? 0 : (i / v.totalSevere) * 100; },
-                reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
-                description: "% [indicator] sui gravi totali"
-            },
-            {
-                id: "test",
-                name: "Tamponi",
-                validFor: ["region", "country"],
-                compute: function (v, a, i) { return !v.toatlTests ? 0 : (i / v.toatlTests) * 100; },
-                reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
-                description: "% [indicator] sui tamponi eseguiti"
-            }
-        ]
-    };
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    GeoPlot.ViewModes = {
-        "district": {
-            label: {
-                singular: "provincia",
-                plural: "province"
-            },
-            mapGroup: "group_district",
-            tab: "districtTab",
-            areaType: GeoPlot.GeoAreaType.District,
-            validateId: function (id) { return id[0].toLowerCase() == 'd'; }
-        },
-        "region": {
-            label: {
-                singular: "regione",
-                plural: "regioni"
-            },
-            mapGroup: "group_region",
-            tab: "regionTab",
-            areaType: GeoPlot.GeoAreaType.Region,
-            validateId: function (id) { return id[0].toLowerCase() == 'r'; }
-        },
-        "country": {
-            label: {
-                singular: "italiana",
-                plural: "italiane"
-            },
-            mapGroup: "group_country",
-            tab: "italyTab",
-            areaType: GeoPlot.GeoAreaType.Country,
-            validateId: function (id) { return id.toLowerCase() == 'it'; }
-        }
-    };
 })(GeoPlot || (GeoPlot = {}));
 //# sourceMappingURL=app.js.map
