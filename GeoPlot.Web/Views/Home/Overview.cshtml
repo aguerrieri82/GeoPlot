@@ -95,7 +95,7 @@
                                 </div>
                             </div>
                         </div>
-                            <div class="card-section expandable" data-bind="visible: viewMode() != 'district'">
+                            <div class="card-section expandable" >
                                 <h6 class="section-title" onclick="expandCollapse(this)">
                                     <span>Indicatori</span>
                                     <i class="material-icons">chevron_right</i>
@@ -141,7 +141,7 @@
 
                             <!--/ko-->
                             <!--ko ifnot: currentArea-->
-                            <span class="empty-text">Selezionare una <span data-bind="text: VIEW_MODES[viewMode()].label.singular"></span></span>
+                            <span class="empty-text">Selezionare una <span data-bind="text: GeoPlot.ViewModes[viewMode()].label.singular"></span></span>
                             <!--/ko-->
                         </div>
                 </section>
@@ -161,7 +161,7 @@
                         <div class="row no-margin row-factor">
                             <div class="col s12">
                                 <label>
-                                    <input class="filled-in" type="checkbox" data-bind="checked: isGraphDelta" />
+                                    <input class="filled-in" type="checkbox" data-bind="checked: isDayDelta" />
                                     <span>Incremento giornaliero</span>
                                 </label>
                             </div>
@@ -183,7 +183,7 @@
                 <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
                     <li>
                         <div class="card-title collapsible-header">
-                            <span data-bind="text: capitalizeFirst(VIEW_MODES[viewMode()].label.plural)"></span>&nbsp;più colpite
+                            <span data-bind="text: capitalizeFirst(GeoPlot.ViewModes[viewMode()].label.plural)"></span>&nbsp;più colpite
                             <i class="material-icons">chevron_right</i>
                         </div>
                         <div class="collapsible-body">

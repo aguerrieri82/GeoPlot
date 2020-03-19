@@ -1,8 +1,6 @@
 ﻿namespace GeoPlot {
 
-    type ViewMode = "district" | "region" | "country";
-
-    type FactorType = "none" | "population" | "totalPositive" | "severe" | "test";
+    type TData = IInfectionData;
 
     interface IDayData {
         topAreas?: AreaViewModel[];
@@ -23,49 +21,25 @@
         area?: string;
         view?: ViewMode;
         maxFactor?: number;
-        indicator?: keyof IInfectionData;
-        factor?: FactorType;
-        graphDelta?: boolean;
+        indicator?: keyof TData | string;
+        factor?: string;
+        dayDelta?: boolean;
         groupSize?: number;
         startDay?: number;
         logScale?: boolean;
         excludedArea?: string[];
     }
 
-    interface IGeoPlotViewModel  {
+    interface IGeoPlotViewModel {
         geo: IGeoAreaSet;
-        data: IDayAreaDataSet<IInfectionData>; 
+        data: IDayAreaDataSet<TData>;
     }
 
-    interface IViewModeData {
-        label: { singular: string, plural: string },
-        mapGroup: string,
-        areaType: GeoAreaType
-        validateId: (id: string) => boolean;
-        tab: string;
-    }
-
-    interface IIndicator {
-        id: keyof IInfectionData;
-        name: string;
-        validFor?: ViewMode[];
-        colorLight?: string;
-        colorDark?: string;
-    }
 
     interface IGroupDay {
         number: number;
         value: Date;
         text: string;
-    }
-
-    interface IFactor {
-        id: FactorType;
-        name: string;
-        validFor?: ViewMode[];
-        compute: (value: IInfectionData, area: IGeoArea, indicator: number) => number
-        reference: (value: IInfectionData, area: IGeoArea) => any;
-        description: string;
     }
 
     /****************************************/
@@ -76,7 +50,7 @@
 
         }
 
-        indicator: IIndicator;
+        indicator: IIndicator<TData>;
         value = ko.observable<number>();
     }
 
@@ -92,7 +66,7 @@
 
         value: IGeoArea;
 
-        data = ko.observable<IInfectionData>();
+        data = ko.observable<TData>();
         factor = ko.observable<number>();
         indicator = ko.observable<number>();
         reference = ko.observable<any>();
@@ -102,9 +76,9 @@
 
     /****************************************/
 
-    export class GeoPlotPage<TData> {
+    export class GeoPlotPage {
 
-        private readonly _data: IDayAreaDataSet<IInfectionData>;
+        private readonly _data: IDayAreaDataSet<TData>;
         private readonly _geo: IGeoAreaSet;
         private _selectedArea: IGeoArea; ù
         private _chart: Chart;
@@ -113,6 +87,7 @@
         private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
         private _mapSvg: SVGSVGElement;
         private _execludedArea = new Map<string, IGeoArea>();
+        private _dataSet = InfectionDataSet;
 
         private _specialDates: IDictionary<ISpecialDate> = {
             current: {
@@ -122,133 +97,6 @@
                 label: "Giorno corrente"
             }
         };
-
-
-        readonly VIEW_MODES: { [K in ViewMode]: IViewModeData } = {
-            "district": {
-                label: {
-                    singular: "provincia",
-                    plural: "province"
-                },
-                mapGroup: "group_district",
-                tab: "districtTab",
-                areaType: GeoAreaType.District,
-                validateId: (id: string) => id[0].toLowerCase() == 'd'
-            },
-            "region": {
-                label: {
-                    singular: "regione",
-                    plural: "regioni"
-                },
-                mapGroup: "group_region",
-                tab: "regionTab",
-                areaType: GeoAreaType.Region,
-                validateId: (id: string) => id[0].toLowerCase() == 'r'
-            },
-            "country": {
-                label: {
-                    singular: "italiana",
-                    plural: "italiane"
-                },
-                mapGroup: "group_country",
-                tab: "italyTab",
-                areaType: GeoAreaType.Country,
-                validateId: (id: string) => id.toLowerCase() == 'it'
-            }
-        }
-
-        readonly INDICATORS: IIndicator[] = [
-            {
-                id: "totalPositive",
-                name: "Positivi Totali",
-                colorLight: "#f44336",
-                colorDark: "#b71c1c"
-            },
-            {
-                id: "currentPositive",
-                name: "Attuali Positivi",
-                validFor: ["region", "country"],
-                colorLight: "#e91e63",
-                colorDark: "#880e4f"
-            },
-            {
-                id: "totalDeath",
-                name: "Deceduti",
-                validFor: ["region", "country"],
-                colorLight: "#9c27b0",
-                colorDark: "#4a148c"
-            },
-            {
-                id: "totalSevere",
-                name: "Gravi",
-                validFor: ["region", "country"],
-                colorLight: "#ff9800",
-                colorDark: "#e65100"
-            },
-            {
-                id: "totalHospedalized",
-                name: "Ricoverati",
-                validFor: ["region", "country"],
-                colorLight: "#fdd835",
-                colorDark: "#fbc02d"
-            },
-            {
-                id: "totalHealed",
-                name: "Guariti",
-                validFor: ["region", "country"],
-                colorLight: "#4caf50",
-                colorDark: "#1b5e20"
-            },
-            {
-                id: "toatlTests",
-                name: "Tamponi",
-                validFor: ["region", "country"],
-                colorLight: "#03a9f4",
-                colorDark: "#01579b"
-
-            },
-        ];
-
-        readonly FACTORS: IFactor[] = [
-            {
-                id: "none",
-                name: "Nessuno",
-                compute: (v, a, i) => i,
-                reference: (v, a) => "N/A",
-                description: "[indicator]"
-            },
-            {
-                id: "population",
-                name: "Popolazione",
-                compute: (v, a, i) => (i / a.demography.total) * 100000,
-                reference: (v, a) => formatNumber(a.demography.total),
-                description: "[indicator] ogni 100.000 abitanti"
-            },
-            {
-                id: "totalPositive",
-                name: "Positivi Totali",
-                validFor: ["region", "country"],
-                compute: (v, a, i) => !v.totalPositive ? 0 : (i / v.totalPositive) * 100,
-                reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive),
-                description: "% [indicator] su positivi totali"
-            },
-            {
-                id: "severe",
-                name: "Gravi",
-                validFor: ["region", "country"],
-                compute: (v, a, i) => !v.totalSevere ? 0 : (i / v.totalSevere) * 100,
-                reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere),
-                description: "% [indicator] sui gravi totali"
-            },
-            {
-                id: "test",
-                name: "Tamponi",
-                validFor: ["region", "country"],
-                compute: (v, a, i) => !v.toatlTests ? 0 : (i / v.toatlTests) * 100,
-                reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
-                description: "% [indicator] sui tamponi eseguiti"
-            }
-        ];
 
         constructor(model: IGeoPlotViewModel) {
 
@@ -275,11 +123,11 @@
             M.Sidenav.init(document.getElementById("mobile-menu"));
 
             const areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
-            
+
             areaTabs.options.onShow = (el: HTMLDivElement) => {
 
                 this.setViewMode(<ViewMode>el.dataset["viewMode"]);
-            };          
+            };
 
             const topCasesView = M.Collapsible.init(document.getElementById("topCases"));
 
@@ -293,11 +141,11 @@
                 this._topAreasVisible = false;
             }
 
-            this.indicators = ko.computed(() => linq(this.INDICATORS)
+            this.indicators = ko.computed(() => linq(this._dataSet.indicators)
                 .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
                 .toArray());
 
-            this.factors = ko.computed(() => linq(this.FACTORS)
+            this.factors = ko.computed(() => linq(this._dataSet.factors)
                 .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
                 .toArray());
 
@@ -329,7 +177,7 @@
                 this.updateUrl();
             });
 
-            this.isGraphDelta.subscribe(() => {
+            this.isDayDelta.subscribe(() => {
                 this.computeStartDayForGroup();
                 this.updateIndicator();
             });
@@ -346,7 +194,7 @@
             this.groupSize.subscribe(value => {
                 this.computeStartDayForGroup();
                 this.updateChart();
-                this.updateUrl(); 
+                this.updateUrl();
             });
 
             this.startDay.subscribe(() => {
@@ -375,7 +223,7 @@
                 (!state.indicator || state.indicator == "totalPositive") &&
                 (!state.factor || state.factor == "none") &&
                 !state.maxFactor &&
-                !state.graphDelta &&
+                !state.dayDelta &&
                 !state.logScale &&
                 (!state.groupSize || state.groupSize == 1) &&
                 (state.startDay == undefined || state.startDay == 0) &&
@@ -397,7 +245,7 @@
                 state.view = "district";
 
             const viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
-            viewTabs.select(this.VIEW_MODES[state.view].tab);
+            viewTabs.select(ViewModes[state.view].tab);
 
             document.body.scrollTop = 0;
 
@@ -410,8 +258,8 @@
             if (state.startDay != undefined)
                 this.startDay(state.startDay);
 
-            if (state.graphDelta != undefined)
-                this.isGraphDelta(state.graphDelta);
+            if (state.dayDelta != undefined)
+                this.isDayDelta(state.dayDelta);
 
             if (state.maxFactor) {
                 this.autoMaxFactor(false);
@@ -427,15 +275,15 @@
             }
 
             if (state.indicator)
-                this.selectedIndicator(linq(this.INDICATORS).first(a => a.id == state.indicator));
+                this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == state.indicator));
 
             if (state.factor)
-                this.selectedFactor(linq(this.FACTORS).first(a => a.id == state.factor));
+                this.selectedFactor(linq(this._dataSet.factors).first(a => a.id == state.factor));
 
             if (state.area)
                 this.selectedArea = this._geo.areas[state.area.toLowerCase()];
 
-          
+
         }
 
         /****************************************/
@@ -446,15 +294,15 @@
                 view: this.viewMode(),
                 indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
                 factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
-                graphDelta: this.isGraphDelta(),
+                dayDelta: this.isDayDelta(),
                 maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
                 day: this.dayNumber(),
                 area: this.selectedArea ? this.selectedArea.id : undefined,
                 groupSize: this.groupSize(),
-                startDay: this.startDay(), 
+                startDay: this.startDay(),
                 logScale: this.isLogScale(),
                 excludedArea: linq(this._execludedArea.keys()).toArray()
-            }; 
+            };
         }
 
         /****************************************/
@@ -485,7 +333,7 @@
 
             const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
             let text = "";
-            for (let i = 0; i < data.length; i++) 
+            for (let i = 0; i < data.length; i++)
                 text += DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + MathUtils.round(data[i].y, 1) + "\n";
 
             DomUtils.copyText(text);
@@ -578,32 +426,45 @@
 
         /****************************************/
 
-        protected getFactorValue(dayNumber: number, areaOrId: string|IGeoArea, indicator: keyof IInfectionData): number {
+        protected getFactorValue(dayNumber: number, areaOrId: string | IGeoArea, indicator: keyof TData|string): number {
 
             const day = this._data.days[dayNumber]
-
             const area = typeof areaOrId == "string" ? this._geo.areas[areaOrId.toLowerCase()] : areaOrId;
 
-            return this.selectedFactor().compute(day.values[area.id.toLowerCase()], area, this.getIndicatorValue(dayNumber, area, indicator));
+            if (!area)
+                return 0;
+
+            const itemData = day.values[area.id.toLowerCase()];
+
+            if (!itemData)
+                return 0;
+
+            return this.selectedFactor().compute(itemData, area, this.getIndicatorValue(dayNumber, area, indicator));
         }
 
         /****************************************/
 
-        protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicator: keyof IInfectionData, ignoreExcluded: boolean = false): number {
+        protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicatorId: keyof TData | string, ignoreExcluded: boolean = false): number {
 
-            const areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;            
+            const areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;
 
-            let curValue = this._data.days[dayNumber].values[areaId.toLowerCase()][indicator];
+            const itemData = this._data.days[dayNumber].values[areaId.toLowerCase()];
+            if (!itemData)
+                return 0;
 
-            if (this.isGraphDelta()) {
+            const indicator = linq(this._dataSet.indicators).first(a => a.id == indicatorId);
+
+            let curValue = indicator.compute ? indicator.compute(this._data.days[dayNumber].values[areaId.toLowerCase()], this._geo.areas[areaId.toLowerCase()]) : this._data.days[dayNumber].values[areaId.toLowerCase()][indicatorId];
+
+            if (this.isDayDelta()) {
                 if (dayNumber == 0)
                     return 0;
-                curValue -= this._data.days[dayNumber - 1].values[areaId.toLowerCase()][indicator];
+                curValue -= this._data.days[dayNumber - 1].values[areaId.toLowerCase()][indicatorId];
             }
 
             if (!ignoreExcluded && this._execludedArea.size > 0) {
                 this._execludedArea.forEach(a => {
-                    curValue -= this.getIndicatorValue(dayNumber, a.id, indicator, true);
+                    curValue -= this.getIndicatorValue(dayNumber, a.id, indicatorId, true);
                 });
             }
 
@@ -615,7 +476,7 @@
         protected computeStartDayForGroup() {
 
             let totDays = this.days.length - this.startDay();
-            if (this.isGraphDelta())
+            if (this.isDayDelta())
                 totDays--;
             const module = (totDays % this.groupSize());
             if (module != 0) {
@@ -690,7 +551,7 @@
 
                 this.updateChart();
 
-                
+
                 if (isEmptyArea) {
                     M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
                     M.Tooltip.init(document.querySelectorAll(".row-chart-group .tooltipped"));
@@ -731,8 +592,8 @@
         protected updateFactorDescription() {
 
             let desc = "";
-            
-            if (this.isGraphDelta())
+
+            if (this.isDayDelta())
                 desc = "Nuovi ";
 
             desc += this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name);
@@ -765,7 +626,7 @@
 
             if (this.selectedFactor().id != "none") {
 
-                if (this.groupSize() != 1) 
+                if (this.groupSize() != 1)
                     this.groupSize(1);
             }
 
@@ -786,7 +647,7 @@
                 return;
 
             let result = Number.NEGATIVE_INFINITY;
-            let curView = this.VIEW_MODES[this.viewMode()];
+            let curView = ViewModes[this.viewMode()];
 
             for (let i = 0; i < this._data.days.length; i++) {
                 const day = this._data.days[i];
@@ -884,7 +745,7 @@
                     }
                 }
             });
-        }        
+        }
 
         /****************************************/
 
@@ -926,7 +787,7 @@
                 const newData = [];
                 const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
                 let count = this.groupSize();
-                let curPoint: { x?: Date, y: number } = {y: 0};
+                let curPoint: { x?: Date, y: number } = { y: 0 };
                 for (let i = 0; i < data.length; i++) {
                     curPoint.y += data[i].y;
                     count--;
@@ -984,25 +845,25 @@
 
                 const item: IDayData = {};
 
-                const isInArea = this.VIEW_MODES[this.viewMode()].validateId;
+                const isInArea = ViewModes[this.viewMode()].validateId;
 
                 item.topAreas = linq(day.values).select(a => ({
                     factor: this.getFactorValue(i, a.key, this.selectedIndicator().id),
-                        value: a
-                    }))
+                    value: a
+                }))
                     .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
 
-                    const area = new AreaViewModel();
+                        const area = new AreaViewModel();
 
-                    area.value = this._geo.areas[a.value.key.toLowerCase()];
+                        area.value = this._geo.areas[a.value.key.toLowerCase()];
 
-                    area.select = () => this.selectedArea = area.value;
+                        area.select = () => this.selectedArea = area.value;
 
-                    this.updateArea(area, i);
+                        this.updateArea(area, i);
 
-                    return area;
+                        return area;
 
-                }).take(25).toArray();
+                    }).take(25).toArray();
 
                 this._daysData.push(item);
             }
@@ -1072,7 +933,7 @@
 
                         const area = this._geo.areas[key];
 
-                        if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
+                        if (area.type != ViewModes[this.viewMode()].areaType)
                             continue;
 
                         const field = this.selectedIndicator().id;
@@ -1114,24 +975,24 @@
         dayNumber = ko.observable(0);
         totalDays = ko.observable(0);
         currentData = ko.observable<string>();
-        isPlaying = ko.observable(false);
         currentArea = ko.observable<AreaViewModel>();
         topAreas = ko.observable<AreaViewModel[]>();
         viewMode = ko.observable<ViewMode>("district");
-        selectedIndicator = ko.observable<IIndicator>();
-        selectedFactor = ko.observable<IFactor>();
+        selectedIndicator = ko.observable<IIndicator<TData>>();
+        selectedFactor = ko.observable<IFactor<TData>>();
         autoMaxFactor = ko.observable<boolean>(true);
         maxFactor = ko.observable<number>();
+        isPlaying = ko.observable(false);
         isLogScale = ko.observable<boolean>(false);
-        isGraphDelta = ko.observable<boolean>(false);
+        isDayDelta = ko.observable<boolean>(false);
         isZoomChart = ko.observable<boolean>(false);
         groupSize = ko.observable<number>(1);
         startDay = ko.observable<number>(0);
         isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
         groupDays = [1, 2, 3, 4, 5, 6, 7];
         factorDescription = ko.observable<string>();
-        indicators: KnockoutObservable<IIndicator[]>;
-        factors: KnockoutObservable<IFactor[]>;
+        indicators: KnockoutObservable<IIndicator<TData>[]>;
+        factors: KnockoutObservable<IFactor<TData>[]>;
         days: IGroupDay[];
     }
 }

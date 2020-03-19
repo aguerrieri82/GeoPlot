@@ -15,16 +15,6 @@
         days: IDayAreaGroupItem<TData>[];
     }    
 
-    export interface IInfectionData {
-        totalPositive: number;
-        currentPositive: number;
-        totalDeath: number;
-        totalSevere: number;
-        totalHospedalized: number;
-        totalHealed: number;
-        toatlTests: number;
-    }
-
     export enum GeoAreaType {
         Country,
         State,
@@ -32,17 +22,18 @@
         District
     }
 
-    export interface IDemography {
-        total?: number;
+    export interface IAggregateDemography {
+        total: number;
         male?: number;
         female?: number;
-        old?: number;
+        over65?: number;
     }
 
     export interface IGeoArea {
         id: string;
         name: string;
-        demography: IDemography;
+        demography: IAggregateDemography;
+        surface: number;
         type: GeoAreaType;
         geography: IPoly2D[];
         parentId: string;
@@ -52,5 +43,32 @@
         viewBox: IRect2D;
         areas: IDictionary<IGeoArea>;
     }
+
+    /****************************************/
+
+    export interface IIndicator<TData> {
+        id: keyof TData|string;
+        name: string;
+        validFor?: ViewMode[];
+        colorLight?: string;
+        colorDark?: string;
+        compute?: (value: TData, area: IGeoArea) => number;
+    }
+
+    export interface IFactor<TData> {
+        id: string;
+        name: string;
+        validFor?: ViewMode[];
+        compute: (value: TData, area: IGeoArea, indicator: number) => number
+        reference: (value: TData, area: IGeoArea) => any;
+        description: string;
+    }
+
+    export interface IDataSet<TData> {
+        name: string;
+        indicators: IIndicator<TData>[];
+        factors: IFactor<TData>[];
+    }
 }
+
 

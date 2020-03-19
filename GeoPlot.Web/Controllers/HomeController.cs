@@ -44,7 +44,7 @@ namespace GeoPlot.Web.Controllers
             return View(model);
         }
 
-        public async Task<IActionResult> Studio()
+        public IActionResult Studio()
         {
             return View();
         }
@@ -54,35 +54,16 @@ namespace GeoPlot.Web.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
-
-        async Task<DateTime> GetLastCommit()
-        {
-            var head = await HttpGetJson<GitHubHeadResponse>("https://api.github.com/repos/pcm-dpc/COVID-19/git/refs/heads/master");
-            var commit = await HttpGetJson<GitHubCommitResponse>(head.obj.url);
-            return commit.committer.date;
-        }
-
-        async Task<T> HttpGetJson<T>(string url)
-        {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36");
-            //client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
-            client.DefaultRequestHeaders.Add("Accept-Language", "en,it-IT;q=0.9,it;q=0.8,en-US;q=0.7");
-            var json = await client.GetStringAsync(url);
-            return JsonConvert.DeserializeObject<T>(json);
-        }
-
         async Task<DayAreaDataSet<InfectionData>> LoadInfectionData()
         {
-            var adapters = new IDataAdapter<DayAreaItem<InfectionData>>[]
+            var sources = new IDataSource<DayAreaItem<InfectionData>>[]
             {
-                new InfectionDistrictItalyAdapter(),
-                new InfectionRegionItalyAdapter(),
-                new InfectionItalyAdapter()
+                new ItalyInfectionDistrictSource(),
+                new ItalyInfectionRegionSource(),
+                new ItalyInfectionSource()
             };
 
-            var items = await Task.WhenAll(adapters.Select(a => a.LoadAsync()));
+            var items = await Task.WhenAll(sources.Select(a => a.LoadAsync()));
 
             var data = items.SelectMany(a => a);
 
@@ -114,47 +95,36 @@ namespace GeoPlot.Web.Controllers
 
         async Task<GeoAreaSet> LoadGeoAreas()
         {
-            var adapters = new BaseGeoJsonAdapter[]
-            {
-                new ItalyDistrictAdapter(_env.WebRootPath + "\\data\\province.csv"),
-                new ItalyRegionAdapter(_env.WebRootPath + "\\data\\regioni.csv")
-            };
+            var source = new ItalyGeoSource(_env.WebRootPath + "\\data\\province_demo.csv", _env.WebRootPath + "\\data\\province_superficie.csv");
 
-            var items = await Task.WhenAll(adapters.Select(a => a.LoadAsync()));
-
-            var data = items.SelectMany(a => a);
+            var data = await source.LoadAsync();
 
             var result = new GeoAreaSet
             {
                 Areas = data.ToDictionary(a => a.Id, a => a),
-                ViewBox = adapters[0].ViewBox
-            };
-
-            result.Areas["IT"] = new GeoArea()
-            {
-                Id = "IT",
-                Name = "Italia",
-                Type = GeoAreaType.Country,
-                Demography = new Demography<int>()
-                {
-                    Female = result.Areas.Where(a=> a.Key[0] == 'R').Sum(a=> a.Value.Demography.Female),
-                    Male = result.Areas.Where(a => a.Key[0] == 'R').Sum(a => a.Value.Demography.Male),
-                    Total = result.Areas.Where(a => a.Key[0] == 'R').Sum(a => a.Value.Demography.Total)
-                }                                
-            };
-
-            result.ViewBox = new Rect2D()
-            {
-                X = adapters[0].ViewBox.X,
-                Y = adapters[0].ViewBox.Y,
-                Width = adapters[0].ViewBox.Width,
-                Height = 1595892
-            };
-            
+                ViewBox = source.ViewBox
+            };                             
 
             return result;
         }
 
+        static async Task<DateTime> GetLastCommit()
+        {
+            var head = await HttpGetJson<GitHubHeadResponse>("https://api.github.com/repos/pcm-dpc/COVID-19/git/refs/heads/master");
+            var commit = await HttpGetJson<GitHubCommitResponse>(head.obj.url);
+            return commit.committer.date;
+        }
+
+        static async Task<T> HttpGetJson<T>(string url)
+        {
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36");
+            //client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
+            client.DefaultRequestHeaders.Add("Accept-Language", "en,it-IT;q=0.9,it;q=0.8,en-US;q=0.7");
+            var json = await client.GetStringAsync(url);
+            return JsonConvert.DeserializeObject<T>(json);
+        }
 
 
     }

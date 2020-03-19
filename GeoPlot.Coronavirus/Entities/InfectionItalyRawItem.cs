@@ -7,7 +7,7 @@ namespace GeoPlot.Coronavirus.Entities
 {
     public struct InfectionItalyRawItem
     {
-        public DateTime data;
+        public DateTime? data;
 
         public string stato;
 

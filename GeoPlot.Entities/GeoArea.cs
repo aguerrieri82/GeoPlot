@@ -37,7 +37,9 @@ namespace GeoPlot.Entities
 
         public string ParentId { get; set; }
 
-        public Demography<int> Demography { get; set; }
+        public double Surface { get; set; }
+
+        public AggregateDemografy Demography { get; set; }
 
         public GeoAreaType Type { get; set; }
 

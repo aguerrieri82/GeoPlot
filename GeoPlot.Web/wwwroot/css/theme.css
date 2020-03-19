@@ -204,8 +204,7 @@ svg.map {
       stroke-width: 0.2%; }
     svg.map .group .area.district {
       stroke: #999;
-      stroke-width: 0.05%;
-      transition: opacity 0.3s; }
+      stroke-width: 0.05%; }
   svg.map .group.active .area {
     fill: white; }
     svg.map .group.active .area.region {

@@ -477,10 +477,11 @@ var GeoPlot;
     }());
     GeoPlot.Geo = Geo;
 })(GeoPlot || (GeoPlot = {}));
+var itNumberFormat = new Intl.NumberFormat("it-IT", {});
 function formatNumber(value) {
     if (!value)
         return "";
-    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return itNumberFormat.format(value);
 }
 /****************************************/
 function capitalizeFirst(value) {
@@ -1518,6 +1519,7 @@ var GeoPlot;
             this._topAreasVisible = false;
             this._gradient = new GeoPlot.LinearGradient("#18ffff", "#ffff00", "#ff3d00");
             this._execludedArea = new Map();
+            this._dataSet = GeoPlot.InfectionDataSet;
             this._specialDates = {
                 current: {
                     date: undefined,
@@ -1526,133 +1528,10 @@ var GeoPlot;
                     label: "Giorno corrente"
                 }
             };
-            this.VIEW_MODES = {
-                "district": {
-                    label: {
-                        singular: "provincia",
-                        plural: "province"
-                    },
-                    mapGroup: "group_district",
-                    tab: "districtTab",
-                    areaType: GeoPlot.GeoAreaType.District,
-                    validateId: function (id) { return id[0].toLowerCase() == 'd'; }
-                },
-                "region": {
-                    label: {
-                        singular: "regione",
-                        plural: "regioni"
-                    },
-                    mapGroup: "group_region",
-                    tab: "regionTab",
-                    areaType: GeoPlot.GeoAreaType.Region,
-                    validateId: function (id) { return id[0].toLowerCase() == 'r'; }
-                },
-                "country": {
-                    label: {
-                        singular: "italiana",
-                        plural: "italiane"
-                    },
-                    mapGroup: "group_country",
-                    tab: "italyTab",
-                    areaType: GeoPlot.GeoAreaType.Country,
-                    validateId: function (id) { return id.toLowerCase() == 'it'; }
-                }
-            };
-            this.INDICATORS = [
-                {
-                    id: "totalPositive",
-                    name: "Positivi Totali",
-                    colorLight: "#f44336",
-                    colorDark: "#b71c1c"
-                },
-                {
-                    id: "currentPositive",
-                    name: "Attuali Positivi",
-                    validFor: ["region", "country"],
-                    colorLight: "#e91e63",
-                    colorDark: "#880e4f"
-                },
-                {
-                    id: "totalDeath",
-                    name: "Deceduti",
-                    validFor: ["region", "country"],
-                    colorLight: "#9c27b0",
-                    colorDark: "#4a148c"
-                },
-                {
-                    id: "totalSevere",
-                    name: "Gravi",
-                    validFor: ["region", "country"],
-                    colorLight: "#ff9800",
-                    colorDark: "#e65100"
-                },
-                {
-                    id: "totalHospedalized",
-                    name: "Ricoverati",
-                    validFor: ["region", "country"],
-                    colorLight: "#fdd835",
-                    colorDark: "#fbc02d"
-                },
-                {
-                    id: "totalHealed",
-                    name: "Guariti",
-                    validFor: ["region", "country"],
-                    colorLight: "#4caf50",
-                    colorDark: "#1b5e20"
-                },
-                {
-                    id: "toatlTests",
-                    name: "Tamponi",
-                    validFor: ["region", "country"],
-                    colorLight: "#03a9f4",
-                    colorDark: "#01579b"
-                },
-            ];
-            this.FACTORS = [
-                {
-                    id: "none",
-                    name: "Nessuno",
-                    compute: function (v, a, i) { return i; },
-                    reference: function (v, a) { return "N/A"; },
-                    description: "[indicator]"
-                },
-                {
-                    id: "population",
-                    name: "Popolazione",
-                    compute: function (v, a, i) { return (i / a.demography.total) * 100000; },
-                    reference: function (v, a) { return formatNumber(a.demography.total); },
-                    description: "[indicator] ogni 100.000 abitanti"
-                },
-                {
-                    id: "totalPositive",
-                    name: "Positivi Totali",
-                    validFor: ["region", "country"],
-                    compute: function (v, a, i) { return !v.totalPositive ? 0 : (i / v.totalPositive) * 100; },
-                    reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
-                    description: "% [indicator] su positivi totali"
-                },
-                {
-                    id: "severe",
-                    name: "Gravi",
-                    validFor: ["region", "country"],
-                    compute: function (v, a, i) { return !v.totalSevere ? 0 : (i / v.totalSevere) * 100; },
-                    reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
-                    description: "% [indicator] sui gravi totali"
-                },
-                {
-                    id: "test",
-                    name: "Tamponi",
-                    validFor: ["region", "country"],
-                    compute: function (v, a, i) { return !v.toatlTests ? 0 : (i / v.toatlTests) * 100; },
-                    reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
-                    description: "% [indicator] sui tamponi eseguiti"
-                }
-            ];
             /****************************************/
             this.dayNumber = ko.observable(0);
             this.totalDays = ko.observable(0);
             this.currentData = ko.observable();
-            this.isPlaying = ko.observable(false);
             this.currentArea = ko.observable();
             this.topAreas = ko.observable();
             this.viewMode = ko.observable("district");
@@ -1660,8 +1539,9 @@ var GeoPlot;
             this.selectedFactor = ko.observable();
             this.autoMaxFactor = ko.observable(true);
             this.maxFactor = ko.observable();
+            this.isPlaying = ko.observable(false);
             this.isLogScale = ko.observable(false);
-            this.isGraphDelta = ko.observable(false);
+            this.isDayDelta = ko.observable(false);
             this.isZoomChart = ko.observable(false);
             this.groupSize = ko.observable(1);
             this.startDay = ko.observable(0);
@@ -1696,10 +1576,10 @@ var GeoPlot;
             topCasesView.options.onCloseEnd = function () {
                 _this._topAreasVisible = false;
             };
-            this.indicators = ko.computed(function () { return GeoPlot.linq(_this.INDICATORS)
+            this.indicators = ko.computed(function () { return GeoPlot.linq(_this._dataSet.indicators)
                 .where(function (a) { return !a.validFor || a.validFor.indexOf(_this.viewMode()) != -1; })
                 .toArray(); });
-            this.factors = ko.computed(function () { return GeoPlot.linq(_this.FACTORS)
+            this.factors = ko.computed(function () { return GeoPlot.linq(_this._dataSet.factors)
                 .where(function (a) { return !a.validFor || a.validFor.indexOf(_this.viewMode()) != -1; })
                 .toArray(); });
             this.selectedIndicator.subscribe(function (value) {
@@ -1725,7 +1605,7 @@ var GeoPlot;
                     _this.updateMap();
                 _this.updateUrl();
             });
-            this.isGraphDelta.subscribe(function () {
+            this.isDayDelta.subscribe(function () {
                 _this.computeStartDayForGroup();
                 _this.updateIndicator();
             });
@@ -1762,7 +1642,7 @@ var GeoPlot;
                 (!state.indicator || state.indicator == "totalPositive") &&
                 (!state.factor || state.factor == "none") &&
                 !state.maxFactor &&
-                !state.graphDelta &&
+                !state.dayDelta &&
                 !state.logScale &&
                 (!state.groupSize || state.groupSize == 1) &&
                 (state.startDay == undefined || state.startDay == 0) &&
@@ -1778,7 +1658,7 @@ var GeoPlot;
             if (!state.view)
                 state.view = "district";
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
-            viewTabs.select(this.VIEW_MODES[state.view].tab);
+            viewTabs.select(GeoPlot.ViewModes[state.view].tab);
             document.body.scrollTop = 0;
             if (state.logScale != undefined)
                 this.isLogScale(state.logScale);
@@ -1786,8 +1666,8 @@ var GeoPlot;
                 this.groupSize(state.groupSize);
             if (state.startDay != undefined)
                 this.startDay(state.startDay);
-            if (state.graphDelta != undefined)
-                this.isGraphDelta(state.graphDelta);
+            if (state.dayDelta != undefined)
+                this.isDayDelta(state.dayDelta);
             if (state.maxFactor) {
                 this.autoMaxFactor(false);
                 this.maxFactor(state.maxFactor);
@@ -1810,9 +1690,9 @@ var GeoPlot;
                 }
             }
             if (state.indicator)
-                this.selectedIndicator(GeoPlot.linq(this.INDICATORS).first(function (a) { return a.id == state.indicator; }));
+                this.selectedIndicator(GeoPlot.linq(this._dataSet.indicators).first(function (a) { return a.id == state.indicator; }));
             if (state.factor)
-                this.selectedFactor(GeoPlot.linq(this.FACTORS).first(function (a) { return a.id == state.factor; }));
+                this.selectedFactor(GeoPlot.linq(this._dataSet.factors).first(function (a) { return a.id == state.factor; }));
             if (state.area)
                 this.selectedArea = this._geo.areas[state.area.toLowerCase()];
         };
@@ -1822,7 +1702,7 @@ var GeoPlot;
                 view: this.viewMode(),
                 indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
                 factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
-                graphDelta: this.isGraphDelta(),
+                dayDelta: this.isDayDelta(),
                 maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
                 day: this.dayNumber(),
                 area: this.selectedArea ? this.selectedArea.id : undefined,
@@ -1945,22 +1825,31 @@ var GeoPlot;
         GeoPlotPage.prototype.getFactorValue = function (dayNumber, areaOrId, indicator) {
             var day = this._data.days[dayNumber];
             var area = typeof areaOrId == "string" ? this._geo.areas[areaOrId.toLowerCase()] : areaOrId;
-            return this.selectedFactor().compute(day.values[area.id.toLowerCase()], area, this.getIndicatorValue(dayNumber, area, indicator));
+            if (!area)
+                return 0;
+            var itemData = day.values[area.id.toLowerCase()];
+            if (!itemData)
+                return 0;
+            return this.selectedFactor().compute(itemData, area, this.getIndicatorValue(dayNumber, area, indicator));
         };
         /****************************************/
-        GeoPlotPage.prototype.getIndicatorValue = function (dayNumber, areaOrId, indicator, ignoreExcluded) {
+        GeoPlotPage.prototype.getIndicatorValue = function (dayNumber, areaOrId, indicatorId, ignoreExcluded) {
             var _this = this;
             if (ignoreExcluded === void 0) { ignoreExcluded = false; }
             var areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;
-            var curValue = this._data.days[dayNumber].values[areaId.toLowerCase()][indicator];
-            if (this.isGraphDelta()) {
+            var itemData = this._data.days[dayNumber].values[areaId.toLowerCase()];
+            if (!itemData)
+                return 0;
+            var indicator = GeoPlot.linq(this._dataSet.indicators).first(function (a) { return a.id == indicatorId; });
+            var curValue = indicator.compute ? indicator.compute(this._data.days[dayNumber].values[areaId.toLowerCase()], this._geo.areas[areaId.toLowerCase()]) : this._data.days[dayNumber].values[areaId.toLowerCase()][indicatorId];
+            if (this.isDayDelta()) {
                 if (dayNumber == 0)
                     return 0;
-                curValue -= this._data.days[dayNumber - 1].values[areaId.toLowerCase()][indicator];
+                curValue -= this._data.days[dayNumber - 1].values[areaId.toLowerCase()][indicatorId];
             }
             if (!ignoreExcluded && this._execludedArea.size > 0) {
                 this._execludedArea.forEach(function (a) {
-                    curValue -= _this.getIndicatorValue(dayNumber, a.id, indicator, true);
+                    curValue -= _this.getIndicatorValue(dayNumber, a.id, indicatorId, true);
                 });
             }
             return curValue;
@@ -1968,7 +1857,7 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.computeStartDayForGroup = function () {
             var totDays = this.days.length - this.startDay();
-            if (this.isGraphDelta())
+            if (this.isDayDelta())
                 totDays--;
             var module = (totDays % this.groupSize());
             if (module != 0) {
@@ -2085,7 +1974,7 @@ var GeoPlot;
         GeoPlotPage.prototype.updateFactorDescription = function () {
             var e_4, _a;
             var desc = "";
-            if (this.isGraphDelta())
+            if (this.isDayDelta())
                 desc = "Nuovi ";
             desc += this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name);
             if (this.currentArea())
@@ -2134,7 +2023,7 @@ var GeoPlot;
             if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
                 return;
             var result = Number.NEGATIVE_INFINITY;
-            var curView = this.VIEW_MODES[this.viewMode()];
+            var curView = GeoPlot.ViewModes[this.viewMode()];
             for (var i = 0; i < this._data.days.length; i++) {
                 var day = this._data.days[i];
                 for (var areaId in day.values) {
@@ -2286,7 +2175,7 @@ var GeoPlot;
             var _loop_2 = function (i) {
                 var day = this_1._data.days[i];
                 var item = {};
-                var isInArea = this_1.VIEW_MODES[this_1.viewMode()].validateId;
+                var isInArea = GeoPlot.ViewModes[this_1.viewMode()].validateId;
                 item.topAreas = GeoPlot.linq(day.values).select(function (a) { return ({
                     factor: _this.getFactorValue(i, a.key, _this.selectedIndicator().id),
                     value: a
@@ -2347,7 +2236,7 @@ var GeoPlot;
                     var element = document.getElementById(key.toUpperCase());
                     if (element) {
                         var area = this._geo.areas[key];
-                        if (area.type != this.VIEW_MODES[this.viewMode()].areaType)
+                        if (area.type != GeoPlot.ViewModes[this.viewMode()].areaType)
                             continue;
                         var field = this.selectedIndicator().id;
                         var factor = this.getFactorValue(this.dayNumber(), area, field);
@@ -2382,5 +2271,182 @@ var GeoPlot;
         return GeoPlotPage;
     }());
     GeoPlot.GeoPlotPage = GeoPlotPage;
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    GeoPlot.InfectionDataSet = {
+        name: "COVID-19",
+        indicators: [
+            {
+                id: "totalPositive",
+                name: "Positivi Totali",
+                colorLight: "#f44336",
+                colorDark: "#b71c1c"
+            },
+            {
+                id: "currentPositive",
+                name: "Attuali Positivi",
+                validFor: ["region", "country"],
+                colorLight: "#e91e63",
+                colorDark: "#880e4f"
+            },
+            {
+                id: "totalDeath",
+                name: "Deceduti",
+                validFor: ["region", "country"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c"
+            },
+            {
+                id: "totalSevere",
+                name: "Gravi",
+                validFor: ["region", "country"],
+                colorLight: "#ff9800",
+                colorDark: "#e65100"
+            },
+            {
+                id: "totalHospedalized",
+                name: "Ricoverati",
+                validFor: ["region", "country"],
+                colorLight: "#fdd835",
+                colorDark: "#fbc02d"
+            },
+            {
+                id: "totalHealed",
+                name: "Guariti",
+                validFor: ["region", "country"],
+                colorLight: "#4caf50",
+                colorDark: "#1b5e20"
+            },
+            {
+                id: "toatlTests",
+                name: "Tamponi",
+                validFor: ["region", "country"],
+                colorLight: "#03a9f4",
+                colorDark: "#01579b"
+            },
+            {
+                id: "surface",
+                name: "Superfice (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return GeoPlot.MathUtils.round(a.surface, 0); }
+            },
+            {
+                id: "density",
+                name: "Densita (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return GeoPlot.MathUtils.round(a.demography.total / a.surface, 0); }
+            },
+            {
+                id: "population",
+                name: "Popolazione (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return a.demography.total; }
+            },
+            {
+                id: "populationOld",
+                name: "Popolazione +65 (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: function (v, a) { return a.demography.over65; }
+            },
+        ],
+        factors: [
+            {
+                id: "none",
+                name: "Nessuno",
+                compute: function (v, a, i) { return i; },
+                reference: function (v, a) { return "N/A"; },
+                description: "[indicator]"
+            },
+            {
+                id: "population",
+                name: "Popolazione",
+                compute: function (v, a, i) { return (i / a.demography.total) * 100000; },
+                reference: function (v, a) { return formatNumber(a.demography.total); },
+                description: "[indicator] ogni 100.000 abitanti"
+            },
+            {
+                id: "population",
+                name: "Popolazione +65",
+                compute: function (v, a, i) { return (i / a.demography.over65) * 100000; },
+                reference: function (v, a) { return formatNumber(a.demography.over65); },
+                description: "[indicator] ogni 100.000 abitanti +65"
+            },
+            {
+                id: "density",
+                name: "Densità",
+                compute: function (v, a, i) { return (i / (a.demography.total / a.surface)); },
+                reference: function (v, a) { return formatNumber(GeoPlot.MathUtils.round(a.demography.total / a.surface, 1)); },
+                description: "[indicator] rispetto densità territorio"
+            },
+            {
+                id: "totalPositive",
+                name: "Positivi Totali",
+                validFor: ["region", "country"],
+                compute: function (v, a, i) { return !v.totalPositive ? 0 : (i / v.totalPositive) * 100; },
+                reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
+                description: "% [indicator] su positivi totali"
+            },
+            {
+                id: "severe",
+                name: "Gravi",
+                validFor: ["region", "country"],
+                compute: function (v, a, i) { return !v.totalSevere ? 0 : (i / v.totalSevere) * 100; },
+                reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
+                description: "% [indicator] sui gravi totali"
+            },
+            {
+                id: "test",
+                name: "Tamponi",
+                validFor: ["region", "country"],
+                compute: function (v, a, i) { return !v.toatlTests ? 0 : (i / v.toatlTests) * 100; },
+                reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
+                description: "% [indicator] sui tamponi eseguiti"
+            }
+        ]
+    };
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    GeoPlot.ViewModes = {
+        "district": {
+            label: {
+                singular: "provincia",
+                plural: "province"
+            },
+            mapGroup: "group_district",
+            tab: "districtTab",
+            areaType: GeoPlot.GeoAreaType.District,
+            validateId: function (id) { return id[0].toLowerCase() == 'd'; }
+        },
+        "region": {
+            label: {
+                singular: "regione",
+                plural: "regioni"
+            },
+            mapGroup: "group_region",
+            tab: "regionTab",
+            areaType: GeoPlot.GeoAreaType.Region,
+            validateId: function (id) { return id[0].toLowerCase() == 'r'; }
+        },
+        "country": {
+            label: {
+                singular: "italiana",
+                plural: "italiane"
+            },
+            mapGroup: "group_country",
+            tab: "italyTab",
+            areaType: GeoPlot.GeoAreaType.Country,
+            validateId: function (id) { return id.toLowerCase() == 'it'; }
+        }
+    };
 })(GeoPlot || (GeoPlot = {}));
 //# sourceMappingURL=app.js.map
