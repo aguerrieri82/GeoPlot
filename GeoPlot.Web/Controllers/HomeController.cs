@@ -36,10 +36,11 @@ namespace GeoPlot.Web.Controllers
         {
             var lastUpdate = await GetLastCommit();
 
-            var model = new GeoPlotViewModel() 
+            var model = new GeoPlotViewModel()
             {
                 Geo = await LoadGeoAreas(),
                 Data = await LoadInfectionData(lastUpdate),
+                Environment = await LoadEnvironmentData(),
                 LastUpdate = lastUpdate
             };
 
@@ -55,6 +56,33 @@ namespace GeoPlot.Web.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        async Task<EnvironmentItemViewModel[]> LoadEnvironmentData()
+        {
+            var data = (await new ItalyEnvironmentSource(_env.WebRootPath + "\\data\\air_quality.csv").LoadAsync()).Select(a =>
+            {
+                var item = new EnvironmentItemViewModel()
+                {
+                    Value = a,
+                    Position = Geo.Project(a.Location),
+                    Radius = 100
+                };
+                if (a.Value < 20)
+                    item.Severity = PollutantSeverity.Good;
+                else  if (a.Value < 40)
+                    item.Severity = PollutantSeverity.Medium;
+                else if (a.Value < 50)
+                    item.Severity = PollutantSeverity.Bad;
+                else if (a.Value < 75)
+                    item.Severity = PollutantSeverity.Sever;
+                else
+                    item.Severity = PollutantSeverity.VerySevere;
+
+                return item;
+            }).ToArray();
+            
+            return data;
         }
 
         async Task<DayAreaDataSet<InfectionData>> LoadInfectionData(DateTime lastUpdate)

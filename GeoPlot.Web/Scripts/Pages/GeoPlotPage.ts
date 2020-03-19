@@ -27,6 +27,7 @@
         groupSize?: number;
         startDay?: number;
         logScale?: boolean;
+        showEnvData?: boolean;
         excludedArea?: string[];
     }
 
@@ -225,6 +226,7 @@
                 !state.maxFactor &&
                 !state.dayDelta &&
                 !state.logScale &&
+                !state.showEnvData &&
                 (!state.groupSize || state.groupSize == 1) &&
                 (state.startDay == undefined || state.startDay == 0) &&
                 (!state.excludedArea);
@@ -260,6 +262,9 @@
 
             if (state.dayDelta != undefined)
                 this.isDayDelta(state.dayDelta);
+
+            if (state.showEnvData != undefined)
+                this.isShowEnvData(state.showEnvData);
 
             if (state.maxFactor) {
                 this.autoMaxFactor(false);
@@ -301,7 +306,8 @@
                 groupSize: this.groupSize(),
                 startDay: this.startDay(),
                 logScale: this.isLogScale(),
-                excludedArea: linq(this._execludedArea.keys()).toArray()
+                excludedArea: linq(this._execludedArea.keys()).toArray(),
+                showEnvData: this.isShowEnvData()
             };
         }
 
@@ -476,8 +482,6 @@
         protected computeStartDayForGroup() {
 
             let totDays = this.days.length - this.startDay();
-            if (this.isDayDelta())
-                totDays--;
             const module = (totDays % this.groupSize());
             if (module != 0) {
                 const invModule = this.groupSize() - module;
@@ -986,6 +990,7 @@
         isLogScale = ko.observable<boolean>(false);
         isDayDelta = ko.observable<boolean>(false);
         isZoomChart = ko.observable<boolean>(false);
+        isShowEnvData = ko.observable<boolean>(false);
         groupSize = ko.observable<number>(1);
         startDay = ko.observable<number>(0);
         isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');

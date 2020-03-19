@@ -14,6 +14,8 @@ namespace GeoPlot.Web.Models
 
         public DayAreaDataSet<InfectionData> Data { get; set; }
 
+        public IList<EnvironmentItemViewModel> Environment { get; set; }
+
         public DateTime LastUpdate { get; set; }
     }
 }

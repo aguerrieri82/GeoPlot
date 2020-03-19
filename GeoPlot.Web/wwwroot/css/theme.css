@@ -197,6 +197,20 @@ svg.map {
   width: 50vh;
   max-width: 100%;
   pointer-events: painted; }
+  svg.map .environment > circle {
+    stroke: #000;
+    stroke-width: 500;
+    fill-opacity: 0.7; }
+  svg.map .environment .good {
+    fill: #4caf50; }
+  svg.map .environment .medium {
+    fill: #ffeb3b; }
+  svg.map .environment .bad {
+    fill: #ff9800; }
+  svg.map .environment .sever {
+    fill: #f44336; }
+  svg.map .environment .verysevere {
+    fill: #9c27b0; }
   svg.map .group .area {
     fill: none; }
     svg.map .group .area.region {

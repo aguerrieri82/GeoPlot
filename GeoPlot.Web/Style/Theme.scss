@@ -58,7 +58,7 @@ ul.collapsible li {
 }
 
 @media #{$small-and-down} {
-    
+
     .container {
         width: auto !important;
     }
@@ -189,11 +189,11 @@ ul.collapsible li {
 
 
 
-.selectable{
+.selectable {
     transition-duration: 0.2s;
     cursor: pointer;
 
-    &:hover{
+    &:hover {
         background-color: #eee;
     }
 }
@@ -265,7 +265,7 @@ ul.collapsible li {
 /* Custom                               */
 /****************************************/
 
-.data-source{
+.data-source {
 }
 
 .card-map {
@@ -320,6 +320,33 @@ svg.map {
     width: 50vh;
     max-width: 100%;
     pointer-events: painted;
+
+    .environment {
+        > circle{
+            stroke: #000;
+            stroke-width: 500;
+            fill-opacity: 0.7;
+        }
+        .good {
+            fill: #4caf50;
+        }
+
+        .medium {
+            fill: #ffeb3b;
+        }
+
+        .bad {
+            fill: #ff9800;
+        }
+
+        .sever {
+            fill: #f44336;
+        }
+
+        .verysevere {
+            fill: #9c27b0;
+        }
+    }
 
     .group {
 

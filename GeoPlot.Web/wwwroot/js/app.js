@@ -1720,6 +1720,7 @@ var GeoPlot;
             this.isLogScale = ko.observable(false);
             this.isDayDelta = ko.observable(false);
             this.isZoomChart = ko.observable(false);
+            this.isShowEnvData = ko.observable(false);
             this.groupSize = ko.observable(1);
             this.startDay = ko.observable(0);
             this.isNoFactorSelected = ko.computed(function () { return _this.selectedFactor() && _this.selectedFactor().id == 'none'; });
@@ -1821,6 +1822,7 @@ var GeoPlot;
                 !state.maxFactor &&
                 !state.dayDelta &&
                 !state.logScale &&
+                !state.showEnvData &&
                 (!state.groupSize || state.groupSize == 1) &&
                 (state.startDay == undefined || state.startDay == 0) &&
                 (!state.excludedArea);
@@ -1845,6 +1847,8 @@ var GeoPlot;
                 this.startDay(state.startDay);
             if (state.dayDelta != undefined)
                 this.isDayDelta(state.dayDelta);
+            if (state.showEnvData != undefined)
+                this.isShowEnvData(state.showEnvData);
             if (state.maxFactor) {
                 this.autoMaxFactor(false);
                 this.maxFactor(state.maxFactor);
@@ -1886,7 +1890,8 @@ var GeoPlot;
                 groupSize: this.groupSize(),
                 startDay: this.startDay(),
                 logScale: this.isLogScale(),
-                excludedArea: GeoPlot.linq(this._execludedArea.keys()).toArray()
+                excludedArea: GeoPlot.linq(this._execludedArea.keys()).toArray(),
+                showEnvData: this.isShowEnvData()
             };
         };
         /****************************************/
@@ -2034,8 +2039,6 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.computeStartDayForGroup = function () {
             var totDays = this.days.length - this.startDay();
-            if (this.isDayDelta())
-                totDays--;
             var module = (totDays % this.groupSize());
             if (module != 0) {
                 var invModule = this.groupSize() - module;
