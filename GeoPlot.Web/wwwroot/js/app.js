@@ -1697,6 +1697,7 @@ var GeoPlot;
             this._gradient = new GeoPlot.LinearGradient("#18ffff", "#ffff00", "#ff3d00");
             this._execludedArea = new Map();
             this._dataSet = GeoPlot.InfectionDataSet;
+            this._keepState = false;
             this._specialDates = {
                 current: {
                     date: undefined,
@@ -1805,8 +1806,9 @@ var GeoPlot;
             });
             var urlParams = new URLSearchParams(window.location.search);
             var stateRaw = urlParams.get("state");
+            this._keepState = urlParams.get("keepState") == "true";
             var state;
-            if (stateRaw)
+            if (stateRaw && this._keepState)
                 state = JSON.parse(atob(stateRaw));
             else
                 state = {};
@@ -1880,18 +1882,18 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.saveStata = function () {
             return {
-                view: this.viewMode(),
+                view: this.viewMode() == "district" ? undefined : this.viewMode(),
                 indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
                 factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
-                dayDelta: this.isDayDelta(),
+                dayDelta: this.isDayDelta() ? true : undefined,
                 maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
-                day: this.dayNumber(),
+                day: this.dayNumber() == this._data.days.length - 1 ? undefined : this.dayNumber(),
                 area: this.selectedArea ? this.selectedArea.id : undefined,
-                groupSize: this.groupSize(),
-                startDay: this.startDay(),
-                logScale: this.isLogScale(),
-                excludedArea: GeoPlot.linq(this._execludedArea.keys()).toArray(),
-                showEnvData: this.isShowEnvData()
+                groupSize: this.groupSize() == 1 ? undefined : this.groupSize(),
+                startDay: this.startDay() == 0 ? undefined : this.startDay(),
+                logScale: this.isLogScale() ? true : undefined,
+                excludedArea: this._execludedArea.size > 0 ? GeoPlot.linq(this._execludedArea.keys()).toArray() : undefined,
+                showEnvData: this.isShowEnvData() ? true : undefined
             };
         };
         /****************************************/
@@ -2388,6 +2390,8 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateUrl = function () {
+            if (!this._keepState)
+                return;
             var state = this.saveStata();
             var url = GeoPlot.Uri.appRoot + "Overview";
             if (!this.isDefaultState(state))

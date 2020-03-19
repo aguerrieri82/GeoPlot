@@ -89,6 +89,7 @@
         private _mapSvg: SVGSVGElement;
         private _execludedArea = new Map<string, IGeoArea>();
         private _dataSet = InfectionDataSet;
+        private _keepState = false;
 
         private _specialDates: IDictionary<ISpecialDate> = {
             current: {
@@ -205,9 +206,11 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             const stateRaw = urlParams.get("state");
+            this._keepState = urlParams.get("keepState") == "true";
+
             let state: IPageState;
 
-            if (stateRaw)
+            if (stateRaw && this._keepState)
                 state = <IPageState>JSON.parse(atob(stateRaw));
             else
                 state = {};
@@ -296,18 +299,18 @@
         saveStata(): IPageState {
 
             return {
-                view: this.viewMode(),
+                view: this.viewMode() == "district" ? undefined : this.viewMode(),
                 indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
                 factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
-                dayDelta: this.isDayDelta(),
+                dayDelta: this.isDayDelta() ? true : undefined,
                 maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
-                day: this.dayNumber(),
+                day: this.dayNumber() == this._data.days.length - 1 ? undefined : this.dayNumber(),
                 area: this.selectedArea ? this.selectedArea.id : undefined,
-                groupSize: this.groupSize(),
-                startDay: this.startDay(),
-                logScale: this.isLogScale(),
-                excludedArea: linq(this._execludedArea.keys()).toArray(),
-                showEnvData: this.isShowEnvData()
+                groupSize: this.groupSize() == 1 ? undefined : this.groupSize(),
+                startDay: this.startDay() == 0 ? undefined : this.startDay(),
+                logScale: this.isLogScale() ? true : undefined,
+                excludedArea: this._execludedArea.size > 0 ? linq(this._execludedArea.keys()).toArray() : undefined,
+                showEnvData: this.isShowEnvData() ? true : undefined
             };
         }
 
@@ -898,6 +901,8 @@
         /****************************************/
 
         protected updateUrl() {
+            if (!this._keepState)
+                return;
             const state = this.saveStata();
             let url = Uri.appRoot + "Overview";
             if (!this.isDefaultState(state))
