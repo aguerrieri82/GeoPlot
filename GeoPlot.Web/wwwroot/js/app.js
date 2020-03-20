@@ -166,21 +166,6 @@ var GeoPlot;
 })(GeoPlot || (GeoPlot = {}));
 var GeoPlot;
 (function (GeoPlot) {
-    var AggregationFunc;
-    (function (AggregationFunc) {
-        AggregationFunc[AggregationFunc["SUm"] = 0] = "SUm";
-        AggregationFunc[AggregationFunc["Avg"] = 1] = "Avg";
-    })(AggregationFunc = GeoPlot.AggregationFunc || (GeoPlot.AggregationFunc = {}));
-    var GeoAreaType;
-    (function (GeoAreaType) {
-        GeoAreaType[GeoAreaType["Country"] = 0] = "Country";
-        GeoAreaType[GeoAreaType["State"] = 1] = "State";
-        GeoAreaType[GeoAreaType["Region"] = 2] = "Region";
-        GeoAreaType[GeoAreaType["District"] = 3] = "District";
-    })(GeoAreaType = GeoPlot.GeoAreaType || (GeoPlot.GeoAreaType = {}));
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
     var ConstIndicatorFunction = /** @class */ (function () {
         function ConstIndicatorFunction(value) {
             this._value = value;
@@ -251,6 +236,21 @@ var GeoPlot;
     }());
     GeoPlot.DoubleFactorFunction = DoubleFactorFunction;
     /****************************************/
+})(GeoPlot || (GeoPlot = {}));
+var GeoPlot;
+(function (GeoPlot) {
+    var AggregationFunc;
+    (function (AggregationFunc) {
+        AggregationFunc[AggregationFunc["SUm"] = 0] = "SUm";
+        AggregationFunc[AggregationFunc["Avg"] = 1] = "Avg";
+    })(AggregationFunc = GeoPlot.AggregationFunc || (GeoPlot.AggregationFunc = {}));
+    var GeoAreaType;
+    (function (GeoAreaType) {
+        GeoAreaType[GeoAreaType["Country"] = 0] = "Country";
+        GeoAreaType[GeoAreaType["State"] = 1] = "State";
+        GeoAreaType[GeoAreaType["Region"] = 2] = "Region";
+        GeoAreaType[GeoAreaType["District"] = 3] = "District";
+    })(GeoAreaType = GeoPlot.GeoAreaType || (GeoPlot.GeoAreaType = {}));
 })(GeoPlot || (GeoPlot = {}));
 /// <reference path="../indicators.ts" />
 var GeoPlot;
@@ -581,6 +581,10 @@ var GeoPlot;
                 element.classList.add(className);
         };
         /****************************************/
+        DomUtils.isSmallDevice = function () {
+            return window.innerWidth < 610;
+        };
+        /****************************************/
         DomUtils.copyText = function (value) {
             return __awaiter(this, void 0, void 0, function () {
                 var input;
@@ -785,6 +789,29 @@ function expandCollapse(elment) {
     else {
         container.classList.add("closed");
         setTimeout(function () { return content.style.display = "none"; }, 300);
+    }
+}
+/****************************************/
+function scrollIntoViewIfOutOfView(el) {
+    var topOfPage = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    var heightOfPage = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+    var elY = 0;
+    var elH = 0;
+    if (document["layers"]) { // NS4
+        elY = el.y;
+        elH = el.height;
+    }
+    else {
+        for (var p = el; p && p.tagName != 'BODY'; p = p.offsetParent) {
+            elY += p.offsetTop;
+        }
+        elH = el.offsetHeight;
+    }
+    if ((topOfPage + heightOfPage) < (elY + elH)) {
+        el.scrollIntoView(false);
+    }
+    else if (elY < topOfPage) {
+        el.scrollIntoView(true);
     }
 }
 /****************************************/
@@ -1482,7 +1509,7 @@ var GeoPlot;
         else if ("current" in value && "reset" in value && "moveNext" in value)
             enumerator = value;
         else
-            return new Linq(new DictionaryEnumerator(value));
+            enumerator = new DictionaryEnumerator(value);
         return new Linq(enumerator);
     }
     GeoPlot.linq = linq;
@@ -1784,6 +1811,50 @@ var GeoPlot;
         return AreaViewModel;
     }());
     /****************************************/
+    var TipViewModel = /** @class */ (function () {
+        function TipViewModel() {
+            this.isVisible = ko.observable(false);
+            this.hasNext = ko.observable(true);
+            this.content = ko.observable();
+        }
+        /****************************************/
+        TipViewModel.prototype.dontShowAgain = function () {
+        };
+        /****************************************/
+        TipViewModel.prototype.executeAction = function () {
+            var _this = this;
+            if (this.value.showAction)
+                this.value.showAction();
+            setTimeout(function () {
+                var element = document.querySelector(_this.value.elementSelector);
+                if (element) {
+                    scrollIntoViewIfOutOfView(element);
+                    GeoPlot.DomUtils.addClass(element, "pulse");
+                    setTimeout(function () { return GeoPlot.DomUtils.removeClass(element, "pulse"); }, 10000);
+                }
+            });
+        };
+        /****************************************/
+        TipViewModel.prototype.next = function () {
+        };
+        /****************************************/
+        TipViewModel.prototype.close = function () {
+            clearTimeout(this._closeTimeoutId);
+            this.isVisible(false);
+            var element = document.querySelector(this.value.elementSelector);
+            if (element)
+                GeoPlot.DomUtils.removeClass(element, "pulse");
+        };
+        /****************************************/
+        TipViewModel.prototype.show = function () {
+            if (this._closeTimeoutId)
+                clearTimeout(this._closeTimeoutId);
+            this.isVisible(true);
+            //this._closeTimeoutId = setTimeout(() => this.close(), 15000);
+        };
+        return TipViewModel;
+    }());
+    /****************************************/
     var GeoPlotPage = /** @class */ (function () {
         function GeoPlotPage(model) {
             var _this = this;
@@ -1792,6 +1863,138 @@ var GeoPlot;
             this._execludedArea = new Map();
             this._dataSet = GeoPlot.InfectionDataSet;
             this._keepState = false;
+            this._tips = {
+                areaSelected: {
+                    order: 0,
+                    featureName: "Zone",
+                    html: "Puoi vedere i dati relativi ad una particolare area selezionadoli sulla mappa.",
+                    elementSelector: ".card-map .center-align",
+                    showAfter: 5,
+                    showAction: function () {
+                        _this.viewMode("region");
+                        _this.selectedArea = _this._geo.areas["r10"];
+                    }
+                },
+                indicatorSelected: {
+                    order: 1,
+                    featureName: "Indicatori",
+                    html: "Puoi vedere il grafico associato all'indicatore, facendo click sull'indicatore.",
+                    elementSelector: ".indicators .summary-field",
+                    showAfter: 20,
+                    showAction: function () {
+                        if (!_this.currentArea())
+                            _this._tips.areaSelected.showAction();
+                        _this.selectedIndicator(GeoPlot.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalDeath"; }));
+                    }
+                },
+                dayChanged: {
+                    order: 2,
+                    featureName: "Cronologia",
+                    html: "Puoi vedere gli indicatori dei giorni precedenti muovendo la slide.",
+                    elementSelector: ".day input[type=range]",
+                    showAfter: 40,
+                    showAction: function () {
+                        _this.dayNumber(5);
+                    }
+                },
+                indicatorChanged: {
+                    order: 3,
+                    featureName: "Indicatori",
+                    html: "Puoi cambiare l'indicatore scegliendolo dal filtro nell'elenco.",
+                    elementSelector: ".filter-indicator",
+                    showAfter: 0
+                },
+                viewChanged: {
+                    order: 4,
+                    featureName: "Zone",
+                    html: "Puoi vedere gli indicatori a livello regionale, nazionale o provinciale.",
+                    elementSelector: "#areaTabs",
+                    showAfter: 0,
+                    showAction: function () {
+                        _this.viewMode("district");
+                    }
+                },
+                topAreasOpened: {
+                    order: 5,
+                    featureName: "Zone",
+                    html: "Puo vedere le zone più colpite di un qualsiasi indicatore scelto.",
+                    elementSelector: "#topCases .card-title",
+                    showAfter: 60,
+                    showAction: function () {
+                        M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
+                    }
+                },
+                deltaSelected: {
+                    order: 5.5,
+                    featureName: "Indicatori",
+                    html: "Puoi vedere l'incremento giornaliero dell'indicatore anzichè il valore totale.",
+                    elementSelector: ".day-delta",
+                    showAfter: 80,
+                    showAction: function () {
+                        if (!_this.currentArea())
+                            _this._tips.areaSelected.showAction();
+                        _this.isDayDelta(true);
+                    }
+                },
+                factorChanged: {
+                    order: 6,
+                    featureName: "Indicatori",
+                    html: "Puoi mettere in relazione qualsiasi indicatore a numerosi parametri (es. % Positivi su Tamponi).",
+                    elementSelector: ".filter-factor",
+                    showAfter: 110,
+                    showAction: function () {
+                        if (!_this.currentArea())
+                            _this._tips.areaSelected.showAction();
+                        _this.selectedIndicator(GeoPlot.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalPositive"; }));
+                        _this.selectedFactor(GeoPlot.linq(_this._dataSet.factors).first(function (a) { return a.id == "population"; }));
+                    }
+                },
+                groupChanged: {
+                    order: 7,
+                    featureName: "Grafico",
+                    html: "Puo raggruppare i dati del grafico in gruppi da 1 a 7 giorni. Puoi anche scegliere la data d'inizio.",
+                    elementSelector: ".row-chart-group .select-wrapper",
+                    showAfter: 140,
+                    showAction: function () {
+                        var element = document.querySelector(".chart-options");
+                        if (element.classList.contains("closed"))
+                            element.classList.remove("closed");
+                        _this.groupSize(2);
+                        M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+                    }
+                },
+                chartActionExecuted: {
+                    order: 8,
+                    featureName: "Grafico",
+                    html: "Puoi portare il grafico a schermo interno, copiarlo, o copiare la serie numerico e incollarla in excel.",
+                    elementSelector: ".chart .actions",
+                    showAfter: 180
+                },
+                scaleChanged: {
+                    order: 9,
+                    featureName: "Grafico",
+                    html: "Puo cambiare da scala logaritmica a scala lineare.",
+                    elementSelector: ".log-scale",
+                    showAfter: 210,
+                    showAction: function () {
+                        _this.isLogScale(true);
+                    }
+                },
+                maxFactorChanged: {
+                    order: 10,
+                    featureName: "Mappa",
+                    html: "Puoi cambiare il riferimento rispetto al quale la mappa viene colorata. Normalmente è in base al valore massimo che si ha avuto globalmente.",
+                    elementSelector: ".max-factor",
+                    showAfter: 300,
+                    showAction: function () {
+                        if (!_this.currentArea())
+                            _this._tips.areaSelected.showAction();
+                        _this.selectedIndicator(GeoPlot.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalPositive"; }));
+                        _this.autoMaxFactor(false);
+                        _this.maxFactor(1000);
+                    }
+                }
+            };
             this._specialDates = {
                 current: {
                     date: undefined,
@@ -1820,6 +2023,7 @@ var GeoPlot;
             this.startDay = ko.observable(0);
             this.isNoFactorSelected = ko.computed(function () { return _this.selectedFactor() && _this.selectedFactor().id == 'none'; });
             this.groupDays = [1, 2, 3, 4, 5, 6, 7];
+            this.tip = new TipViewModel();
             this.factorDescription = ko.observable();
             this._data = model.data;
             this._geo = model.geo;
@@ -1845,6 +2049,7 @@ var GeoPlot;
                 if (!_this._daysData)
                     _this.updateTopAreas();
                 _this._topAreasVisible = true;
+                _this._preferences.actions.topAreasOpened++;
             };
             topCasesView.options.onCloseEnd = function () {
                 _this._topAreasVisible = false;
@@ -1859,11 +2064,15 @@ var GeoPlot;
                 if (!value)
                     return;
                 _this.updateIndicator();
+                if (value.id != "totalPositive")
+                    _this._preferences.actions.indicatorChanged++;
             });
             this.selectedFactor.subscribe(function (value) {
                 if (!value)
                     return;
                 _this.updateIndicator();
+                if (value.id != "none")
+                    _this._preferences.actions.factorChanged++;
                 setTimeout(function () { return M.FormSelect.init(document.querySelectorAll(".row-chart-group select")); });
             });
             this.autoMaxFactor.subscribe(function (value) {
@@ -1874,44 +2083,99 @@ var GeoPlot;
                 _this.updateUrl();
             });
             this.maxFactor.subscribe(function () {
-                if (!_this.autoMaxFactor())
+                if (!_this.autoMaxFactor()) {
                     _this.updateMap();
+                    _this._preferences.actions.maxFactorChanged++;
+                }
                 _this.updateUrl();
             });
-            this.isDayDelta.subscribe(function () {
+            this.isDayDelta.subscribe(function (value) {
                 _this.computeStartDayForGroup();
                 _this.updateIndicator();
+                if (value)
+                    _this._preferences.actions.deltaSelected++;
             });
-            this.isLogScale.subscribe(function () {
+            this.isLogScale.subscribe(function (value) {
                 _this.updateChart();
                 _this.updateUrl();
+                if (value)
+                    _this._preferences.actions.scaleChanged++;
             });
-            this.isZoomChart.subscribe(function () {
+            this.isZoomChart.subscribe(function (value) {
                 _this.updateChart();
             });
             this.groupSize.subscribe(function (value) {
                 _this.computeStartDayForGroup();
                 _this.updateChart();
                 _this.updateUrl();
+                if (value > 1)
+                    _this._preferences.actions.groupChanged++;
             });
-            this.startDay.subscribe(function () {
+            this.startDay.subscribe(function (value) {
                 _this.updateChart();
                 _this.updateUrl();
+                if (value != _this._data.days.length - 1)
+                    _this._preferences.actions.dayChanged++;
             });
             var urlParams = new URLSearchParams(window.location.search);
             var stateRaw = urlParams.get("state");
             this._keepState = urlParams.get("keepState") == "true";
+            this.loadPreferences();
+            this.engageUser();
             var state;
             if (stateRaw && this._keepState)
                 state = JSON.parse(atob(stateRaw));
             else
                 state = {};
             setTimeout(function () { return _this.loadState(state); }, 0);
+            window.addEventListener("beforeunload", function () { return _this.savePreferences(); });
         }
+        /****************************************/
+        GeoPlotPage.prototype.engageUser = function () {
+            var _this = this;
+            if (this._preferences.showTips != undefined && !this._preferences.showTips)
+                return;
+            var _loop_1 = function (action) {
+                if (this_1._tips[action].showAfter > 0)
+                    setTimeout(function () {
+                        if (_this._preferences.actions[action] > 0)
+                            return;
+                        if (!_this.tip.isVisible())
+                            _this.showTip(_this._tips[action]);
+                    }, this_1._tips[action].showAfter * 1000);
+            };
+            var this_1 = this;
+            for (var action in this._preferences.actions) {
+                _loop_1(action);
+            }
+        };
+        /****************************************/
+        GeoPlotPage.prototype.showTip = function (tip) {
+            var _this = this;
+            this.tip.dontShowAgain = function () {
+                _this._preferences.showTips = false;
+                _this.tip.close();
+            };
+            var nextTip = GeoPlot.linq(this._tips).where(function (a) { return a.value.order > tip.order; }).select(function (a) { return a.value; }).first();
+            if (nextTip) {
+                this.tip.next = function () {
+                    _this.tip.close();
+                    _this.showTip(nextTip);
+                };
+                this.tip.hasNext(true);
+            }
+            else {
+                this.tip.next = null;
+                this.tip.hasNext(false);
+            }
+            this.tip.content(tip.html);
+            this.tip.value = tip;
+            this.tip.show();
+        };
         /****************************************/
         GeoPlotPage.prototype.isDefaultState = function (state) {
             return (!state.day || state.day == this._data.days.length - 1) &&
-                (!state.view || state.view == "district") &&
+                (!state.view || state.view == "region") &&
                 !state.area &&
                 (!state.indicator || state.indicator == "totalPositive") &&
                 (!state.factor || state.factor == "none") &&
@@ -1924,14 +2188,10 @@ var GeoPlot;
                 (!state.excludedArea);
         };
         /****************************************/
-        GeoPlotPage.prototype.toggleChartZoom = function () {
-            this.isZoomChart(!this.isZoomChart());
-        };
-        /****************************************/
         GeoPlotPage.prototype.loadState = function (state) {
             var e_1, _a;
             if (!state.view)
-                state.view = "district";
+                state.view = "region";
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
             viewTabs.select(GeoPlot.ViewModes[state.view].tab);
             document.body.scrollTop = 0;
@@ -1976,7 +2236,7 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.saveStata = function () {
             return {
-                view: this.viewMode() == "district" ? undefined : this.viewMode(),
+                view: this.viewMode() == "region" ? undefined : this.viewMode(),
                 indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
                 factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
                 dayDelta: this.isDayDelta() ? true : undefined,
@@ -1989,6 +2249,41 @@ var GeoPlot;
                 excludedArea: this._execludedArea.size > 0 ? GeoPlot.linq(this._execludedArea.keys()).toArray() : undefined,
                 showEnvData: this.isShowEnvData() ? true : undefined
             };
+        };
+        /****************************************/
+        GeoPlotPage.prototype.loadPreferences = function () {
+            var json = localStorage.getItem("preferences");
+            if (!json)
+                this._preferences = {
+                    isFirstView: true,
+                    showTips: true,
+                    actions: {
+                        areaSelected: 0,
+                        indicatorSelected: 0,
+                        indicatorChanged: 0,
+                        dayChanged: 0,
+                        viewChanged: 0,
+                        chartActionExecuted: 0,
+                        factorChanged: 0,
+                        groupChanged: 0,
+                        maxFactorChanged: 0,
+                        scaleChanged: 0,
+                        topAreasOpened: 0,
+                        deltaSelected: 0
+                    }
+                };
+            else
+                this._preferences = JSON.parse(json);
+        };
+        /****************************************/
+        GeoPlotPage.prototype.savePreferences = function () {
+            this._preferences.isFirstView = false;
+            localStorage.setItem("preferences", JSON.stringify(this._preferences));
+        };
+        /****************************************/
+        GeoPlotPage.prototype.toggleChartZoom = function () {
+            this._preferences.actions.chartActionExecuted++;
+            this.isZoomChart(!this.isZoomChart());
         };
         /****************************************/
         GeoPlotPage.prototype.copyChart = function () {
@@ -2019,6 +2314,7 @@ var GeoPlot;
                     }
                 });
             }); });
+            this._preferences.actions.chartActionExecuted++;
         };
         /****************************************/
         GeoPlotPage.prototype.copySerie = function () {
@@ -2031,6 +2327,7 @@ var GeoPlot;
                         text += GeoPlot.DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + GeoPlot.MathUtils.round(data[i].y, 1) + "\n";
                     GeoPlot.DomUtils.copyText(text);
                     M.toast({ html: "Serie copiata sugli appunti." });
+                    this._preferences.actions.chartActionExecuted++;
                     return [2 /*return*/];
                 });
             });
@@ -2046,6 +2343,8 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.setViewMode = function (mode) {
+            if (mode != "region")
+                this._preferences.actions.viewChanged++;
             this.viewMode(mode);
             var districtGroup = document.getElementById("group_district");
             if (mode == "district")
@@ -2199,6 +2498,7 @@ var GeoPlot;
                 if (item.parentElement.classList.contains(this.viewMode()))
                     this.selectedArea = area;
             }
+            this._preferences.actions.areaSelected++;
         };
         /****************************************/
         GeoPlotPage.prototype.nextFrame = function () {
@@ -2239,10 +2539,11 @@ var GeoPlot;
                 return;
             if (!this.currentArea().indicators()) {
                 var items = [];
-                var _loop_1 = function (indicator) {
+                var _loop_2 = function (indicator) {
                     var item = new IndicatorViewModel();
                     item.indicator = indicator;
                     item.select = function () {
+                        _this._preferences.actions.indicatorSelected++;
                         _this.selectedIndicator(indicator);
                         setTimeout(function () {
                             return M.FormSelect.init(document.querySelectorAll(".row-indicator select"));
@@ -2253,7 +2554,7 @@ var GeoPlot;
                 try {
                     for (var _c = __values(this.indicators()), _d = _c.next(); !_d.done; _d = _c.next()) {
                         var indicator = _d.value;
-                        _loop_1(indicator);
+                        _loop_2(indicator);
                     }
                 }
                 catch (e_3_1) { e_3 = { error: e_3_1 }; }
@@ -2486,10 +2787,10 @@ var GeoPlot;
         GeoPlotPage.prototype.updateTopAreas = function () {
             var _this = this;
             this._daysData = [];
-            var _loop_2 = function (i) {
-                var day = this_1._data.days[i];
+            var _loop_3 = function (i) {
+                var day = this_2._data.days[i];
                 var item = {};
-                var isInArea = GeoPlot.ViewModes[this_1.viewMode()].validateId;
+                var isInArea = GeoPlot.ViewModes[this_2.viewMode()].validateId;
                 item.topAreas = GeoPlot.linq(day.values).select(function (a) { return ({
                     factor: _this.getFactorValue(i, a.key),
                     value: a
@@ -2501,11 +2802,11 @@ var GeoPlot;
                     _this.updateArea(area, i);
                     return area;
                 }).take(25).toArray();
-                this_1._daysData.push(item);
+                this_2._daysData.push(item);
             };
-            var this_1 = this;
+            var this_2 = this;
             for (var i = 0; i < this._data.days.length; i++) {
-                _loop_2(i);
+                _loop_3(i);
             }
             this.topAreas(this._daysData[this.dayNumber()].topAreas);
         };

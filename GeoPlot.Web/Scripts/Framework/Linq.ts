@@ -867,10 +867,10 @@
             enumerator = new CollectionEnumerator<T>(value);
         else if ("next" in value && typeof (value["next"]) == "function")
             enumerator = new IteratorEnumerator(value);
-        else if ("current" in value && "reset" in value && "moveNext" in value )
+        else if ("current" in value && "reset" in value && "moveNext" in value)
             enumerator = value;
         else
-            return new Linq(new DictionaryEnumerator<T>(value));
+            enumerator = new DictionaryEnumerator<T>(value);
 
         return new Linq(enumerator);
     }

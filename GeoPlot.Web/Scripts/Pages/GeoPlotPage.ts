@@ -31,11 +31,50 @@
         excludedArea?: string[];
     }
 
+    /****************************************/
+
+    interface IViewActionTip {
+        html: string;
+        featureName: string;
+        elementSelector?: string;
+        showAfter: number;
+        showAction?: () => void;
+        order: number;
+    }
+
+    /****************************************/
+
+    interface IViewActions<T> {
+        areaSelected: T;
+        indicatorChanged: T;
+        indicatorSelected: T;
+        dayChanged: T;
+        viewChanged: T;
+        groupChanged: T;
+        scaleChanged: T;
+        topAreasOpened: T;
+        chartActionExecuted: T;
+        factorChanged: T;
+        maxFactorChanged: T;
+        deltaSelected: T;
+    }
+
+    /****************************************/
+
+    interface IViewPreferences {
+        isFirstView: boolean;
+        showTips: boolean;
+        actions: IViewActions<number>;
+    }
+
+    /****************************************/
+
     interface IGeoPlotViewModel {
         geo: IGeoAreaSet;
         data: IDayAreaDataSet<TData>;
     }
 
+    /****************************************/
 
     interface IGroupDay {
         number: number;
@@ -74,6 +113,70 @@
         indicators = ko.observable<IndicatorViewModel[]>();
     }
 
+    /****************************************/
+
+    class TipViewModel {
+
+        private _closeTimeoutId : number;
+
+        constructor() {
+        }
+
+        /****************************************/
+
+        dontShowAgain() {
+
+        }
+
+        /****************************************/
+
+        executeAction() {
+            if (this.value.showAction)
+                this.value.showAction();
+            setTimeout(() => {
+
+                let element = document.querySelector(this.value.elementSelector);
+                if (element) {
+                    scrollIntoViewIfOutOfView(element);
+                    DomUtils.addClass(element, "pulse")
+                    setTimeout(() => DomUtils.removeClass(element, "pulse"), 10000);
+                }
+
+            });
+        }
+
+        /****************************************/
+
+        next() {
+
+        }
+
+        /****************************************/
+
+        close() {
+            clearTimeout(this._closeTimeoutId);
+            this.isVisible(false);
+            let element = document.querySelector(this.value.elementSelector);
+            if (element)
+                DomUtils.removeClass(element, "pulse");
+        }
+
+        /****************************************/
+
+        show() {
+            if (this._closeTimeoutId)
+                clearTimeout(this._closeTimeoutId);
+            this.isVisible(true);
+            //this._closeTimeoutId = setTimeout(() => this.close(), 15000);
+        }
+
+        /****************************************/
+
+        value: IViewActionTip;
+        isVisible = ko.observable(false);
+        hasNext = ko.observable(true);
+        content = ko.observable<string>();
+    }
 
     /****************************************/
 
@@ -90,6 +193,140 @@
         private _execludedArea = new Map<string, IGeoArea>();
         private _dataSet = InfectionDataSet;
         private _keepState = false;
+        private _preferences: IViewPreferences;   
+        
+        private _tips: (IViewActions<IViewActionTip> & IDictionary<IViewActionTip>) = {
+            areaSelected: {
+                order: 0,
+                featureName: "Zone",
+                html: "Puoi vedere i dati relativi ad una particolare area selezionadoli sulla mappa.",
+                elementSelector: ".card-map .center-align",
+                showAfter: 5,
+                showAction: () => {
+                    this.viewMode("region");
+                    this.selectedArea = this._geo.areas["r10"];
+                }
+            },
+            indicatorSelected: {
+                order: 1,
+                featureName: "Indicatori",
+                html: "Puoi vedere il grafico associato all'indicatore, facendo click sull'indicatore.",
+                elementSelector: ".indicators .summary-field",
+                showAfter: 20,
+                showAction: () => {
+                    if (!this.currentArea())
+                        this._tips.areaSelected.showAction();
+                    this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalDeath"));
+                }
+            },
+            dayChanged: {
+                order: 2,
+                featureName: "Cronologia",
+                html: "Puoi vedere gli indicatori dei giorni precedenti muovendo la slide.",
+                elementSelector: ".day input[type=range]",
+                showAfter: 40,
+                showAction: () => {
+                    this.dayNumber(5);
+                }
+            },
+            indicatorChanged: {
+                order: 3,
+                featureName: "Indicatori",
+                html: "Puoi cambiare l'indicatore scegliendolo dal filtro nell'elenco.",
+                elementSelector: ".filter-indicator",
+                showAfter: 0
+            },
+            viewChanged: {
+                order: 4,
+                featureName: "Zone",
+                html: "Puoi vedere gli indicatori a livello regionale, nazionale o provinciale.",
+                elementSelector: "#areaTabs",
+                showAfter: 0,
+                showAction: () => {
+                    this.viewMode("district");
+                }
+            },
+            topAreasOpened: {
+                order: 5,
+                featureName: "Zone",
+                html: "Puo vedere le zone più colpite di un qualsiasi indicatore scelto.",
+                elementSelector: "#topCases .card-title",
+                showAfter: 60,
+                showAction: () => {
+                    M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
+                }
+            },
+            deltaSelected: {
+                order: 5.5,
+                featureName: "Indicatori",
+                html: "Puoi vedere l'incremento giornaliero dell'indicatore anzichè il valore totale.",
+                elementSelector: ".day-delta",
+                showAfter: 80,
+                showAction: () => {
+                    if (!this.currentArea())
+                        this._tips.areaSelected.showAction();
+                    this.isDayDelta(true);
+                }
+            },   
+            factorChanged: {
+                order: 6,
+                featureName: "Indicatori",
+                html: "Puoi mettere in relazione qualsiasi indicatore a numerosi parametri (es. % Positivi su Tamponi).",
+                elementSelector: ".filter-factor",
+                showAfter: 110,
+                showAction: () => {
+                    if (!this.currentArea())
+                        this._tips.areaSelected.showAction();
+                    this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalPositive"));
+                    this.selectedFactor(linq(this._dataSet.factors).first(a => a.id == "population"));
+                }
+            },     
+            groupChanged: {
+                order: 7,
+                featureName: "Grafico",
+                html: "Puo raggruppare i dati del grafico in gruppi da 1 a 7 giorni. Puoi anche scegliere la data d'inizio.",
+                elementSelector: ".row-chart-group .select-wrapper",
+                showAfter: 140,
+                showAction: () => {
+                    var element = document.querySelector(".chart-options");
+                    if (element.classList.contains("closed"))
+                        element.classList.remove("closed");
+                    this.groupSize(2);
+                    M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+                }
+            },
+            chartActionExecuted: {
+                order: 8,
+                featureName: "Grafico",
+                html: "Puoi portare il grafico a schermo interno, copiarlo, o copiare la serie numerico e incollarla in excel.",
+                elementSelector: ".chart .actions",
+                showAfter: 180
+            },
+            scaleChanged: {
+                order: 9,
+                featureName: "Grafico",
+                html: "Puo cambiare da scala logaritmica a scala lineare.",
+                elementSelector: ".log-scale",
+                showAfter: 210,
+                showAction: () => {
+                    this.isLogScale(true);
+                }
+            },
+            maxFactorChanged: {
+                order: 10,
+                featureName: "Mappa",
+                html: "Puoi cambiare il riferimento rispetto al quale la mappa viene colorata. Normalmente è in base al valore massimo che si ha avuto globalmente.",
+                elementSelector: ".max-factor",
+                showAfter: 300,
+                showAction: () => {
+                    if (!this.currentArea())
+                        this._tips.areaSelected.showAction();
+                    this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalPositive"));
+                    this.autoMaxFactor(false);
+                    this.maxFactor(1000);
+                }
+            }
+        }
 
         private _specialDates: IDictionary<ISpecialDate> = {
             current: {
@@ -137,6 +374,7 @@
                 if (!this._daysData)
                     this.updateTopAreas();
                 this._topAreasVisible = true;
+                this._preferences.actions.topAreasOpened++;
             }
 
             topCasesView.options.onCloseEnd = () => {
@@ -156,12 +394,16 @@
                 if (!value)
                     return;
                 this.updateIndicator();
+                if (value.id != "totalPositive")
+                    this._preferences.actions.indicatorChanged++;
             });
 
             this.selectedFactor.subscribe(value => {
                 if (!value)
                     return;
                 this.updateIndicator();
+                if (value.id != "none")
+                    this._preferences.actions.factorChanged++;
                 setTimeout(() => M.FormSelect.init(document.querySelectorAll(".row-chart-group select")));
             });
 
@@ -174,22 +416,29 @@
             });
 
             this.maxFactor.subscribe(() => {
-                if (!this.autoMaxFactor())
+                if (!this.autoMaxFactor()) {
                     this.updateMap();
+                    this._preferences.actions.maxFactorChanged++;
+                }
                 this.updateUrl();
             });
 
-            this.isDayDelta.subscribe(() => {
+            this.isDayDelta.subscribe(value => {
                 this.computeStartDayForGroup();
                 this.updateIndicator();
+                if (value)
+                    this._preferences.actions.deltaSelected++;
+
             });
 
-            this.isLogScale.subscribe(() => {
+            this.isLogScale.subscribe(value => {
                 this.updateChart();
                 this.updateUrl();
+                if (value)
+                    this._preferences.actions.scaleChanged++;
             });
 
-            this.isZoomChart.subscribe(() => {
+            this.isZoomChart.subscribe(value => {
                 this.updateChart();
             });
 
@@ -197,16 +446,24 @@
                 this.computeStartDayForGroup();
                 this.updateChart();
                 this.updateUrl();
+                if (value > 1)
+                    this._preferences.actions.groupChanged++;
             });
 
-            this.startDay.subscribe(() => {
+            this.startDay.subscribe(value=> {
                 this.updateChart();
                 this.updateUrl();
+                if (value != this._data.days.length -1)
+                    this._preferences.actions.dayChanged++;
             });
 
             const urlParams = new URLSearchParams(window.location.search);
             const stateRaw = urlParams.get("state");
             this._keepState = urlParams.get("keepState") == "true";
+
+            this.loadPreferences();
+
+            this.engageUser();
 
             let state: IPageState;
 
@@ -216,13 +473,65 @@
                 state = {};
 
             setTimeout(() => this.loadState(state), 0);
+
+            window.addEventListener("beforeunload", () => this.savePreferences());
+        } 
+
+        /****************************************/
+
+        protected engageUser() {
+
+            if (this._preferences.showTips != undefined && !this._preferences.showTips)
+                return;
+
+            for (let action in this._preferences.actions) {
+
+                if (this._tips[action].showAfter > 0)
+
+                    setTimeout(() => {
+
+                        if (this._preferences.actions[action] > 0)
+                            return;
+                        if (!this.tip.isVisible())
+                            this.showTip(this._tips[action]);
+
+                    }, this._tips[action].showAfter * 1000);
+            }
+        }
+
+        /****************************************/
+
+        protected showTip(tip: IViewActionTip) {
+
+            this.tip.dontShowAgain = () => {
+                this._preferences.showTips = false;
+                this.tip.close();
+            }
+
+            let nextTip = linq(this._tips).where(a => a.value.order > tip.order).select(a => a.value).first();
+
+            if (nextTip) {
+                this.tip.next = () => {
+                    this.tip.close();
+                    this.showTip(nextTip);
+                }
+                this.tip.hasNext(true);
+            }
+            else {
+                this.tip.next = null;
+                this.tip.hasNext(false);
+            }
+            this.tip.content(tip.html);
+            this.tip.value = tip;
+
+            this.tip.show();
         }
 
         /****************************************/
 
         protected isDefaultState(state: IPageState) {
             return (!state.day || state.day == this._data.days.length - 1) &&
-                (!state.view || state.view == "district") &&
+                (!state.view || state.view == "region") &&
                 !state.area &&
                 (!state.indicator || state.indicator == "totalPositive") &&
                 (!state.factor || state.factor == "none") &&
@@ -237,17 +546,10 @@
 
         /****************************************/
 
-        toggleChartZoom() {
-
-            this.isZoomChart(!this.isZoomChart());
-        }
-
-        /****************************************/
-
         loadState(state: IPageState) {
 
             if (!state.view)
-                state.view = "district";
+                state.view = "region";
 
             const viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
             viewTabs.select(ViewModes[state.view].tab);
@@ -290,8 +592,6 @@
 
             if (state.area)
                 this.selectedArea = this._geo.areas[state.area.toLowerCase()];
-
-
         }
 
         /****************************************/
@@ -299,7 +599,7 @@
         saveStata(): IPageState {
 
             return {
-                view: this.viewMode() == "district" ? undefined : this.viewMode(),
+                view: this.viewMode() == "region" ? undefined : this.viewMode(),
                 indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
                 factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
                 dayDelta: this.isDayDelta() ? true : undefined,
@@ -312,6 +612,49 @@
                 excludedArea: this._execludedArea.size > 0 ? linq(this._execludedArea.keys()).toArray() : undefined,
                 showEnvData: this.isShowEnvData() ? true : undefined
             };
+        }
+
+        /****************************************/
+
+        loadPreferences() {
+            let json = localStorage.getItem("preferences");
+            if (!json)
+                this._preferences = {
+                    isFirstView: true,
+                    showTips: true,
+                    actions: {
+                        areaSelected: 0,
+                        indicatorSelected: 0,
+                        indicatorChanged: 0,
+                        dayChanged: 0,
+                        viewChanged: 0,
+                        chartActionExecuted: 0,
+                        factorChanged: 0,
+                        groupChanged: 0,
+                        maxFactorChanged: 0,
+                        scaleChanged: 0,
+                        topAreasOpened: 0,
+                        deltaSelected: 0
+                    }
+                };
+            else
+                this._preferences = JSON.parse(json);
+        }
+
+        /****************************************/
+
+        savePreferences() {
+            this._preferences.isFirstView = false;
+            localStorage.setItem("preferences", JSON.stringify(this._preferences));
+        }
+
+
+        /****************************************/
+
+        toggleChartZoom() {
+
+            this._preferences.actions.chartActionExecuted++;
+            this.isZoomChart(!this.isZoomChart());
         }
 
         /****************************************/
@@ -333,7 +676,7 @@
                     M.toast({ html: "Funzionalità non supportata, download in corso." })
                 }
             });
-
+            this._preferences.actions.chartActionExecuted++;
         }
 
         /****************************************/
@@ -348,6 +691,7 @@
             DomUtils.copyText(text);
 
             M.toast({ html: "Serie copiata sugli appunti." })
+            this._preferences.actions.chartActionExecuted++;
         }
 
         /****************************************/
@@ -367,6 +711,8 @@
 
         setViewMode(mode: ViewMode) {
 
+            if (mode != "region")
+                this._preferences.actions.viewChanged++;
             this.viewMode(mode);
 
             const districtGroup = document.getElementById("group_district");
@@ -402,7 +748,6 @@
                 M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
         }
 
-
         /****************************************/
 
         get selectedArea() {
@@ -435,7 +780,7 @@
 
         /****************************************/
 
-        protected getFactorValue(dayNumberOrGroup: number|number[], areaOrId: string | IGeoArea): number {
+        protected getFactorValue(dayNumberOrGroup: number | number[], areaOrId: string | IGeoArea): number {
 
             const areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
 
@@ -481,7 +826,7 @@
 
             const indicator = linq(this._dataSet.indicators).first(a => a.id == indicatorId);
 
-            const dataAtDay = (number: number, curAreaId: string) => 
+            const dataAtDay = (number: number, curAreaId: string) =>
                 number < 0 ? undefined : this._data.days[number].values[curAreaId];
 
 
@@ -492,7 +837,7 @@
 
             if (this.isDayDelta())
                 delta = dataAtDay(dayNumber - 1, areaId);
-                
+
             if (this._execludedArea.size > 0) {
                 exMain = [];
                 exDelta = [];
@@ -545,6 +890,8 @@
                 if (item.parentElement.classList.contains(this.viewMode()))
                     this.selectedArea = area;
             }
+
+            this._preferences.actions.areaSelected++;
         }
 
         /****************************************/
@@ -605,6 +952,7 @@
                     let item = new IndicatorViewModel();
                     item.indicator = indicator;
                     item.select = () => {
+                        this._preferences.actions.indicatorSelected++;
                         this.selectedIndicator(indicator);
                         setTimeout(() =>
                             M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
@@ -837,7 +1185,7 @@
                 }
             }
 
-            
+
 
             this._chart.update();
         }
@@ -1030,6 +1378,7 @@
         startDay = ko.observable<number>(0);
         isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
         groupDays = [1, 2, 3, 4, 5, 6, 7];
+        tip = new TipViewModel();
         factorDescription = ko.observable<string>();
         indicators: KnockoutObservable<IIndicator<TData>[]>;
         factors: KnockoutObservable<IFactor<TData>[]>;

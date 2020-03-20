@@ -38,7 +38,7 @@
                                 </g>
                             }
                             <g class="environment" data-bind="visible: isShowEnvData">
-                                @foreach (var item in Model.Environment.Where(a => a.Value.ReportingYear == 2018).OrderBy(a=> a.Value.Value))
+                                @foreach (var item in Model.Environment.Where(a => a.Value.ReportingYear == 2018).OrderBy(a => a.Value.Value))
                                 {
                                     <circle cx="@item.Position.X" cy="@item.Position.Y" r="15000" class="@item.Severity.ToString().ToLower()" data-value="@item.Value.Value" id="@item.Value.StationId"></circle>
                                 }
@@ -101,7 +101,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-section expandable">
+                    <div class="card-section expandable indicators">
                         <h6 class="section-title" onclick="expandCollapse(this)">
                             <span>Indicatori</span>
                             <i class="material-icons">chevron_right</i>
@@ -115,14 +115,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-section expandable closed">
+                    <div class="card-section expandable closed chart-options">
                         <h6 class="section-title" onclick="expandCollapse(this)">
                             <span>Opzioni grafico</span>
                             <i class="material-icons">chevron_right</i>
                         </h6>
                         <div class="section-content">
                             <div class="row">
-                                <div class="col s12">
+                                <div class="col s12 log-scale">
                                     <label>
                                         <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
                                         <span>Scala logaritmica</span>
@@ -147,7 +147,12 @@
 
                     <!--/ko-->
                     <!--ko ifnot: currentArea-->
-                    <span class="empty-text">Selezionare una <span data-bind="text: GeoPlot.ViewModes[viewMode()].label.singular"></span></span>
+                    <div class="empty-text flex-row-inline item-margin-small">
+                        <i class="material-icons small orange-text">warning</i>
+                        <div>
+                            Selezionare una <span data-bind="text: GeoPlot.ViewModes[viewMode()].label.singular"></span>  per vedere gli indicatori
+                        </div>
+                    </div>
                     <!--/ko-->
                 </div>
             </section>
@@ -155,18 +160,18 @@
                 <div class="card-content">
                     <span class="card-title">Filtro</span>
                     <div class="row no-margin row-indicator">
-                        <div class="col s6 input-field">
+                        <div class="col s6 input-field filter-indicator">
                             <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
                             <label>Indicatore</label>
                         </div>
-                        <div class="col s6 input-field">
+                        <div class="col s6 input-field filter-factor">
                             <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
                             <label>In rapporto a</label>
                         </div>
                     </div>
                     <div class="row no-margin row-factor">
                         <div class="col s12">
-                            <label>
+                            <label class="day-delta">
                                 <input class="filled-in" type="checkbox" data-bind="checked: isDayDelta" />
                                 <span>Incremento giornaliero</span>
                             </label>
@@ -178,7 +183,7 @@
                                 <i class="material-icons tooltipped" data-position="top" data-tooltip="La colorazione nella mappa è relativa al valore più alto dell'indicatore che si ha avuto in un area geografica (rosso scuro = soglia, bianco = 0).&#013; E' possibile impostare manualmente il valore di riferimento (soglia massima) e rendere i colori relativi a quel valore.">info</i>
                             </label>
                         </div>
-                        <div class="input-field col s6">
+                        <div class="input-field col s6 max-factor">
                             <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
                             <label for="limit">Soglia fattore</label>
                         </div>
@@ -191,8 +196,8 @@
                             </label>
                         </div>
                     </div>
-                    </div>
-</section>
+                </div>
+            </section>
 
             <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
                 <li>
@@ -231,9 +236,75 @@
         </div>
     </div>
     <section class="main data-source">
-        <b>Fonte Dati:</b> <a href="https://github.com/pcm-dpc/COVID-19/tree/master/dati-json" target="_blank">Protezione civile</a> - aggiornati al @string.Format("{0:dd/MM/yyyy HH:mm:ss}", Model.LastUpdate)
+        <h5>Fonte Dati:</h5>
+        <ul>
+            <li>
+                <label>Indicatori</label>
+                <a href="https://github.com/pcm-dpc/COVID-19/tree/master/dati-json" target="_blank">Protezione civile</a>
+                <span class="last-update">aggiornati al @string.Format("{0:dd/MM/yyyy} alle {0:HH:mm:ss}", Model.LastUpdate)</span>
+            </li>
+            <li>
+                <label>Demografia</label>
+                <a href="http://demo.istat.it/pop2019/index3.html" target="_blank">Istat</a>
+                <span class="last-update">aggiornati al 2019</span>
+            </li>
+            <li>
+                <label>Superficie</label>
+                <a href="https://www.istat.it/it/files/2013/02/Dati-comunali-e-provinciali.zip" target="_blank">Istat</a>
+                <span class="last-update">aggiornati al 2011</span>
+            </li>
+            <li>
+                <label>Dati geografici</label>
+                <a href="https://github.com/openpolis/geojson-italy/tree/master/geojson" target="_blank">Open polis</a>
+                <span class="last-update">aggiornati a Settembre 2019</span>
+            </li>
+            <li>
+                <label>Dati ambientali</label>
+                <a href="http://aidef.apps.eea.europa.eu/?source=%7B%22query%22%3A%7B%22match_all%22%3A%7B%7D%7D%2C%22display_type%22%3A%22tabular%22%7D" target="_blank">Europian Environment Agency</a>
+                <span class="last-update">aggiornati al 2018</span>
+                <div class="note">
+                    Concentrazione PM10 su 1 anno al 90.4 percentile
+                    <div class="legend">
+                        <i class="good"></i>
+                        <span>&lt; 20 µg m³</span>
+                    </div>
+                    <div class="legend">
+                        <i class="medium"></i>
+                        <span>20 - 40 µg m³</span>
+                    </div>
+                    <div class="legend">
+                        <i class="bad"></i>
+                        <span>40 - 50 µg m³</span>
+                    </div>
+                    <div class="legend">
+                        <i class="sever"></i>
+                        <span>50 - 75 µg m³</span>
+                    </div>
+                    <div class="legend">
+                        <i class="verysevere"></i>
+                        <span>&gt; 75 µg m³</span>
+                    </div>
+                </div>
+            </li>
+        </ul>
     </section>
-
+    <!--ko with: tip-->
+    <div class="tip z-depth-3" data-bind="css: {visible: isVisible}">
+        <div class="main">
+            <i class="material-icons yellow-text text-darken-1">lightbulb_outline</i>
+            <div>
+                <h5 class="title">Lo sapevi che?</h5>
+                <div class="body" data-bind="html: content"></div>
+                <a class="not-show" href="#!" data-bind="click: dontShowAgain">Non mostrarmi suggerimenti</a>
+            </div>
+        </div>
+        <ul class="actions">
+            <li><a class="waves-effect waves-light" href="#!" data-bind="click: close">Capito!</a></li>
+            <li><a class="waves-effect waves-light" href="#!" data-bind="click: executeAction">Come?</a></li>
+            <li><a class="waves-effect waves-light" href="#!" data-bind="visible: hasNext, click: next">Prossimo&nbsp;›</a></li>
+        </ul>
+    </div>
+    <!--/ko-->
 </div>
 
 

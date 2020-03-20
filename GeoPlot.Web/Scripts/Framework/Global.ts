@@ -49,6 +49,31 @@ function expandCollapse(elment: HTMLElement) {
 }
 
 /****************************************/
+
+function scrollIntoViewIfOutOfView(el) {
+    var topOfPage = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+    var heightOfPage = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+    var elY = 0;
+    var elH = 0;
+    if (document["layers"]) { // NS4
+        elY = el.y;
+        elH = el.height;
+    }
+    else {
+        for (var p = el; p && p.tagName != 'BODY'; p = p.offsetParent) {
+            elY += p.offsetTop;
+        }
+        elH = el.offsetHeight;
+    }
+    if ((topOfPage + heightOfPage) < (elY + elH)) {
+        el.scrollIntoView(false);
+    }
+    else if (elY < topOfPage) {
+        el.scrollIntoView(true);
+    }
+}
+
+/****************************************/
 /* Definitions
 /****************************************/
 

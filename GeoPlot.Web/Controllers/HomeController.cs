@@ -154,9 +154,16 @@ namespace GeoPlot.Web.Controllers
 
         static async Task<DateTime> GetLastCommit()
         {
-            var head = await HttpGetJson<GitHubHeadResponse>("https://api.github.com/repos/pcm-dpc/COVID-19/git/refs/heads/master");
-            var commit = await HttpGetJson<GitHubCommitResponse>(head.obj.url);
-            return commit.committer.date;
+            try
+            {
+                var head = await HttpGetJson<GitHubHeadResponse>("https://api.github.com/repos/pcm-dpc/COVID-19/git/refs/heads/master");
+                var commit = await HttpGetJson<GitHubCommitResponse>(head.obj.url);
+                return commit.committer.date;
+            }
+            catch (Exception ex)
+            {
+                return DateTime.Now;
+            }
         }
 
         static async Task<T> HttpGetJson<T>(string url)

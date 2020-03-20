@@ -30,6 +30,12 @@
 
         /****************************************/
 
+        static isSmallDevice(): boolean {
+            return window.innerWidth < 610;
+        }
+
+        /****************************************/
+
         static async copyText(value: string) {
             if (navigator["clipboard"])
                 await navigator.clipboard.writeText(value);
