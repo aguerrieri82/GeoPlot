@@ -14,6 +14,7 @@
     <None Remove="Scripts\Framework\MathUtils.ts" />
     <None Remove="Scripts\Geo.ts" />
     <None Remove="Scripts\Graphics.ts" />
+    <None Remove="Scripts\Indicators.ts" />
     <None Remove="Scripts\InfectionDataSet.ts" />
     <None Remove="Scripts\Types.ts" />
     <None Remove="Scripts\ViewModes.ts" />

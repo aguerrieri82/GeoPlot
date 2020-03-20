@@ -435,49 +435,75 @@
 
         /****************************************/
 
-        protected getFactorValue(dayNumber: number, areaOrId: string | IGeoArea, indicator: keyof TData|string): number {
+        protected getFactorValue(dayNumberOrGroup: number|number[], areaOrId: string | IGeoArea): number {
 
-            const day = this._data.days[dayNumber]
-            const area = typeof areaOrId == "string" ? this._geo.areas[areaOrId.toLowerCase()] : areaOrId;
+            const areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
 
-            if (!area)
-                return 0;
+            const dataAtDay = (number: number, curAreaId: string) =>
+                number < 0 ? undefined : this._data.days[number].values[curAreaId];
 
-            const itemData = day.values[area.id.toLowerCase()];
+            if (!Array.isArray(dayNumberOrGroup))
+                dayNumberOrGroup = [dayNumberOrGroup];
 
-            if (!itemData)
-                return 0;
+            let main: TData[] = [];
+            let delta: TData[] = [];
+            let exMain: TData[][] = [];
+            let exDelta: TData[][] = [];
 
-            return this.selectedFactor().compute(itemData, area, this.getIndicatorValue(dayNumber, area, indicator));
+            for (var dayNumber of dayNumberOrGroup) {
+
+                main.push(dataAtDay(dayNumber, areaId));
+
+                if (this.isDayDelta())
+                    delta.push(dataAtDay(dayNumber - 1, areaId));
+
+                if (this._execludedArea.size > 0) {
+                    var curExMain = [];
+                    var curExDelta = [];
+                    this._execludedArea.forEach(a => {
+                        curExMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
+                        if (this.isDayDelta())
+                            curExDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
+                    });
+                    exMain.push(curExMain)
+                    exDelta.push(curExDelta)
+                }
+            }
+
+            return this.selectedFactor().compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId], this.selectedIndicator().compute);
         }
 
         /****************************************/
 
-        protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicatorId: keyof TData | string, ignoreExcluded: boolean = false): number {
+        protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicatorId: keyof TData | string): number {
 
-            const areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;
-
-            const itemData = this._data.days[dayNumber].values[areaId.toLowerCase()];
-            if (!itemData)
-                return 0;
+            const areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
 
             const indicator = linq(this._dataSet.indicators).first(a => a.id == indicatorId);
 
-            let curValue = indicator.compute ? indicator.compute(this._data.days[dayNumber].values[areaId.toLowerCase()], this._geo.areas[areaId.toLowerCase()]) : this._data.days[dayNumber].values[areaId.toLowerCase()][indicatorId];
+            const dataAtDay = (number: number, curAreaId: string) => 
+                number < 0 ? undefined : this._data.days[number].values[curAreaId];
 
-            if (this.isDayDelta()) {
-                if (dayNumber == 0)
-                    return 0;
-                curValue -= this._data.days[dayNumber - 1].values[areaId.toLowerCase()][indicatorId];
-            }
 
-            if (!ignoreExcluded && this._execludedArea.size > 0) {
+            let main = dataAtDay(dayNumber, areaId);
+            let delta: TData;
+            let exMain: TData[];
+            let exDelta: TData[];
+
+            if (this.isDayDelta())
+                delta = dataAtDay(dayNumber - 1, areaId);
+                
+            if (this._execludedArea.size > 0) {
+                exMain = [];
+                exDelta = [];
                 this._execludedArea.forEach(a => {
-                    curValue -= this.getIndicatorValue(dayNumber, a.id, indicatorId, true);
+                    exMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
+                    if (this.isDayDelta())
+                        exDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
                 });
             }
 
-            return curValue;
+            return indicator.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId]);
         }
 
         /****************************************/
@@ -631,11 +657,12 @@
 
             this.updateFactorDescription();
 
+            /*
             if (this.selectedFactor().id != "none") {
 
                 if (this.groupSize() != 1)
                     this.groupSize(1);
-            }
+            }*/
 
             this.updateMaxFactor();
             this.updateDayData();
@@ -661,7 +688,7 @@
                 for (let areaId in day.values) {
                     if (!curView.validateId(areaId))
                         continue;
-                    const factor = this.getFactorValue(i, areaId, this.selectedIndicator().id);
+                    const factor = this.getFactorValue(i, areaId);
                     if (factor > result)
                         result = factor;
                 }
@@ -781,32 +808,36 @@
 
             this._chart.data.datasets[0].data = [];
 
-            for (let i = 0 + this.startDay(); i < this._data.days.length; i++) {
-
-                const item: Chart.ChartPoint = {
-                    x: new Date(this._data.days[i].date),
-                    y: this.getFactorValue(i, area, field)
-                };
-                this._chart.data.datasets[0].data.push(<any>item);
-            }
-
             if (this.groupSize() > 1) {
-                const newData = [];
-                const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
+
                 let count = this.groupSize();
-                let curPoint: { x?: Date, y: number } = { y: 0 };
-                for (let i = 0; i < data.length; i++) {
-                    curPoint.y += data[i].y;
+                let group: number[] = [];
+                for (let i = 0 + this.startDay(); i < this._data.days.length; i++) {
+                    group.push(i);
                     count--;
                     if (count == 0) {
-                        curPoint.x = data[i].x;
-                        newData.unshift(curPoint);
-                        curPoint = { y: 0 };
+                        const item: Chart.ChartPoint = {
+                            x: new Date(this._data.days[i].date),
+                            y: this.getFactorValue(group, area)
+                        };
+                        this._chart.data.datasets[0].data.push(<any>item);
                         count = this.groupSize();
+                        group = [];
                     }
                 }
-                this._chart.data.datasets[0].data = newData;
             }
+            else {
+                for (let i = 0 + this.startDay(); i < this._data.days.length; i++) {
+
+                    const item: Chart.ChartPoint = {
+                        x: new Date(this._data.days[i].date),
+                        y: this.getFactorValue(i, area)
+                    };
+                    this._chart.data.datasets[0].data.push(<any>item);
+                }
+            }
+
+            
 
             this._chart.update();
         }
@@ -834,7 +865,7 @@
 
             value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
 
-            value.factor(MathUtils.round(this.getFactorValue(dayNumber, area, this.selectedIndicator().id), 1));
+            value.factor(MathUtils.round(this.getFactorValue(dayNumber, area), 1));
 
             value.reference(this.selectedFactor().reference(day.values[id], area));
 
@@ -855,7 +886,7 @@
                 const isInArea = ViewModes[this.viewMode()].validateId;
 
                 item.topAreas = linq(day.values).select(a => ({
-                    factor: this.getFactorValue(i, a.key, this.selectedIndicator().id),
+                    factor: this.getFactorValue(i, a.key),
                     value: a
                 }))
                     .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
@@ -945,14 +976,11 @@
                         if (area.type != ViewModes[this.viewMode()].areaType)
                             continue;
 
-                        const field = this.selectedIndicator().id;
-
-                        let factor = this.getFactorValue(this.dayNumber(), area, field);
-                        let indicator = this.getIndicatorValue(this.dayNumber(), area, field);
+                        let factor = this.getFactorValue(this.dayNumber(), area);
 
                         factor = Math.min(1, factor / this.maxFactor());
 
-                        if (indicator == 0 || isNaN(factor)) {
+                        if (isNaN(factor)) {
                             if (element.classList.contains("valid"))
                                 element.classList.remove("valid");
                             element.style.fillOpacity = "1";

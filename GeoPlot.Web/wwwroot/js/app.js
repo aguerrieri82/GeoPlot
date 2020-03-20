@@ -166,6 +166,11 @@ var GeoPlot;
 })(GeoPlot || (GeoPlot = {}));
 var GeoPlot;
 (function (GeoPlot) {
+    var AggregationFunc;
+    (function (AggregationFunc) {
+        AggregationFunc[AggregationFunc["SUm"] = 0] = "SUm";
+        AggregationFunc[AggregationFunc["Avg"] = 1] = "Avg";
+    })(AggregationFunc = GeoPlot.AggregationFunc || (GeoPlot.AggregationFunc = {}));
     var GeoAreaType;
     (function (GeoAreaType) {
         GeoAreaType[GeoAreaType["Country"] = 0] = "Country";
@@ -176,6 +181,81 @@ var GeoPlot;
 })(GeoPlot || (GeoPlot = {}));
 var GeoPlot;
 (function (GeoPlot) {
+    var ConstIndicatorFunction = /** @class */ (function () {
+        function ConstIndicatorFunction(value) {
+            this._value = value;
+        }
+        /****************************************/
+        ConstIndicatorFunction.prototype.value = function (main, delta, exMain, exDelta, area) {
+            var result = this._value(main, area);
+            if (exMain) {
+                for (var i in exMain)
+                    result -= this.value(exMain[i], exDelta[i], null, null, area);
+            }
+            return result;
+        };
+        return ConstIndicatorFunction;
+    }());
+    GeoPlot.ConstIndicatorFunction = ConstIndicatorFunction;
+    /****************************************/
+    var SimpleIndicatorFunction = /** @class */ (function () {
+        function SimpleIndicatorFunction(value) {
+            this._value = value;
+        }
+        /****************************************/
+        SimpleIndicatorFunction.prototype.value = function (main, delta, exMain, exDelta, area) {
+            var result = this._value(main, area);
+            if (delta)
+                result -= this._value(delta, area);
+            if (exMain) {
+                for (var i in exMain)
+                    result -= this.value(exMain[i], exDelta[i], null, null, area);
+            }
+            return result;
+        };
+        return SimpleIndicatorFunction;
+    }());
+    GeoPlot.SimpleIndicatorFunction = SimpleIndicatorFunction;
+    /****************************************/
+    var SimpleFactorFunction = /** @class */ (function () {
+        function SimpleFactorFunction(value) {
+            this._value = value;
+        }
+        /****************************************/
+        SimpleFactorFunction.prototype.value = function (main, delta, exMain, exDelta, area, indicator) {
+            var curValue = 0;
+            for (var i in main)
+                curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
+            return this._value(curValue, main[0], area);
+        };
+        return SimpleFactorFunction;
+    }());
+    GeoPlot.SimpleFactorFunction = SimpleFactorFunction;
+    /****************************************/
+    var DoubleFactorFunction = /** @class */ (function () {
+        function DoubleFactorFunction(value, factor) {
+            this._value = value;
+            this._factor = factor;
+        }
+        /****************************************/
+        DoubleFactorFunction.prototype.value = function (main, delta, exMain, exDelta, area, indicator) {
+            var curValue = 0;
+            var curFactor = 0;
+            for (var i in main) {
+                curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
+                curFactor += this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area);
+            }
+            return this._value(curValue, curFactor);
+        };
+        return DoubleFactorFunction;
+    }());
+    GeoPlot.DoubleFactorFunction = DoubleFactorFunction;
+    /****************************************/
+})(GeoPlot || (GeoPlot = {}));
+/// <reference path="../indicators.ts" />
+var GeoPlot;
+(function (GeoPlot) {
+    /****************************************/
     GeoPlot.InfectionDataSet = {
         name: "COVID-19",
         indicators: [
@@ -183,49 +263,56 @@ var GeoPlot;
                 id: "totalPositive",
                 name: "Positivi Totali",
                 colorLight: "#f44336",
-                colorDark: "#b71c1c"
+                colorDark: "#b71c1c",
+                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalPositive; })
             },
             {
                 id: "currentPositive",
                 name: "Attuali Positivi",
                 validFor: ["region", "country"],
                 colorLight: "#e91e63",
-                colorDark: "#880e4f"
+                colorDark: "#880e4f",
+                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.currentPositive; })
             },
             {
                 id: "totalDeath",
                 name: "Deceduti",
                 validFor: ["region", "country"],
                 colorLight: "#9c27b0",
-                colorDark: "#4a148c"
+                colorDark: "#4a148c",
+                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalDeath; })
             },
             {
                 id: "totalSevere",
                 name: "Gravi",
                 validFor: ["region", "country"],
                 colorLight: "#ff9800",
-                colorDark: "#e65100"
+                colorDark: "#e65100",
+                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalSevere; })
             },
             {
                 id: "totalHospedalized",
                 name: "Ricoverati",
                 validFor: ["region", "country"],
                 colorLight: "#fdd835",
-                colorDark: "#fbc02d"
+                colorDark: "#fbc02d",
+                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalHospedalized; })
             },
             {
                 id: "totalHealed",
                 name: "Guariti",
                 validFor: ["region", "country"],
                 colorLight: "#4caf50",
-                colorDark: "#1b5e20"
+                colorDark: "#1b5e20",
+                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalHealed; })
             },
             {
                 id: "toatlTests",
                 name: "Tamponi",
                 validFor: ["region", "country"],
                 colorLight: "#03a9f4",
-                colorDark: "#01579b"
+                colorDark: "#01579b",
+                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.toatlTests; })
             },
             {
                 id: "surface",
@@ -233,7 +320,7 @@ var GeoPlot;
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
-                compute: function (v, a) { return GeoPlot.MathUtils.round(a.surface, 0); }
+                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return GeoPlot.MathUtils.round(a.surface, 0); })
             },
             {
                 id: "density",
@@ -241,7 +328,7 @@ var GeoPlot;
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
-                compute: function (v, a) { return GeoPlot.MathUtils.round(a.demography.total / a.surface, 0); }
+                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return GeoPlot.MathUtils.round(a.demography.total / a.surface, 0); })
             },
             {
                 id: "population",
@@ -249,7 +336,7 @@ var GeoPlot;
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
-                compute: function (v, a) { return a.demography.total; }
+                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return a.demography.total; })
             },
             {
                 id: "populationOld",
@@ -257,35 +344,39 @@ var GeoPlot;
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
-                compute: function (v, a) { return a.demography.over65; }
+                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return a.demography.over65; })
             },
         ],
         factors: [
             {
                 id: "none",
                 name: "Nessuno",
-                compute: function (v, a, i) { return i; },
+                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return i; }),
+                format: function (a) { return formatNumber(a); },
                 reference: function (v, a) { return "N/A"; },
                 description: "[indicator]"
             },
             {
                 id: "population",
                 name: "Popolazione",
-                compute: function (v, a, i) { return (i / a.demography.total) * 100000; },
+                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.total) * 100000; }),
+                format: function (a) { return formatNumber(a); },
                 reference: function (v, a) { return formatNumber(a.demography.total); },
                 description: "[indicator] ogni 100.000 abitanti"
             },
             {
                 id: "population",
                 name: "Popolazione +65",
-                compute: function (v, a, i) { return (i / a.demography.over65) * 100000; },
+                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.over65) * 100000; }),
+                format: function (a) { return formatNumber(GeoPlot.MathUtils.round(a, 1)); },
                 reference: function (v, a) { return formatNumber(a.demography.over65); },
                 description: "[indicator] ogni 100.000 abitanti +65"
             },
             {
                 id: "density",
                 name: "Densità",
-                compute: function (v, a, i) { return (i / (a.demography.total / a.surface)); },
+                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / (a.demography.total / a.surface)) * 100000; }),
+                format: function (a) { return formatNumber(GeoPlot.MathUtils.round(a, 1)); },
                 reference: function (v, a) { return formatNumber(GeoPlot.MathUtils.round(a.demography.total / a.surface, 1)); },
                 description: "[indicator] rispetto densità territorio"
             },
@@ -293,7 +384,8 @@ var GeoPlot;
                 id: "totalPositive",
                 name: "Positivi Totali",
                 validFor: ["region", "country"],
-                compute: function (v, a, i) { return !v.totalPositive ? 0 : (i / v.totalPositive) * 100; },
+                compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.totalPositive; })),
+                format: function (a) { return GeoPlot.MathUtils.round(a, 1) + "%"; },
                 reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
                 description: "% [indicator] su positivi totali"
             },
@@ -301,7 +393,8 @@ var GeoPlot;
                 id: "severe",
                 name: "Gravi",
                 validFor: ["region", "country"],
-                compute: function (v, a, i) { return !v.totalSevere ? 0 : (i / v.totalSevere) * 100; },
+                compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.totalSevere; })),
+                format: function (a) { return GeoPlot.MathUtils.round(a, 1) + "%"; },
                 reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
                 description: "% [indicator] sui gravi totali"
             },
@@ -309,7 +402,8 @@ var GeoPlot;
                 id: "test",
                 name: "Tamponi",
                 validFor: ["region", "country"],
-                compute: function (v, a, i) { return !v.toatlTests ? 0 : (i / v.toatlTests) * 100; },
+                compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.toatlTests; })),
+                format: function (a) { return GeoPlot.MathUtils.round(a, 1) + "%"; },
                 reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
                 description: "% [indicator] sui tamponi eseguiti"
             }
@@ -2006,37 +2100,71 @@ var GeoPlot;
             configurable: true
         });
         /****************************************/
-        GeoPlotPage.prototype.getFactorValue = function (dayNumber, areaOrId, indicator) {
-            var day = this._data.days[dayNumber];
-            var area = typeof areaOrId == "string" ? this._geo.areas[areaOrId.toLowerCase()] : areaOrId;
-            if (!area)
-                return 0;
-            var itemData = day.values[area.id.toLowerCase()];
-            if (!itemData)
-                return 0;
-            return this.selectedFactor().compute(itemData, area, this.getIndicatorValue(dayNumber, area, indicator));
+        GeoPlotPage.prototype.getFactorValue = function (dayNumberOrGroup, areaOrId) {
+            var e_2, _a;
+            var _this = this;
+            var areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
+            var dataAtDay = function (number, curAreaId) {
+                return number < 0 ? undefined : _this._data.days[number].values[curAreaId];
+            };
+            if (!Array.isArray(dayNumberOrGroup))
+                dayNumberOrGroup = [dayNumberOrGroup];
+            var main = [];
+            var delta = [];
+            var exMain = [];
+            var exDelta = [];
+            try {
+                for (var dayNumberOrGroup_1 = __values(dayNumberOrGroup), dayNumberOrGroup_1_1 = dayNumberOrGroup_1.next(); !dayNumberOrGroup_1_1.done; dayNumberOrGroup_1_1 = dayNumberOrGroup_1.next()) {
+                    var dayNumber = dayNumberOrGroup_1_1.value;
+                    main.push(dataAtDay(dayNumber, areaId));
+                    if (this.isDayDelta())
+                        delta.push(dataAtDay(dayNumber - 1, areaId));
+                    if (this._execludedArea.size > 0) {
+                        var curExMain = [];
+                        var curExDelta = [];
+                        this._execludedArea.forEach(function (a) {
+                            curExMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
+                            if (_this.isDayDelta())
+                                curExDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
+                        });
+                        exMain.push(curExMain);
+                        exDelta.push(curExDelta);
+                    }
+                }
+            }
+            catch (e_2_1) { e_2 = { error: e_2_1 }; }
+            finally {
+                try {
+                    if (dayNumberOrGroup_1_1 && !dayNumberOrGroup_1_1.done && (_a = dayNumberOrGroup_1.return)) _a.call(dayNumberOrGroup_1);
+                }
+                finally { if (e_2) throw e_2.error; }
+            }
+            return this.selectedFactor().compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId], this.selectedIndicator().compute);
         };
         /****************************************/
-        GeoPlotPage.prototype.getIndicatorValue = function (dayNumber, areaOrId, indicatorId, ignoreExcluded) {
+        GeoPlotPage.prototype.getIndicatorValue = function (dayNumber, areaOrId, indicatorId) {
             var _this = this;
-            if (ignoreExcluded === void 0) { ignoreExcluded = false; }
-            var areaId = typeof areaOrId == "string" ? areaOrId : areaOrId.id;
-            var itemData = this._data.days[dayNumber].values[areaId.toLowerCase()];
-            if (!itemData)
-                return 0;
+            var areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
             var indicator = GeoPlot.linq(this._dataSet.indicators).first(function (a) { return a.id == indicatorId; });
-            var curValue = indicator.compute ? indicator.compute(this._data.days[dayNumber].values[areaId.toLowerCase()], this._geo.areas[areaId.toLowerCase()]) : this._data.days[dayNumber].values[areaId.toLowerCase()][indicatorId];
-            if (this.isDayDelta()) {
-                if (dayNumber == 0)
-                    return 0;
-                curValue -= this._data.days[dayNumber - 1].values[areaId.toLowerCase()][indicatorId];
-            }
-            if (!ignoreExcluded && this._execludedArea.size > 0) {
+            var dataAtDay = function (number, curAreaId) {
+                return number < 0 ? undefined : _this._data.days[number].values[curAreaId];
+            };
+            var main = dataAtDay(dayNumber, areaId);
+            var delta;
+            var exMain;
+            var exDelta;
+            if (this.isDayDelta())
+                delta = dataAtDay(dayNumber - 1, areaId);
+            if (this._execludedArea.size > 0) {
+                exMain = [];
+                exDelta = [];
                 this._execludedArea.forEach(function (a) {
-                    curValue -= _this.getIndicatorValue(dayNumber, a.id, indicatorId, true);
+                    exMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
+                    if (_this.isDayDelta())
+                        exDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
                 });
             }
-            return curValue;
+            return indicator.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId]);
         };
         /****************************************/
         GeoPlotPage.prototype.computeStartDayForGroup = function () {
@@ -2105,7 +2233,7 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.updateAreaIndicators = function () {
-            var e_2, _a, e_3, _b;
+            var e_3, _a, e_4, _b;
             var _this = this;
             if (!this.currentArea())
                 return;
@@ -2128,12 +2256,12 @@ var GeoPlot;
                         _loop_1(indicator);
                     }
                 }
-                catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                catch (e_3_1) { e_3 = { error: e_3_1 }; }
                 finally {
                     try {
                         if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                     }
-                    finally { if (e_2) throw e_2.error; }
+                    finally { if (e_3) throw e_3.error; }
                 }
                 this.currentArea().indicators(items);
             }
@@ -2144,17 +2272,17 @@ var GeoPlot;
                     item.value(this.getIndicatorValue(this.dayNumber(), areaId, item.indicator.id));
                 }
             }
-            catch (e_3_1) { e_3 = { error: e_3_1 }; }
+            catch (e_4_1) { e_4 = { error: e_4_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_4) throw e_4.error; }
             }
         };
         /****************************************/
         GeoPlotPage.prototype.updateFactorDescription = function () {
-            var e_4, _a;
+            var e_5, _a;
             var desc = "";
             if (this.isDayDelta())
                 desc = "Nuovi ";
@@ -2173,12 +2301,12 @@ var GeoPlot;
                         i++;
                     }
                 }
-                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                catch (e_5_1) { e_5 = { error: e_5_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_4) throw e_4.error; }
+                    finally { if (e_5) throw e_5.error; }
                 }
                 desc += ")";
             }
@@ -2189,10 +2317,12 @@ var GeoPlot;
             if (!this.selectedIndicator() || !this.selectedFactor())
                 return;
             this.updateFactorDescription();
+            /*
             if (this.selectedFactor().id != "none") {
+
                 if (this.groupSize() != 1)
                     this.groupSize(1);
-            }
+            }*/
             this.updateMaxFactor();
             this.updateDayData();
             this.updateChart();
@@ -2211,7 +2341,7 @@ var GeoPlot;
                 for (var areaId in day.values) {
                     if (!curView.validateId(areaId))
                         continue;
-                    var factor = this.getFactorValue(i, areaId, this.selectedIndicator().id);
+                    var factor = this.getFactorValue(i, areaId);
                     if (factor > result)
                         result = factor;
                 }
@@ -2306,29 +2436,31 @@ var GeoPlot;
             this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
             this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
             this._chart.data.datasets[0].data = [];
-            for (var i = 0 + this.startDay(); i < this._data.days.length; i++) {
-                var item = {
-                    x: new Date(this._data.days[i].date),
-                    y: this.getFactorValue(i, area, field)
-                };
-                this._chart.data.datasets[0].data.push(item);
-            }
             if (this.groupSize() > 1) {
-                var newData = [];
-                var data = this._chart.data.datasets[0].data;
                 var count = this.groupSize();
-                var curPoint = { y: 0 };
-                for (var i = 0; i < data.length; i++) {
-                    curPoint.y += data[i].y;
+                var group = [];
+                for (var i = 0 + this.startDay(); i < this._data.days.length; i++) {
+                    group.push(i);
                     count--;
                     if (count == 0) {
-                        curPoint.x = data[i].x;
-                        newData.unshift(curPoint);
-                        curPoint = { y: 0 };
+                        var item = {
+                            x: new Date(this._data.days[i].date),
+                            y: this.getFactorValue(group, area)
+                        };
+                        this._chart.data.datasets[0].data.push(item);
                         count = this.groupSize();
+                        group = [];
                     }
                 }
-                this._chart.data.datasets[0].data = newData;
+            }
+            else {
+                for (var i = 0 + this.startDay(); i < this._data.days.length; i++) {
+                    var item = {
+                        x: new Date(this._data.days[i].date),
+                        y: this.getFactorValue(i, area)
+                    };
+                    this._chart.data.datasets[0].data.push(item);
+                }
             }
             this._chart.update();
         };
@@ -2347,7 +2479,7 @@ var GeoPlot;
             }
             value.data(day.values[id]);
             value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
-            value.factor(GeoPlot.MathUtils.round(this.getFactorValue(dayNumber, area, this.selectedIndicator().id), 1));
+            value.factor(GeoPlot.MathUtils.round(this.getFactorValue(dayNumber, area), 1));
             value.reference(this.selectedFactor().reference(day.values[id], area));
         };
         /****************************************/
@@ -2359,7 +2491,7 @@ var GeoPlot;
                 var item = {};
                 var isInArea = GeoPlot.ViewModes[this_1.viewMode()].validateId;
                 item.topAreas = GeoPlot.linq(day.values).select(function (a) { return ({
-                    factor: _this.getFactorValue(i, a.key, _this.selectedIndicator().id),
+                    factor: _this.getFactorValue(i, a.key),
                     value: a
                 }); })
                     .orderByDesc(function (a) { return a.factor; }).where(function (a) { return isInArea(a.value.key); }).select(function (a) {
@@ -2422,11 +2554,9 @@ var GeoPlot;
                         var area = this._geo.areas[key];
                         if (area.type != GeoPlot.ViewModes[this.viewMode()].areaType)
                             continue;
-                        var field = this.selectedIndicator().id;
-                        var factor = this.getFactorValue(this.dayNumber(), area, field);
-                        var indicator = this.getIndicatorValue(this.dayNumber(), area, field);
+                        var factor = this.getFactorValue(this.dayNumber(), area);
                         factor = Math.min(1, factor / this.maxFactor());
-                        if (indicator == 0 || isNaN(factor)) {
+                        if (isNaN(factor)) {
                             if (element.classList.contains("valid"))
                                 element.classList.remove("valid");
                             element.style.fillOpacity = "1";

@@ -1,5 +1,10 @@
 ﻿namespace GeoPlot {
 
+    export enum AggregationFunc {
+        SUm,
+        Avg
+    }
+
     export interface IGeoPoint {
         lat: number;
         lng: number;
@@ -46,20 +51,31 @@
 
     /****************************************/
 
+    export interface IIndicatorFunction<TData> {
+        value(main: TData, delta: TData, exMain: TData[], exDelta: TData[], area: IGeoArea): number;
+    }
+
+    export interface IFactorFunction<TData> {
+        value(main: TData[], delta: TData[], exMain: TData[][], exDelta: TData[][], area: IGeoArea, indicator: IIndicatorFunction<TData>): number;
+    }
+
+    /****************************************/
+
     export interface IIndicator<TData> {
         id: keyof TData|string;
         name: string;
         validFor?: ViewMode[];
         colorLight?: string;
         colorDark?: string;
-        compute?: (value: TData, area: IGeoArea) => number;
+        compute: IIndicatorFunction<TData>;
     }
 
     export interface IFactor<TData> {
         id: string;
         name: string;
         validFor?: ViewMode[];
-        compute: (value: TData, area: IGeoArea, indicator: number) => number
+        compute: IFactorFunction<TData>;
+        format: (value: number) => string,
         reference: (value: TData, area: IGeoArea) => any;
         description: string;
     }
