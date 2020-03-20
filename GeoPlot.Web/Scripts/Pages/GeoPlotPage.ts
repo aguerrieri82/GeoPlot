@@ -689,7 +689,7 @@
                     if (!curView.validateId(areaId))
                         continue;
                     const factor = this.getFactorValue(i, areaId);
-                    if (factor > result)
+                    if (factor > result && factor != Number.POSITIVE_INFINITY)
                         result = factor;
                 }
             }
@@ -937,7 +937,7 @@
             const state = this.saveStata();
             let url = Uri.appRoot + "Overview";
             if (!this.isDefaultState(state))
-                url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state)));
+                url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
             history.replaceState(null, null, url);
         }
 
@@ -977,6 +977,8 @@
                             continue;
 
                         let factor = this.getFactorValue(this.dayNumber(), area);
+                        if (factor == Number.POSITIVE_INFINITY)
+                            factor = NaN;
 
                         factor = Math.min(1, factor / this.maxFactor());
 

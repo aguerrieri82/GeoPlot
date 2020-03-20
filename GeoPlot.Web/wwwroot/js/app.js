@@ -2342,7 +2342,7 @@ var GeoPlot;
                     if (!curView.validateId(areaId))
                         continue;
                     var factor = this.getFactorValue(i, areaId);
-                    if (factor > result)
+                    if (factor > result && factor != Number.POSITIVE_INFINITY)
                         result = factor;
                 }
             }
@@ -2527,7 +2527,7 @@ var GeoPlot;
             var state = this.saveStata();
             var url = GeoPlot.Uri.appRoot + "Overview";
             if (!this.isDefaultState(state))
-                url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state)));
+                url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
             history.replaceState(null, null, url);
         };
         /****************************************/
@@ -2555,6 +2555,8 @@ var GeoPlot;
                         if (area.type != GeoPlot.ViewModes[this.viewMode()].areaType)
                             continue;
                         var factor = this.getFactorValue(this.dayNumber(), area);
+                        if (factor == Number.POSITIVE_INFINITY)
+                            factor = NaN;
                         factor = Math.min(1, factor / this.maxFactor());
                         if (isNaN(factor)) {
                             if (element.classList.contains("valid"))
