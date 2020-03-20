@@ -153,6 +153,11 @@
 
         /****************************************/
 
+        understood() {
+        }
+
+        /****************************************/
+
         close() {
             clearTimeout(this._closeTimeoutId);
             this.isVisible(false);
@@ -201,7 +206,7 @@
                 featureName: "Zone",
                 html: "Puoi vedere i dati relativi ad una particolare area selezionadoli sulla mappa.",
                 elementSelector: ".card-map .center-align",
-                showAfter: 5,
+                showAfter: 3,
                 showAction: () => {
                     this.viewMode("region");
                     this.selectedArea = this._geo.areas["r10"];
@@ -212,7 +217,7 @@
                 featureName: "Indicatori",
                 html: "Puoi vedere il grafico associato all'indicatore, facendo click sull'indicatore.",
                 elementSelector: ".indicators .summary-field",
-                showAfter: 20,
+                showAfter: 15,
                 showAction: () => {
                     if (!this.currentArea())
                         this._tips.areaSelected.showAction();
@@ -224,7 +229,7 @@
                 featureName: "Cronologia",
                 html: "Puoi vedere gli indicatori dei giorni precedenti muovendo la slide.",
                 elementSelector: ".day input[type=range]",
-                showAfter: 40,
+                showAfter: 20,
                 showAction: () => {
                     this.dayNumber(5);
                 }
@@ -251,7 +256,7 @@
                 featureName: "Zone",
                 html: "Puo vedere le zone più colpite di un qualsiasi indicatore scelto.",
                 elementSelector: "#topCases .card-title",
-                showAfter: 60,
+                showAfter: 20,
                 showAction: () => {
                     M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
                 }
@@ -261,7 +266,7 @@
                 featureName: "Indicatori",
                 html: "Puoi vedere l'incremento giornaliero dell'indicatore anzichè il valore totale.",
                 elementSelector: ".day-delta",
-                showAfter: 80,
+                showAfter: 20,
                 showAction: () => {
                     if (!this.currentArea())
                         this._tips.areaSelected.showAction();
@@ -273,7 +278,7 @@
                 featureName: "Indicatori",
                 html: "Puoi mettere in relazione qualsiasi indicatore a numerosi parametri (es. % Positivi su Tamponi).",
                 elementSelector: ".filter-factor",
-                showAfter: 110,
+                showAfter: 30,
                 showAction: () => {
                     if (!this.currentArea())
                         this._tips.areaSelected.showAction();
@@ -286,7 +291,7 @@
                 featureName: "Grafico",
                 html: "Puo raggruppare i dati del grafico in gruppi da 1 a 7 giorni. Puoi anche scegliere la data d'inizio.",
                 elementSelector: ".row-chart-group .select-wrapper",
-                showAfter: 140,
+                showAfter: 30,
                 showAction: () => {
                     var element = document.querySelector(".chart-options");
                     if (element.classList.contains("closed"))
@@ -300,7 +305,7 @@
                 featureName: "Grafico",
                 html: "Puoi portare il grafico a schermo interno, copiarlo, o copiare la serie numerico e incollarla in excel.",
                 elementSelector: ".chart .actions",
-                showAfter: 180
+                showAfter: 30
             },
             scaleChanged: {
                 order: 9,
@@ -317,7 +322,7 @@
                 featureName: "Mappa",
                 html: "Puoi cambiare il riferimento rispetto al quale la mappa viene colorata. Normalmente è in base al valore massimo che si ha avuto globalmente.",
                 elementSelector: ".max-factor",
-                showAfter: 300,
+                showAfter: 60,
                 showAction: () => {
                     if (!this.currentArea())
                         this._tips.areaSelected.showAction();
@@ -344,9 +349,11 @@
 
             this.totalDays(this._data.days.length - 1);
 
-            this.dayNumber.subscribe(a => {
+            this.dayNumber.subscribe(value => {
+                if (value != this._data.days.length - 1)
+                    this._preferences.actions.dayChanged++;
                 this.updateDayData();
-                this._specialDates.current.date = new Date(this._data.days[a].date);
+                this._specialDates.current.date = new Date(this._data.days[value].date);
                 this.updateChart();
             });
 
@@ -453,8 +460,6 @@
             this.startDay.subscribe(value=> {
                 this.updateChart();
                 this.updateUrl();
-                if (value != this._data.days.length -1)
-                    this._preferences.actions.dayChanged++;
             });
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -484,36 +489,49 @@
             if (this._preferences.showTips != undefined && !this._preferences.showTips)
                 return;
 
+            let curTime = 0;
+
             for (let action in this._preferences.actions) {
 
-                if (this._tips[action].showAfter > 0)
+                if (!this._tips[action].showAfter || this._preferences.actions[action] > 0)
+                    continue;
 
-                    setTimeout(() => {
+                curTime += this._tips[action].showAfter;
 
-                        if (this._preferences.actions[action] > 0)
-                            return;
-                        if (!this.tip.isVisible())
-                            this.showTip(this._tips[action]);
+                setTimeout(() => {
 
-                    }, this._tips[action].showAfter * 1000);
+                    if (this._preferences.actions[action] > 0)
+                        return;
+
+                    if (!this.tip.isVisible())
+                        this.showTip(action);
+
+                }, curTime * 1000);
             }
         }
 
         /****************************************/
 
-        protected showTip(tip: IViewActionTip) {
+        protected showTip(tipId: string) {
+
+            const tip = this._tips[tipId];
 
             this.tip.dontShowAgain = () => {
                 this._preferences.showTips = false;
                 this.tip.close();
             }
 
-            let nextTip = linq(this._tips).where(a => a.value.order > tip.order).select(a => a.value).first();
+            this.tip.understood = () => {
+                this._preferences.actions[tipId]++;
+                this.tip.close();
+            };
+
+            let nextTip = linq(this._tips).where(a => a.value.order > tip.order && this._preferences.actions[a.key] == 0).first();
 
             if (nextTip) {
                 this.tip.next = () => {
                     this.tip.close();
-                    this.showTip(nextTip);
+                    this.showTip(nextTip.key);
                 }
                 this.tip.hasNext(true);
             }
@@ -618,6 +636,7 @@
 
         loadPreferences() {
             let json = localStorage.getItem("preferences");
+
             if (!json)
                 this._preferences = {
                     isFirstView: true,

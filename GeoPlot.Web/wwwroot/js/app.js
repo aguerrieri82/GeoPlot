@@ -1838,6 +1838,9 @@ var GeoPlot;
         TipViewModel.prototype.next = function () {
         };
         /****************************************/
+        TipViewModel.prototype.understood = function () {
+        };
+        /****************************************/
         TipViewModel.prototype.close = function () {
             clearTimeout(this._closeTimeoutId);
             this.isVisible(false);
@@ -1869,7 +1872,7 @@ var GeoPlot;
                     featureName: "Zone",
                     html: "Puoi vedere i dati relativi ad una particolare area selezionadoli sulla mappa.",
                     elementSelector: ".card-map .center-align",
-                    showAfter: 5,
+                    showAfter: 3,
                     showAction: function () {
                         _this.viewMode("region");
                         _this.selectedArea = _this._geo.areas["r10"];
@@ -1880,7 +1883,7 @@ var GeoPlot;
                     featureName: "Indicatori",
                     html: "Puoi vedere il grafico associato all'indicatore, facendo click sull'indicatore.",
                     elementSelector: ".indicators .summary-field",
-                    showAfter: 20,
+                    showAfter: 15,
                     showAction: function () {
                         if (!_this.currentArea())
                             _this._tips.areaSelected.showAction();
@@ -1892,7 +1895,7 @@ var GeoPlot;
                     featureName: "Cronologia",
                     html: "Puoi vedere gli indicatori dei giorni precedenti muovendo la slide.",
                     elementSelector: ".day input[type=range]",
-                    showAfter: 40,
+                    showAfter: 20,
                     showAction: function () {
                         _this.dayNumber(5);
                     }
@@ -1919,7 +1922,7 @@ var GeoPlot;
                     featureName: "Zone",
                     html: "Puo vedere le zone più colpite di un qualsiasi indicatore scelto.",
                     elementSelector: "#topCases .card-title",
-                    showAfter: 60,
+                    showAfter: 20,
                     showAction: function () {
                         M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
                     }
@@ -1929,7 +1932,7 @@ var GeoPlot;
                     featureName: "Indicatori",
                     html: "Puoi vedere l'incremento giornaliero dell'indicatore anzichè il valore totale.",
                     elementSelector: ".day-delta",
-                    showAfter: 80,
+                    showAfter: 20,
                     showAction: function () {
                         if (!_this.currentArea())
                             _this._tips.areaSelected.showAction();
@@ -1941,7 +1944,7 @@ var GeoPlot;
                     featureName: "Indicatori",
                     html: "Puoi mettere in relazione qualsiasi indicatore a numerosi parametri (es. % Positivi su Tamponi).",
                     elementSelector: ".filter-factor",
-                    showAfter: 110,
+                    showAfter: 30,
                     showAction: function () {
                         if (!_this.currentArea())
                             _this._tips.areaSelected.showAction();
@@ -1954,7 +1957,7 @@ var GeoPlot;
                     featureName: "Grafico",
                     html: "Puo raggruppare i dati del grafico in gruppi da 1 a 7 giorni. Puoi anche scegliere la data d'inizio.",
                     elementSelector: ".row-chart-group .select-wrapper",
-                    showAfter: 140,
+                    showAfter: 30,
                     showAction: function () {
                         var element = document.querySelector(".chart-options");
                         if (element.classList.contains("closed"))
@@ -1968,7 +1971,7 @@ var GeoPlot;
                     featureName: "Grafico",
                     html: "Puoi portare il grafico a schermo interno, copiarlo, o copiare la serie numerico e incollarla in excel.",
                     elementSelector: ".chart .actions",
-                    showAfter: 180
+                    showAfter: 30
                 },
                 scaleChanged: {
                     order: 9,
@@ -1985,7 +1988,7 @@ var GeoPlot;
                     featureName: "Mappa",
                     html: "Puoi cambiare il riferimento rispetto al quale la mappa viene colorata. Normalmente è in base al valore massimo che si ha avuto globalmente.",
                     elementSelector: ".max-factor",
-                    showAfter: 300,
+                    showAfter: 60,
                     showAction: function () {
                         if (!_this.currentArea())
                             _this._tips.areaSelected.showAction();
@@ -2028,9 +2031,11 @@ var GeoPlot;
             this._data = model.data;
             this._geo = model.geo;
             this.totalDays(this._data.days.length - 1);
-            this.dayNumber.subscribe(function (a) {
+            this.dayNumber.subscribe(function (value) {
+                if (value != _this._data.days.length - 1)
+                    _this._preferences.actions.dayChanged++;
                 _this.updateDayData();
-                _this._specialDates.current.date = new Date(_this._data.days[a].date);
+                _this._specialDates.current.date = new Date(_this._data.days[value].date);
                 _this.updateChart();
             });
             this._mapSvg = document.getElementsByTagName("svg").item(0);
@@ -2114,8 +2119,6 @@ var GeoPlot;
             this.startDay.subscribe(function (value) {
                 _this.updateChart();
                 _this.updateUrl();
-                if (value != _this._data.days.length - 1)
-                    _this._preferences.actions.dayChanged++;
             });
             var urlParams = new URLSearchParams(window.location.search);
             var stateRaw = urlParams.get("state");
@@ -2135,14 +2138,17 @@ var GeoPlot;
             var _this = this;
             if (this._preferences.showTips != undefined && !this._preferences.showTips)
                 return;
+            var curTime = 0;
             var _loop_1 = function (action) {
-                if (this_1._tips[action].showAfter > 0)
-                    setTimeout(function () {
-                        if (_this._preferences.actions[action] > 0)
-                            return;
-                        if (!_this.tip.isVisible())
-                            _this.showTip(_this._tips[action]);
-                    }, this_1._tips[action].showAfter * 1000);
+                if (!this_1._tips[action].showAfter || this_1._preferences.actions[action] > 0)
+                    return "continue";
+                curTime += this_1._tips[action].showAfter;
+                setTimeout(function () {
+                    if (_this._preferences.actions[action] > 0)
+                        return;
+                    if (!_this.tip.isVisible())
+                        _this.showTip(action);
+                }, curTime * 1000);
             };
             var this_1 = this;
             for (var action in this._preferences.actions) {
@@ -2150,17 +2156,22 @@ var GeoPlot;
             }
         };
         /****************************************/
-        GeoPlotPage.prototype.showTip = function (tip) {
+        GeoPlotPage.prototype.showTip = function (tipId) {
             var _this = this;
+            var tip = this._tips[tipId];
             this.tip.dontShowAgain = function () {
                 _this._preferences.showTips = false;
                 _this.tip.close();
             };
-            var nextTip = GeoPlot.linq(this._tips).where(function (a) { return a.value.order > tip.order; }).select(function (a) { return a.value; }).first();
+            this.tip.understood = function () {
+                _this._preferences.actions[tipId]++;
+                _this.tip.close();
+            };
+            var nextTip = GeoPlot.linq(this._tips).where(function (a) { return a.value.order > tip.order && _this._preferences.actions[a.key] == 0; }).first();
             if (nextTip) {
                 this.tip.next = function () {
                     _this.tip.close();
-                    _this.showTip(nextTip);
+                    _this.showTip(nextTip.key);
                 };
                 this.tip.hasNext(true);
             }
