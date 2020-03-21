@@ -853,9 +853,9 @@ var GeoPlot;
             var c1 = this.colors[minX];
             var c2 = this.colors[maxX];
             var c3 = new RgbColor();
-            c3.r = Math.round(c1.r + (c2.r - c1.r) * minOfs);
-            c3.g = Math.round(c1.g + (c2.g - c1.g) * minOfs);
-            c3.b = Math.round(c1.b + (c2.b - c1.b) * minOfs);
+            c3.r = c1.r + (c2.r - c1.r) * minOfs;
+            c3.g = c1.g + (c2.g - c1.g) * minOfs;
+            c3.b = c1.b + (c2.b - c1.b) * minOfs;
             return c3;
         };
         return LinearGradient;
@@ -1812,10 +1812,11 @@ var GeoPlot;
     }());
     /****************************************/
     var TipViewModel = /** @class */ (function () {
-        function TipViewModel() {
+        function TipViewModel(value, closeAfter) {
             this.isVisible = ko.observable(false);
-            this.hasNext = ko.observable(true);
-            this.content = ko.observable();
+            this.isTransparent = ko.observable(false);
+            this.value = value;
+            this._closeAfter = closeAfter;
         }
         /****************************************/
         TipViewModel.prototype.dontShowAgain = function () {
@@ -1825,14 +1826,25 @@ var GeoPlot;
             var _this = this;
             if (this.value.showAction)
                 this.value.showAction();
-            setTimeout(function () {
-                var element = document.querySelector(_this.value.elementSelector);
-                if (element) {
-                    scrollIntoViewIfOutOfView(element);
-                    GeoPlot.DomUtils.addClass(element, "pulse");
-                    setTimeout(function () { return GeoPlot.DomUtils.removeClass(element, "pulse"); }, 10000);
-                }
-            });
+            setTimeout(function () { return _this.startPulse(); });
+        };
+        /****************************************/
+        TipViewModel.prototype.startPulse = function () {
+            this._element = document.querySelector(this.value.elementSelector);
+            if (!this._element)
+                return;
+            var relY = centerElement(this._element);
+            GeoPlot.DomUtils.addClass(this._element, "pulse");
+            var tipElement = document.querySelector(".tip-container");
+            if (relY < (tipElement.clientTop + tipElement.clientHeight))
+                this.isTransparent(true);
+        };
+        /****************************************/
+        TipViewModel.prototype.stopPulse = function () {
+            if (!this._element)
+                return;
+            GeoPlot.DomUtils.removeClass(this._element, "pulse");
+            this.isTransparent(false);
         };
         /****************************************/
         TipViewModel.prototype.next = function () {
@@ -1841,31 +1853,49 @@ var GeoPlot;
         TipViewModel.prototype.understood = function () {
         };
         /****************************************/
+        TipViewModel.prototype.onClose = function () {
+        };
+        /****************************************/
         TipViewModel.prototype.close = function () {
             clearTimeout(this._closeTimeoutId);
+            this.stopPulse();
             this.isVisible(false);
-            var element = document.querySelector(this.value.elementSelector);
-            if (element)
-                GeoPlot.DomUtils.removeClass(element, "pulse");
+            this.onClose();
         };
         /****************************************/
         TipViewModel.prototype.show = function () {
+            var _this = this;
             if (this._closeTimeoutId)
                 clearTimeout(this._closeTimeoutId);
             this.isVisible(true);
-            //this._closeTimeoutId = setTimeout(() => this.close(), 15000);
+            if (this._closeAfter)
+                this._closeTimeoutId = setTimeout(function () { return _this.close(); }, this._closeAfter);
         };
         return TipViewModel;
     }());
+    /****************************************/
+    function centerElement(element, always) {
+        if (always === void 0) { always = true; }
+        var topOfPage = document.documentElement.scrollTop;
+        var heightOfPage = window.innerHeight;
+        var elY = 0;
+        var elH = 0;
+        for (var p = element; p && p != document.body; p = p.offsetParent)
+            elY += p.offsetTop;
+        elH = element.offsetHeight;
+        if (always || elY + elH > topOfPage + heightOfPage || elY < topOfPage)
+            document.documentElement.scrollTop = Math.max(0, elY - (heightOfPage - elH) / 2);
+        return elY - document.documentElement.scrollTop;
+    }
     /****************************************/
     var GeoPlotPage = /** @class */ (function () {
         function GeoPlotPage(model) {
             var _this = this;
             this._topAreasVisible = false;
-            this._gradient = new GeoPlot.LinearGradient("#18ffff", "#ffff00", "#ff3d00");
             this._execludedArea = new Map();
             this._dataSet = GeoPlot.InfectionDataSet;
             this._keepState = false;
+            this._debugMode = false;
             this._tips = {
                 areaSelected: {
                     order: 0,
@@ -1924,6 +1954,8 @@ var GeoPlot;
                     elementSelector: "#topCases .card-title",
                     showAfter: 20,
                     showAction: function () {
+                        if (_this.viewMode() == "country")
+                            _this.viewMode("region");
                         M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
                     }
                 },
@@ -1959,6 +1991,8 @@ var GeoPlot;
                     elementSelector: ".row-chart-group .select-wrapper",
                     showAfter: 30,
                     showAction: function () {
+                        if (!_this.currentArea())
+                            _this._tips.areaSelected.showAction();
                         var element = document.querySelector(".chart-options");
                         if (element.classList.contains("closed"))
                             element.classList.remove("closed");
@@ -1996,6 +2030,19 @@ var GeoPlot;
                         _this.autoMaxFactor(false);
                         _this.maxFactor(1000);
                     }
+                },
+                regionExcluded: {
+                    order: 11,
+                    featureName: "Mappa",
+                    html: "Nella vista nazionale puoi escludere dagli indicatori il valore di una o più regioni cliccando sulla mappa.",
+                    elementSelector: ".card-map .center-align",
+                    showAfter: 0,
+                    showAction: function () {
+                        if (_this.viewMode() != "country")
+                            _this.viewMode("country");
+                        _this._execludedArea.set("R8", _this._geo.areas["r8"]);
+                        _this.updateIndicator();
+                    }
                 }
             };
             this._specialDates = {
@@ -2026,10 +2073,11 @@ var GeoPlot;
             this.startDay = ko.observable(0);
             this.isNoFactorSelected = ko.computed(function () { return _this.selectedFactor() && _this.selectedFactor().id == 'none'; });
             this.groupDays = [1, 2, 3, 4, 5, 6, 7];
-            this.tip = new TipViewModel();
+            this.tip = ko.observable();
             this.factorDescription = ko.observable();
             this._data = model.data;
             this._geo = model.geo;
+            this._debugMode = model.debugMode;
             this.totalDays(this._data.days.length - 1);
             this.dayNumber.subscribe(function (value) {
                 if (value != _this._data.days.length - 1)
@@ -2131,57 +2179,57 @@ var GeoPlot;
             else
                 state = {};
             setTimeout(function () { return _this.loadState(state); }, 0);
-            window.addEventListener("beforeunload", function () { return _this.savePreferences(); });
+            if (!this._debugMode)
+                window.addEventListener("beforeunload", function () { return _this.savePreferences(); });
         }
         /****************************************/
         GeoPlotPage.prototype.engageUser = function () {
             var _this = this;
             if (this._preferences.showTips != undefined && !this._preferences.showTips)
                 return;
-            var curTime = 0;
-            var _loop_1 = function (action) {
-                if (!this_1._tips[action].showAfter || this_1._preferences.actions[action] > 0)
-                    return "continue";
-                curTime += this_1._tips[action].showAfter;
-                setTimeout(function () {
-                    if (_this._preferences.actions[action] > 0)
-                        return;
-                    if (!_this.tip.isVisible())
-                        _this.showTip(action);
-                }, curTime * 1000);
-            };
-            var this_1 = this;
-            for (var action in this._preferences.actions) {
-                _loop_1(action);
+            var nextTip = GeoPlot.linq(this._tips).where(function (a) { return a.value.showAfter > 0 && _this._preferences.actions[a.key] == 0; }).first();
+            if (!this.showTip(nextTip.key, {
+                onClose: function () { return _this.engageUser(); },
+                timeout: nextTip.value.showAfter,
+            })) {
+                this.engageUser();
             }
         };
         /****************************************/
-        GeoPlotPage.prototype.showTip = function (tipId) {
+        GeoPlotPage.prototype.showTip = function (tipId, options) {
             var _this = this;
+            if (options && !options.override && this.tip() && this.tip().isVisible())
+                return false;
+            if (options && !options.force && this._preferences.actions[tipId])
+                return false;
             var tip = this._tips[tipId];
-            this.tip.dontShowAgain = function () {
+            var model = new TipViewModel(tip);
+            model.dontShowAgain = function () {
                 _this._preferences.showTips = false;
-                _this.tip.close();
+                model.close();
             };
-            this.tip.understood = function () {
+            model.understood = function () {
                 _this._preferences.actions[tipId]++;
-                _this.tip.close();
+                model.close();
+            };
+            model.onClose = function () {
+                //this.tip(null);
+                if (options && options.onClose)
+                    options.onClose();
             };
             var nextTip = GeoPlot.linq(this._tips).where(function (a) { return a.value.order > tip.order && _this._preferences.actions[a.key] == 0; }).first();
             if (nextTip) {
-                this.tip.next = function () {
-                    _this.tip.close();
+                model.next = function () {
+                    model.close();
+                    _this._preferences.actions[tipId]++;
                     _this.showTip(nextTip.key);
                 };
-                this.tip.hasNext(true);
             }
-            else {
-                this.tip.next = null;
-                this.tip.hasNext(false);
-            }
-            this.tip.content(tip.html);
-            this.tip.value = tip;
-            this.tip.show();
+            else
+                model.next = null;
+            this.tip(model);
+            setTimeout(function () { return model.show(); }, options && options.timeout ? options.timeout * 1000 : 0);
+            return true;
         };
         /****************************************/
         GeoPlotPage.prototype.isDefaultState = function (state) {
@@ -2264,7 +2312,7 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.loadPreferences = function () {
             var json = localStorage.getItem("preferences");
-            if (!json)
+            if (!json || this._debugMode)
                 this._preferences = {
                     isFirstView: true,
                     showTips: true,
@@ -2280,7 +2328,8 @@ var GeoPlot;
                         maxFactorChanged: 0,
                         scaleChanged: 0,
                         topAreasOpened: 0,
-                        deltaSelected: 0
+                        deltaSelected: 0,
+                        regionExcluded: 0
                     }
                 };
             else
@@ -2370,6 +2419,7 @@ var GeoPlot;
             this.updateDayData();
             if (this.viewMode() == "country") {
                 this.selectedArea = this._geo.areas["it"];
+                this.showTip("regionExcluded", { timeout: 5 });
             }
             else {
                 if (this._topAreasVisible)
@@ -2550,7 +2600,7 @@ var GeoPlot;
                 return;
             if (!this.currentArea().indicators()) {
                 var items = [];
-                var _loop_2 = function (indicator) {
+                var _loop_1 = function (indicator) {
                     var item = new IndicatorViewModel();
                     item.indicator = indicator;
                     item.select = function () {
@@ -2565,7 +2615,7 @@ var GeoPlot;
                 try {
                     for (var _c = __values(this.indicators()), _d = _c.next(); !_d.done; _d = _c.next()) {
                         var indicator = _d.value;
-                        _loop_2(indicator);
+                        _loop_1(indicator);
                     }
                 }
                 catch (e_3_1) { e_3 = { error: e_3_1 }; }
@@ -2798,10 +2848,10 @@ var GeoPlot;
         GeoPlotPage.prototype.updateTopAreas = function () {
             var _this = this;
             this._daysData = [];
-            var _loop_3 = function (i) {
-                var day = this_2._data.days[i];
+            var _loop_2 = function (i) {
+                var day = this_1._data.days[i];
                 var item = {};
-                var isInArea = GeoPlot.ViewModes[this_2.viewMode()].validateId;
+                var isInArea = GeoPlot.ViewModes[this_1.viewMode()].validateId;
                 item.topAreas = GeoPlot.linq(day.values).select(function (a) { return ({
                     factor: _this.getFactorValue(i, a.key),
                     value: a
@@ -2813,11 +2863,11 @@ var GeoPlot;
                     _this.updateArea(area, i);
                     return area;
                 }).take(25).toArray();
-                this_2._daysData.push(item);
+                this_1._daysData.push(item);
             };
-            var this_2 = this;
+            var this_1 = this;
             for (var i = 0; i < this._data.days.length; i++) {
-                _loop_3(i);
+                _loop_2(i);
             }
             this.topAreas(this._daysData[this.dayNumber()].topAreas);
         };
@@ -2860,6 +2910,7 @@ var GeoPlot;
                 return;
             if (this.viewMode() != "country") {
                 var day = this._data.days[this.dayNumber()];
+                var gradient = new GeoPlot.LinearGradient("#fff", this.selectedIndicator().colorDark);
                 for (var key in day.values) {
                     var element = document.getElementById(key.toUpperCase());
                     if (element) {
@@ -2880,9 +2931,8 @@ var GeoPlot;
                             if (!element.classList.contains("valid"))
                                 element.classList.add("valid");
                             var value = GeoPlot.MathUtils.discretize(GeoPlot.MathUtils.exponential(factor), 20);
-                            element.style.fillOpacity = value.toString();
-                            element.style.fill = this.selectedIndicator().colorDark;
-                            //element.style.fill = this._gradient.valueAt(value).toString();
+                            //element.style.fillOpacity = value.toString();
+                            element.style.fill = gradient.valueAt(factor).toString();
                         }
                     }
                 }

@@ -17,5 +17,7 @@ namespace GeoPlot.Web.Models
         public IList<EnvironmentItemViewModel> Environment { get; set; }
 
         public DateTime LastUpdate { get; set; }
+
+        public bool DebugMode { get; set; }
     }
 }

@@ -44,7 +44,7 @@
 
     /****************************************/
 
-    interface IViewActions<T> {
+    interface IViewActions<T> extends IDictionary<T> {
         areaSelected: T;
         indicatorChanged: T;
         indicatorSelected: T;
@@ -57,6 +57,7 @@
         factorChanged: T;
         maxFactorChanged: T;
         deltaSelected: T;
+        regionExcluded: T;
     }
 
     /****************************************/
@@ -69,9 +70,19 @@
 
     /****************************************/
 
+    interface IShowTipOptions {
+        onClose?: () => void;
+        timeout?: number;
+        override?: boolean;
+        force?: boolean;
+    }
+
+    /****************************************/
+
     interface IGeoPlotViewModel {
         geo: IGeoAreaSet;
         data: IDayAreaDataSet<TData>;
+        debugMode: boolean;
     }
 
     /****************************************/
@@ -117,9 +128,13 @@
 
     class TipViewModel {
 
-        private _closeTimeoutId : number;
+        private _closeTimeoutId: number;
+        private _element: HTMLElement;
+        private _closeAfter: number;
 
-        constructor() {
+        constructor(value: IViewActionTip, closeAfter?: number) {
+            this.value = value;
+            this._closeAfter = closeAfter;
         }
 
         /****************************************/
@@ -133,16 +148,32 @@
         executeAction() {
             if (this.value.showAction)
                 this.value.showAction();
-            setTimeout(() => {
+            setTimeout(() => this.startPulse());
+        }
 
-                let element = document.querySelector(this.value.elementSelector);
-                if (element) {
-                    scrollIntoViewIfOutOfView(element);
-                    DomUtils.addClass(element, "pulse")
-                    setTimeout(() => DomUtils.removeClass(element, "pulse"), 10000);
-                }
+        /****************************************/
 
-            });
+        startPulse() {
+            this._element = document.querySelector(this.value.elementSelector);
+            if (!this._element)
+                return;
+            let relY = centerElement(this._element);
+
+            DomUtils.addClass(this._element, "pulse")
+
+            let tipElement = document.querySelector(".tip-container");
+            if (relY < (tipElement.clientTop + tipElement.clientHeight)
+                this.isTransparent(true);
+        }
+
+        /****************************************/
+
+        stopPulse() {
+
+            if (!this._element)
+                return;
+            DomUtils.removeClass(this._element, "pulse");
+            this.isTransparent(false);
         }
 
         /****************************************/
@@ -158,12 +189,17 @@
 
         /****************************************/
 
+        onClose() {
+
+        }
+
+        /****************************************/
+
         close() {
             clearTimeout(this._closeTimeoutId);
+            this.stopPulse();
             this.isVisible(false);
-            let element = document.querySelector(this.value.elementSelector);
-            if (element)
-                DomUtils.removeClass(element, "pulse");
+            this.onClose();
         }
 
         /****************************************/
@@ -172,15 +208,37 @@
             if (this._closeTimeoutId)
                 clearTimeout(this._closeTimeoutId);
             this.isVisible(true);
-            //this._closeTimeoutId = setTimeout(() => this.close(), 15000);
+            if (this._closeAfter)
+                this._closeTimeoutId = setTimeout(() => this.close(), this._closeAfter);
         }
 
         /****************************************/
 
         value: IViewActionTip;
         isVisible = ko.observable(false);
-        hasNext = ko.observable(true);
-        content = ko.observable<string>();
+        isTransparent = ko.observable(false);
+    }
+
+    /****************************************/
+
+    function centerElement(element: HTMLElement, always = true) : number{
+
+        var topOfPage = document.documentElement.scrollTop;
+        var heightOfPage = window.innerHeight;
+
+        var elY = 0;
+        var elH = 0;
+
+        for (var p = element; p && p != document.body; p = <HTMLElement>p.offsetParent) 
+            elY += p.offsetTop;
+
+        elH = element.offsetHeight;
+
+        if (always || elY + elH > topOfPage + heightOfPage || elY < topOfPage)
+            document.documentElement.scrollTop = Math.max(0, elY - (heightOfPage - elH) / 2);
+
+        return elY - document.documentElement.scrollTop;
+
     }
 
     /****************************************/
@@ -193,14 +251,14 @@
         private _chart: Chart;
         private _daysData: IDayData[];
         private _topAreasVisible: boolean = false;
-        private _gradient = new LinearGradient("#18ffff", "#ffff00", "#ff3d00");
         private _mapSvg: SVGSVGElement;
         private _execludedArea = new Map<string, IGeoArea>();
         private _dataSet = InfectionDataSet;
         private _keepState = false;
+        private _debugMode = false;
         private _preferences: IViewPreferences;   
         
-        private _tips: (IViewActions<IViewActionTip> & IDictionary<IViewActionTip>) = {
+        private _tips: IViewActions<IViewActionTip> = {
             areaSelected: {
                 order: 0,
                 featureName: "Zone",
@@ -258,6 +316,8 @@
                 elementSelector: "#topCases .card-title",
                 showAfter: 20,
                 showAction: () => {
+                    if (this.viewMode() == "country")
+                        this.viewMode("region");
                     M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
                 }
             },
@@ -293,6 +353,8 @@
                 elementSelector: ".row-chart-group .select-wrapper",
                 showAfter: 30,
                 showAction: () => {
+                    if (!this.currentArea())
+                        this._tips.areaSelected.showAction();
                     var element = document.querySelector(".chart-options");
                     if (element.classList.contains("closed"))
                         element.classList.remove("closed");
@@ -330,6 +392,19 @@
                     this.autoMaxFactor(false);
                     this.maxFactor(1000);
                 }
+            },
+            regionExcluded: {
+                order: 11,
+                featureName: "Mappa",
+                html: "Nella vista nazionale puoi escludere dagli indicatori il valore di una o più regioni cliccando sulla mappa.",
+                elementSelector: ".card-map .center-align",
+                showAfter: 0,
+                showAction: () => {
+                    if (this.viewMode() != "country")
+                        this.viewMode("country");
+                    this._execludedArea.set("R8", this._geo.areas["r8"]);
+                    this.updateIndicator();
+                }
             }
         }
 
@@ -346,6 +421,7 @@
 
             this._data = model.data;
             this._geo = model.geo;
+            this._debugMode = model.debugMode;
 
             this.totalDays(this._data.days.length - 1);
 
@@ -479,7 +555,8 @@
 
             setTimeout(() => this.loadState(state), 0);
 
-            window.addEventListener("beforeunload", () => this.savePreferences());
+            if (!this._debugMode)
+                window.addEventListener("beforeunload", () => this.savePreferences());
         } 
 
         /****************************************/
@@ -489,60 +566,64 @@
             if (this._preferences.showTips != undefined && !this._preferences.showTips)
                 return;
 
-            let curTime = 0;
+            const nextTip = linq(this._tips).where(a => a.value.showAfter > 0 && this._preferences.actions[a.key] == 0).first();
 
-            for (let action in this._preferences.actions) {
-
-                if (!this._tips[action].showAfter || this._preferences.actions[action] > 0)
-                    continue;
-
-                curTime += this._tips[action].showAfter;
-
-                setTimeout(() => {
-
-                    if (this._preferences.actions[action] > 0)
-                        return;
-
-                    if (!this.tip.isVisible())
-                        this.showTip(action);
-
-                }, curTime * 1000);
+            if (!this.showTip(nextTip.key, {
+                onClose: () => this.engageUser(),
+                timeout: nextTip.value.showAfter,
+            })) {
+                this.engageUser();
             }
+
         }
 
         /****************************************/
 
-        protected showTip(tipId: string) {
+        protected showTip(tipId: keyof IViewActions<IViewActionTip>, options?: IShowTipOptions) {
+
+            if (options && !options.override && this.tip() && this.tip().isVisible())
+                return false;
+
+            if (options && !options.force && this._preferences.actions[tipId])
+                return false;
 
             const tip = this._tips[tipId];
 
-            this.tip.dontShowAgain = () => {
+            const model = new TipViewModel(tip);
+
+            model.dontShowAgain = () => {
                 this._preferences.showTips = false;
-                this.tip.close();
+                model.close();
             }
 
-            this.tip.understood = () => {
+            model.understood = () => {
                 this._preferences.actions[tipId]++;
-                this.tip.close();
+                model.close();
             };
+
+            model.onClose = () => {
+                //this.tip(null);
+                if (options && options.onClose)
+                    options.onClose();
+            }
 
             let nextTip = linq(this._tips).where(a => a.value.order > tip.order && this._preferences.actions[a.key] == 0).first();
 
             if (nextTip) {
-                this.tip.next = () => {
-                    this.tip.close();
+                model.next = () => {
+                    model.close();
+                    this._preferences.actions[tipId]++;
                     this.showTip(nextTip.key);
                 }
-                this.tip.hasNext(true);
             }
-            else {
-                this.tip.next = null;
-                this.tip.hasNext(false);
-            }
-            this.tip.content(tip.html);
-            this.tip.value = tip;
+            else 
+                model.next = null;
 
-            this.tip.show();
+            this.tip(model);
+
+            setTimeout(() => model.show(), options && options.timeout ? options.timeout * 1000 : 0);
+
+            return true;
         }
 
         /****************************************/
@@ -637,7 +718,7 @@
         loadPreferences() {
             let json = localStorage.getItem("preferences");
 
-            if (!json)
+            if (!json || this._debugMode)
                 this._preferences = {
                     isFirstView: true,
                     showTips: true,
@@ -653,7 +734,8 @@
                         maxFactorChanged: 0,
                         scaleChanged: 0,
                         topAreasOpened: 0,
-                        deltaSelected: 0
+                        deltaSelected: 0,
+                        regionExcluded: 0
                     }
                 };
             else
@@ -755,6 +837,7 @@
 
             if (this.viewMode() == "country") {
                 this.selectedArea = this._geo.areas["it"];
+                this.showTip("regionExcluded", { timeout: 5 });
             }
             else {
                 if (this._topAreasVisible)
@@ -1334,6 +1417,8 @@
 
                 const day = this._data.days[this.dayNumber()];
 
+                const gradient = new LinearGradient("#fff", this.selectedIndicator().colorDark);
+
                 for (const key in day.values) {
                     const element = document.getElementById(key.toUpperCase());
                     if (element) {
@@ -1359,9 +1444,9 @@
                             if (!element.classList.contains("valid"))
                                 element.classList.add("valid");
                             const value = MathUtils.discretize(MathUtils.exponential(factor), 20);
-                            element.style.fillOpacity = value.toString();
-                            element.style.fill = this.selectedIndicator().colorDark;
-                            //element.style.fill = this._gradient.valueAt(value).toString();
+                            //element.style.fillOpacity = value.toString();
+                            element.style.fill = gradient.valueAt(factor).toString();
+
                         }
                     }
                 }
@@ -1397,7 +1482,7 @@
         startDay = ko.observable<number>(0);
         isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
         groupDays = [1, 2, 3, 4, 5, 6, 7];
-        tip = new TipViewModel();
+        tip = ko.observable<TipViewModel>();
         factorDescription = ko.observable<string>();
         indicators: KnockoutObservable<IIndicator<TData>[]>;
         factors: KnockoutObservable<IFactor<TData>[]>;

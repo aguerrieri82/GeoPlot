@@ -40,6 +40,7 @@ namespace GeoPlot.Web.Controllers
             {
                 Geo = await LoadGeoAreas(),
                 Data = await LoadInfectionData(lastUpdate),
+                DebugMode = Debugger.IsAttached,
                 Environment = await LoadEnvironmentData(),
                 LastUpdate = lastUpdate
             };

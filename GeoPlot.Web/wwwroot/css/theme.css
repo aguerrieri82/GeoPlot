@@ -154,53 +154,56 @@ ul.collapsible li.active .collapsible-header i {
     content: ' '; }
 
 /****************************************/
-.tip {
-  border: solid 1px #ccc;
-  background-color: #ffecb3;
+.tip-container {
   position: fixed;
   top: 60px;
   max-width: 60vw;
   margin: auto;
-  opacity: 0;
-  transition-duration: 0.5s;
-  transition-timing-function: ease-in;
-  margin-top: -100%;
   z-index: 50; }
   @media only screen and (max-width: 600px) {
-    .tip {
+    .tip-container {
       max-width: none;
       right: 0;
       left: 0; } }
-  .tip.visible {
-    margin-top: 0;
-    opacity: 1; }
-  .tip .main {
-    padding: 16px;
-    display: flex;
-    flex-direction: row;
-    align-items: center; }
-    .tip .main i {
-      margin-right: 16px;
-      display: inline-block;
-      font-size: 48px; }
-    .tip .main .not-show {
-      font-size: 0.8em; }
-  .tip .actions {
-    display: flex;
-    flex-direction: row;
-    border-top: solid 1px #ccc;
-    padding: 0;
-    margin: 0; }
-    .tip .actions li {
-      border-right: solid 1px #ccc;
-      flex-basis: 0;
-      flex-grow: 1;
-      text-align: center; }
-      .tip .actions li:last-of-type {
-        border-right: none; }
-      .tip .actions li a {
-        padding: 8px 16px 8px 16px;
-        display: block; }
+  .tip-container .tip {
+    border: solid 1px #ccc;
+    background-color: #ffecb3;
+    opacity: 0;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-in;
+    margin-top: -200px; }
+    .tip-container .tip.visible {
+      margin-top: 0;
+      opacity: 1; }
+      .tip-container .tip.visible.transparent-element {
+        opacity: 0.7; }
+    .tip-container .tip .main {
+      padding: 16px;
+      display: flex;
+      flex-direction: row;
+      align-items: center; }
+      .tip-container .tip .main i {
+        margin-right: 16px;
+        display: inline-block;
+        font-size: 48px; }
+      .tip-container .tip .main .not-show {
+        font-size: 0.8em; }
+    .tip-container .tip .actions {
+      display: flex;
+      flex-direction: row;
+      border-top: solid 1px #ccc;
+      padding: 0;
+      margin: 0; }
+      .tip-container .tip .actions li {
+        border-right: solid 1px #ccc;
+        flex-basis: 0;
+        flex-grow: 1;
+        text-align: center; }
+        .tip-container .tip .actions li:last-of-type {
+          border-right: none; }
+        .tip-container .tip .actions li a {
+          padding: 8px 16px 8px 16px;
+          display: block; }
 
 /****************************************/
 .legend i {
@@ -329,6 +332,32 @@ svg.map {
     svg.map .group.active .area.region {
       stroke-width: 0.15%; }
     svg.map .group.active .area.selected, svg.map .group.active .area:hover {
+      stroke: #F57F17;
+      stroke-width: 0.3%; }
+
+svg.map.experimental {
+  width: 50vh;
+  max-width: 100%;
+  pointer-events: painted; }
+  svg.map.experimental .environment > circle {
+    stroke: #000;
+    stroke-width: 500;
+    fill-opacity: 0.7; }
+  svg.map.experimental .group .area {
+    fill: none; }
+    svg.map.experimental .group .area.region {
+      stroke: #f0f0f0;
+      stroke-width: 4000; }
+    svg.map.experimental .group .area.district {
+      stroke: #f0f0f0;
+      stroke-width: 2000; }
+  svg.map.experimental .group.active .area {
+    fill: white; }
+    svg.map.experimental .group.active .area.region {
+      stroke-width: 4000;
+      stroke: #fff;
+      stroke-opacity: 0; }
+    svg.map.experimental .group.active .area.selected, svg.map.experimental .group.active .area:hover {
       stroke: #F57F17;
       stroke-width: 0.3%; }
 

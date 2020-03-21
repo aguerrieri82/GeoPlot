@@ -20,7 +20,7 @@
                     <div id="regionTab" data-view-mode="region"></div>
                     <div id="districtTab" data-view-mode="district"></div>
                     <div id="italyTab" data-view-mode="country"></div>
-                    <div class="center-align">
+                    <div class="center-align map-container">
                         <svg class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
                             @foreach (var areaType in typeOrder)
                             {
@@ -289,20 +289,22 @@
         </ul>
     </section>
     <!--ko with: tip-->
-    <div class="tip z-depth-3" data-bind="css: {visible: isVisible}">
-        <div class="main">
-            <i class="material-icons yellow-text text-darken-1">lightbulb_outline</i>
-            <div>
-                <h5 class="title">Lo sapevi che?</h5>
-                <div class="body" data-bind="html: content"></div>
-                <a class="not-show" href="#!" data-bind="click: dontShowAgain">Non mostrarmi suggerimenti</a>
+    <div class="tip-container">
+        <div class="tip z-depth-3" data-bind="css: {visible: isVisible, 'transparent-element': isTransparent}">
+            <div class="main">
+                <i class="material-icons yellow-text text-darken-1">lightbulb_outline</i>
+                <div>
+                    <h5 class="title">Lo sapevi che?</h5>
+                    <div class="body" data-bind="html: value.html"></div>
+                    <a class="not-show" href="#!" data-bind="click: dontShowAgain">Non mostrarmi suggerimenti</a>
+                </div>
             </div>
+            <ul class="actions">
+                <li data-bind="visible: next != null"><a class="waves-effect waves-light" href="#!" data-bind="click: next">Prossimo&nbsp;›</a></li>
+                <li><a class="waves-effect waves-light" href="#!" data-bind="click: executeAction">Come?</a></li>
+                <li><a class="waves-effect waves-light" href="#!" data-bind="click: understood">Capito!</a></li>
+            </ul>
         </div>
-        <ul class="actions">
-            <li><a class="waves-effect waves-light" href="#!" data-bind="click: understood">Capito!</a></li>
-            <li><a class="waves-effect waves-light" href="#!" data-bind="click: executeAction">Come?</a></li>
-            <li><a class="waves-effect waves-light" href="#!" data-bind="visible: hasNext, click: next">Prossimo&nbsp;›</a></li>
-        </ul>
     </div>
     <!--/ko-->
 </div>

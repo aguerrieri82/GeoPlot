@@ -79,6 +79,7 @@ namespace GeoPlot.Core
                     simplifier.DistanceTolerance = SimplifyTollerance;
                     curGeo = simplifier.GetResultGeometry();
                 }
+         
                 if (curGeo.IsValid)
                     result.Add(new Poly2D() { Points = curGeo.Coordinates.Select(a => Geo.Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
             }
@@ -92,6 +93,8 @@ namespace GeoPlot.Core
         public Rect2D ViewBox { get; set; }
 
         public double SimplifyTollerance { get; set; }
+
+        public double Shrink { get; set; }
 
     }
 }

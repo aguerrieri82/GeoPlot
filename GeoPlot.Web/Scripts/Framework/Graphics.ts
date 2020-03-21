@@ -77,9 +77,9 @@
             const c2 = this.colors[maxX];
 
             const c3 = new RgbColor();
-            c3.r = Math.round(c1.r + (c2.r - c1.r) * minOfs);
-            c3.g = Math.round(c1.g + (c2.g - c1.g) * minOfs);
-            c3.b = Math.round(c1.b + (c2.b - c1.b) * minOfs);
+            c3.r = c1.r + (c2.r - c1.r) * minOfs;
+            c3.g = c1.g + (c2.g - c1.g) * minOfs;
+            c3.b = c1.b + (c2.b - c1.b) * minOfs;
             return c3;
 
         }
