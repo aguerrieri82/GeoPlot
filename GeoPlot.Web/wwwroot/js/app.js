@@ -45,693 +45,22 @@ var __values = (this && this.__values) || function(o) {
     };
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
-var GeoPlot;
-(function (GeoPlot) {
-    var Http = /** @class */ (function () {
-        function Http() {
-        }
-        Http.getStringAsync = function (url) {
-            return GeoPlot.Services.httpClient.requestAsync({
-                url: url,
-                method: "GET",
-            });
-        };
-        /****************************************/
-        Http.postStringAsync = function (url, data) {
-            return GeoPlot.Services.httpClient.requestAsync({
-                url: url,
-                method: "POST",
-                data: data,
-            });
-        };
-        /****************************************/
-        Http.getJsonAsync = function (url) {
-            return GeoPlot.Services.httpClient.requestAsync({
-                url: url,
-                method: "GET",
-                responseType: "application/json",
-            });
-        };
-        /****************************************/
-        Http.postJsonAsync = function (url, data) {
-            return GeoPlot.Services.httpClient.requestAsync({
-                url: url,
-                method: "POST",
-                responseType: "application/json",
-                data: data,
-            });
-        };
-        /****************************************/
-        Http.postBinaryAsync = function (url, data, onProgress) {
-            return GeoPlot.Services.httpClient.requestAsync({
-                url: url,
-                method: "POST",
-                responseType: "application/json",
-                dataType: "application/octet-stream",
-                data: data,
-                onProgress: onProgress
-            });
-        };
-        return Http;
-    }());
-    GeoPlot.Http = Http;
-    /****************************************/
-    var XHRHttpClient = /** @class */ (function () {
-        function XHRHttpClient() {
-        }
-        XHRHttpClient.prototype.requestAsync = function (config) {
-            return new Promise(function (resolve, reject) {
-                var xmlhttp = new XMLHttpRequest();
-                xmlhttp.onreadystatechange = function (ev) {
-                    if (xmlhttp.readyState == XMLHttpRequest.DONE) {
-                        if (xmlhttp.status == 200) {
-                            var data_1 = xmlhttp.responseText;
-                            var isJson = config.responseType == "application/json";
-                            if (isJson)
-                                data_1 = JSON.parse(data_1);
-                            resolve(data_1);
-                        }
-                        else
-                            reject(xmlhttp.status);
-                    }
-                };
-                if (config.onProgress)
-                    xmlhttp.upload.onprogress = config.onProgress;
-                xmlhttp.open(config.method, GeoPlot.Uri.absolute(config.url), true);
-                var contentType = config.dataType;
-                var data = config.data;
-                if (config.data) {
-                    var isJson = contentType == "application/json" || typeof config.data == "object";
-                    var isObj = contentType == "application/octet-stream";
-                    if (isJson && !isObj) {
-                        contentType = "application/json";
-                        if (data && typeof config.data != "string")
-                            data = JSON.stringify(data);
-                    }
-                }
-                if (contentType)
-                    xmlhttp.setRequestHeader("Content-type", contentType);
-                if (config.headers) {
-                    for (var header in config.headers)
-                        xmlhttp.setRequestHeader(header, config.headers[header]);
-                }
-                xmlhttp.send(data);
-            });
-        };
-        return XHRHttpClient;
-    }());
-    GeoPlot.XHRHttpClient = XHRHttpClient;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var Services;
-    (function (Services) {
-    })(Services = GeoPlot.Services || (GeoPlot.Services = {}));
-})(GeoPlot || (GeoPlot = {}));
-/// <reference path="Framework/HttpClient.ts" />
-/// <reference path="Framework/Services.ts" />
-var GeoPlot;
-(function (GeoPlot) {
-    var Application = /** @class */ (function () {
-        function Application() {
+var WebApp;
+(function (WebApp) {
+    var GeoPlotApplication = /** @class */ (function () {
+        function GeoPlotApplication() {
         }
         /****************************************/
-        Application.prototype.initServices = function () {
-            GeoPlot.Services.httpClient = new GeoPlot.XHRHttpClient();
+        GeoPlotApplication.prototype.initServices = function () {
+            WebApp.Services.httpClient = new WebApp.XHRHttpClient();
         };
-        return Application;
+        return GeoPlotApplication;
     }());
     /****************************************/
-    GeoPlot.app = new Application();
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var ConstIndicatorFunction = /** @class */ (function () {
-        function ConstIndicatorFunction(value) {
-            this._value = value;
-        }
-        /****************************************/
-        ConstIndicatorFunction.prototype.value = function (main, delta, exMain, exDelta, area) {
-            var result = this._value(main, area);
-            if (exMain) {
-                for (var i in exMain)
-                    result -= this.value(exMain[i], exDelta[i], null, null, area);
-            }
-            return result;
-        };
-        return ConstIndicatorFunction;
-    }());
-    GeoPlot.ConstIndicatorFunction = ConstIndicatorFunction;
-    /****************************************/
-    var SimpleIndicatorFunction = /** @class */ (function () {
-        function SimpleIndicatorFunction(value) {
-            this._value = value;
-        }
-        /****************************************/
-        SimpleIndicatorFunction.prototype.value = function (main, delta, exMain, exDelta, area) {
-            var result = this._value(main, area);
-            if (delta)
-                result -= this._value(delta, area);
-            if (exMain) {
-                for (var i in exMain)
-                    result -= this.value(exMain[i], exDelta[i], null, null, area);
-            }
-            return result;
-        };
-        return SimpleIndicatorFunction;
-    }());
-    GeoPlot.SimpleIndicatorFunction = SimpleIndicatorFunction;
-    /****************************************/
-    var SimpleFactorFunction = /** @class */ (function () {
-        function SimpleFactorFunction(value) {
-            this._value = value;
-        }
-        /****************************************/
-        SimpleFactorFunction.prototype.value = function (main, delta, exMain, exDelta, area, indicator) {
-            var curValue = 0;
-            for (var i in main)
-                curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
-            return this._value(curValue, main[0], area);
-        };
-        return SimpleFactorFunction;
-    }());
-    GeoPlot.SimpleFactorFunction = SimpleFactorFunction;
-    /****************************************/
-    var DoubleFactorFunction = /** @class */ (function () {
-        function DoubleFactorFunction(value, factor) {
-            this._value = value;
-            this._factor = factor;
-        }
-        /****************************************/
-        DoubleFactorFunction.prototype.value = function (main, delta, exMain, exDelta, area, indicator) {
-            var curValue = 0;
-            var curFactor = 0;
-            for (var i in main) {
-                curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
-                curFactor += this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area);
-            }
-            return this._value(curValue, curFactor);
-        };
-        return DoubleFactorFunction;
-    }());
-    GeoPlot.DoubleFactorFunction = DoubleFactorFunction;
-    /****************************************/
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var AggregationFunc;
-    (function (AggregationFunc) {
-        AggregationFunc[AggregationFunc["SUm"] = 0] = "SUm";
-        AggregationFunc[AggregationFunc["Avg"] = 1] = "Avg";
-    })(AggregationFunc = GeoPlot.AggregationFunc || (GeoPlot.AggregationFunc = {}));
-    var GeoAreaType;
-    (function (GeoAreaType) {
-        GeoAreaType[GeoAreaType["Country"] = 0] = "Country";
-        GeoAreaType[GeoAreaType["State"] = 1] = "State";
-        GeoAreaType[GeoAreaType["Region"] = 2] = "Region";
-        GeoAreaType[GeoAreaType["District"] = 3] = "District";
-    })(GeoAreaType = GeoPlot.GeoAreaType || (GeoPlot.GeoAreaType = {}));
-})(GeoPlot || (GeoPlot = {}));
-/// <reference path="../indicators.ts" />
-var GeoPlot;
-(function (GeoPlot) {
-    /****************************************/
-    GeoPlot.InfectionDataSet = {
-        name: "COVID-19",
-        indicators: [
-            {
-                id: "totalPositive",
-                name: "Positivi Totali",
-                colorLight: "#f44336",
-                colorDark: "#b71c1c",
-                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalPositive; })
-            },
-            {
-                id: "currentPositive",
-                name: "Attuali Positivi",
-                validFor: ["region", "country"],
-                colorLight: "#e91e63",
-                colorDark: "#880e4f",
-                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.currentPositive; })
-            },
-            {
-                id: "totalDeath",
-                name: "Deceduti",
-                validFor: ["region", "country"],
-                colorLight: "#9c27b0",
-                colorDark: "#4a148c",
-                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalDeath; })
-            },
-            {
-                id: "totalSevere",
-                name: "Gravi",
-                validFor: ["region", "country"],
-                colorLight: "#ff9800",
-                colorDark: "#e65100",
-                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalSevere; })
-            },
-            {
-                id: "totalHospedalized",
-                name: "Ricoverati",
-                validFor: ["region", "country"],
-                colorLight: "#fdd835",
-                colorDark: "#fbc02d",
-                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalHospedalized; })
-            },
-            {
-                id: "totalHealed",
-                name: "Guariti",
-                validFor: ["region", "country"],
-                colorLight: "#4caf50",
-                colorDark: "#1b5e20",
-                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalHealed; })
-            },
-            {
-                id: "toatlTests",
-                name: "Tamponi",
-                validFor: ["region", "country"],
-                colorLight: "#03a9f4",
-                colorDark: "#01579b",
-                compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.toatlTests; })
-            },
-            {
-                id: "surface",
-                name: "Superfice (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return GeoPlot.MathUtils.round(a.surface, 0); })
-            },
-            {
-                id: "density",
-                name: "Densita (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return GeoPlot.MathUtils.round(a.demography.total / a.surface, 0); })
-            },
-            {
-                id: "population",
-                name: "Popolazione (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return a.demography.total; })
-            },
-            {
-                id: "populationOld",
-                name: "Popolazione +65 (Geo)",
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return a.demography.over65; })
-            },
-        ],
-        factors: [
-            {
-                id: "none",
-                name: "Nessuno",
-                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return i; }),
-                format: function (a) { return formatNumber(a); },
-                reference: function (v, a) { return "N/A"; },
-                description: "[indicator]"
-            },
-            {
-                id: "population",
-                name: "Popolazione",
-                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.total) * 100000; }),
-                format: function (a) { return formatNumber(a); },
-                reference: function (v, a) { return formatNumber(a.demography.total); },
-                description: "[indicator] ogni 100.000 abitanti"
-            },
-            {
-                id: "population",
-                name: "Popolazione +65",
-                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.over65) * 100000; }),
-                format: function (a) { return formatNumber(GeoPlot.MathUtils.round(a, 1)); },
-                reference: function (v, a) { return formatNumber(a.demography.over65); },
-                description: "[indicator] ogni 100.000 abitanti +65"
-            },
-            {
-                id: "density",
-                name: "Densità",
-                compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / (a.demography.total / a.surface)) * 100000; }),
-                format: function (a) { return formatNumber(GeoPlot.MathUtils.round(a, 1)); },
-                reference: function (v, a) { return formatNumber(GeoPlot.MathUtils.round(a.demography.total / a.surface, 1)); },
-                description: "[indicator] rispetto densità territorio"
-            },
-            {
-                id: "totalPositive",
-                name: "Positivi Totali",
-                validFor: ["region", "country"],
-                compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.totalPositive; })),
-                format: function (a) { return GeoPlot.MathUtils.round(a, 1) + "%"; },
-                reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
-                description: "% [indicator] su positivi totali"
-            },
-            {
-                id: "severe",
-                name: "Gravi",
-                validFor: ["region", "country"],
-                compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.totalSevere; })),
-                format: function (a) { return GeoPlot.MathUtils.round(a, 1) + "%"; },
-                reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
-                description: "% [indicator] sui gravi totali"
-            },
-            {
-                id: "test",
-                name: "Tamponi",
-                validFor: ["region", "country"],
-                compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.toatlTests; })),
-                format: function (a) { return GeoPlot.MathUtils.round(a, 1) + "%"; },
-                reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
-                description: "% [indicator] sui tamponi eseguiti"
-            }
-        ]
-    };
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    GeoPlot.ViewModes = {
-        "district": {
-            label: {
-                singular: "provincia",
-                plural: "province"
-            },
-            mapGroup: "group_district",
-            tab: "districtTab",
-            areaType: GeoPlot.GeoAreaType.District,
-            validateId: function (id) { return id[0].toLowerCase() == 'd'; }
-        },
-        "region": {
-            label: {
-                singular: "regione",
-                plural: "regioni"
-            },
-            mapGroup: "group_region",
-            tab: "regionTab",
-            areaType: GeoPlot.GeoAreaType.Region,
-            validateId: function (id) { return id[0].toLowerCase() == 'r'; }
-        },
-        "country": {
-            label: {
-                singular: "italiana",
-                plural: "italiane"
-            },
-            mapGroup: "group_country",
-            tab: "italyTab",
-            areaType: GeoPlot.GeoAreaType.Country,
-            validateId: function (id) { return id.toLowerCase() == 'it'; }
-        }
-    };
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var DateUtils = /** @class */ (function () {
-        function DateUtils() {
-        }
-        /****************************************/
-        DateUtils.parse = function (value) {
-            if (value instanceof Date)
-                return value;
-            return new Date(value);
-        };
-        /****************************************/
-        DateUtils.equalsDate = function (a, b) {
-            return this.trucateTime(a).getTime() == this.trucateTime(b).getTime();
-        };
-        /****************************************/
-        DateUtils.trucateTime = function (date) {
-            return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        };
-        /****************************************/
-        DateUtils.addDays = function (date, value) {
-            return this.add(date, GeoPlot.TimeSpan.fromDays(value));
-        };
-        /****************************************/
-        DateUtils.add = function (date, value) {
-            date = this.parse(date);
-            return new Date(date.getTime() + value.ticks);
-        };
-        /****************************************/
-        DateUtils.diff = function (date1, date2) {
-            return new GeoPlot.TimeSpan(this.parse(date1).getTime() - this.parse(date2).getTime());
-        };
-        /****************************************/
-        DateUtils.now = function () {
-            return new Date();
-        };
-        /****************************************/
-        DateUtils.today = function () {
-            return this.truncateTime(this.now());
-        };
-        /****************************************/
-        DateUtils.truncateTime = function (date) {
-            date = this.parse(date);
-            return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        };
-        /****************************************/
-        DateUtils.timeOfDay = function (date) {
-            date = this.parse(date);
-            return new GeoPlot.TimeSpan(date.getTime() - this.truncateTime(date).getTime());
-        };
-        /****************************************/
-        DateUtils.format = function (date, format) {
-            var _this = this;
-            date = this.parse(date);
-            return GeoPlot.Format.replaceArgs(format, function (arg) { return _this.formatArgument(date, arg); });
-        };
-        /****************************************/
-        DateUtils.formatDate = function (date) {
-            if (!date)
-                return null;
-            return this.format(date, "{YYYY}-{MM}-{DD}");
-        };
-        /****************************************/
-        DateUtils.formatArgument = function (value, arg) {
-            value = this.parse(value);
-            switch (arg) {
-                case "D":
-                    return value.getDate().toString();
-                case "DD":
-                    return GeoPlot.StringUtils.padLeft(value.getDate().toString(), 2, "0");
-                case "W":
-                    return this.WEEK_DAYS[(value.getDay() + 6) % 7].substr(0, 3);
-                case "WW":
-                    return this.WEEK_DAYS[(value.getDay() + 6) % 7];
-                case "M":
-                    return value.getMonth().toString();
-                case "MM":
-                    return GeoPlot.StringUtils.padLeft((value.getMonth() + 1).toString(), 2, "0");
-                case "MMM":
-                    return this.MONTHS[value.getMonth()].substr(0, 3);
-                case "MMMM":
-                    return this.MONTHS[value.getMonth()];
-                case "YYYY":
-                    return value.getFullYear().toString();
-                case "h":
-                    return value.getHours().toString();
-                case "hh":
-                    return GeoPlot.StringUtils.padLeft(value.getHours().toString(), 2, "0");
-                case "m":
-                    return value.getMinutes().toString();
-                case "mm":
-                    return GeoPlot.StringUtils.padLeft(value.getMinutes().toString(), 2, "0");
-                case "s":
-                    return value.getSeconds().toString();
-                case "ss":
-                    return GeoPlot.StringUtils.padLeft(value.getSeconds().toString(), 2, "0");
-                case "f":
-                    return (value.getMilliseconds() / 100).toString();
-                case "ff":
-                    return (value.getMilliseconds() / 10).toString();
-                case "fff":
-                    return value.getMilliseconds().toString();
-            }
-            return arg;
-        };
-        DateUtils.WEEK_DAYS = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
-        DateUtils.MONTHS = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-        return DateUtils;
-    }());
-    GeoPlot.DateUtils = DateUtils;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var DomUtils = /** @class */ (function () {
-        function DomUtils() {
-        }
-        DomUtils.isParentOrSelf = function (element, parent) {
-            var curElement = element;
-            while (curElement) {
-                if (curElement == parent)
-                    return true;
-                curElement = curElement.parentElement;
-            }
-            return false;
-        };
-        /****************************************/
-        DomUtils.removeClass = function (element, className) {
-            if (element.classList.contains(className))
-                element.classList.remove(className);
-        };
-        /****************************************/
-        DomUtils.addClass = function (element, className) {
-            if (!element.classList.contains(className))
-                element.classList.add(className);
-        };
-        /****************************************/
-        DomUtils.isSmallDevice = function () {
-            return window.innerWidth < 610;
-        };
-        /****************************************/
-        DomUtils.copyText = function (value) {
-            return __awaiter(this, void 0, void 0, function () {
-                var input;
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            if (!navigator["clipboard"]) return [3 /*break*/, 2];
-                            return [4 /*yield*/, navigator.clipboard.writeText(value)];
-                        case 1:
-                            _a.sent();
-                            return [3 /*break*/, 3];
-                        case 2:
-                            input = document.createElement("textarea");
-                            document.body.appendChild(input);
-                            input.value = value;
-                            input.select();
-                            //input.setSelectionRange(0, input.value.length);
-                            document.execCommand("copy");
-                            document.body.removeChild(input);
-                            _a.label = 3;
-                        case 3: return [2 /*return*/];
-                    }
-                });
-            });
-        };
-        return DomUtils;
-    }());
-    GeoPlot.DomUtils = DomUtils;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var Format;
-    (function (Format) {
-        function price(value) {
-            return (Math.round(value * 100) / 100).toFixed(2);
-        }
-        Format.price = price;
-        function replaceArgs(value, args) {
-            if (!value)
-                return;
-            var map;
-            if (typeof (args) != "function")
-                map = function (key) { return args[key]; };
-            else
-                map = args;
-            var state = 0;
-            var result = "";
-            var curName = "";
-            for (var i = 0; i < value.length; i++) {
-                var c = value[i];
-                switch (state) {
-                    case 0:
-                        if (c == "{") {
-                            curName = "";
-                            state = 1;
-                        }
-                        else
-                            result += c;
-                        break;
-                    case 1:
-                        if (c == "}" || c == ":" || c == "=") {
-                            state = 0;
-                            if (args)
-                                result += map(curName);
-                            if (c == ":" || c == "=")
-                                state = 2;
-                            else
-                                state = 0;
-                        }
-                        else if (c != "?")
-                            curName += c;
-                        break;
-                    case 2:
-                        if (c == "}")
-                            state = 0;
-                        break;
-                }
-            }
-            return result;
-        }
-        Format.replaceArgs = replaceArgs;
-        /****************************************/
-        function replaceArgs2(value, args) {
-            if (!value)
-                return value;
-            var map;
-            if (typeof (args) != "function")
-                map = function (key) { return args[key]; };
-            else
-                map = args;
-            var result = "";
-            var paramName = "";
-            var state = 0;
-            for (var i = 0; i < value.length; i++) {
-                var c = value[i];
-                switch (state) {
-                    case 0:
-                        if (c == '$')
-                            state = 1;
-                        else
-                            result += c;
-                        break;
-                    case 1:
-                        if (c == '(') {
-                            state = 2;
-                            paramName = "";
-                        }
-                        else {
-                            result += "$" + c;
-                            state = 0;
-                        }
-                        break;
-                    case 2:
-                        if (c == ')') {
-                            var paramValue = map(paramName);
-                            result += JSON.stringify(paramValue);
-                            state = 0;
-                        }
-                        else
-                            paramName += c;
-                        break;
-                }
-            }
-            return result;
-        }
-        Format.replaceArgs2 = replaceArgs2;
-        /****************************************/
-        function linkify(value) {
-            if (!value)
-                return "";
-            var replacedText, replacePattern1, replacePattern2, replacePattern3;
-            //URLs starting with http://, https://, or ftp://
-            replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-            replacedText = value.replace(replacePattern1, '<a href="$1" target="_blank">$1</a>');
-            //URLs starting with "www." (without // before it, or it'd re-link the ones done above).
-            replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
-            replacedText = replacedText.replace(replacePattern2, '$1<a href="http://$2" target="_blank">$2</a>');
-            //Change email addresses to mailto:: links.
-            replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
-            replacedText = replacedText.replace(replacePattern3, '<a href="mailto:$1">$1</a>');
-            return replacedText;
-        }
-        Format.linkify = linkify;
-    })(Format = GeoPlot.Format || (GeoPlot.Format = {}));
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
+    WebApp.app = new GeoPlotApplication();
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
     var Geo = /** @class */ (function () {
         function Geo() {
         }
@@ -750,8 +79,8 @@ var GeoPlot;
         Geo.OFFSET_Y = 5543162;
         return Geo;
     }());
-    GeoPlot.Geo = Geo;
-})(GeoPlot || (GeoPlot = {}));
+    WebApp.Geo = Geo;
+})(WebApp || (WebApp = {}));
 var itNumberFormat = new Intl.NumberFormat("it-IT", {});
 function formatNumber(value) {
     if (!value)
@@ -822,8 +151,8 @@ Chart.plugins.register({
         ctx.fillRect(0, 0, chartInstance.width, chartInstance.height);
     }
 });
-var GeoPlot;
-(function (GeoPlot) {
+var WebApp;
+(function (WebApp) {
     /****************************************/
     var LinearGradient = /** @class */ (function () {
         function LinearGradient() {
@@ -833,7 +162,7 @@ var GeoPlot;
             }
             if (values.length > 0) {
                 if (typeof values[0] == "string")
-                    this.colors = GeoPlot.linq(values).select(function (a) { return new RgbColor(a); }).toArray();
+                    this.colors = WebApp.linq(values).select(function (a) { return new RgbColor(a); }).toArray();
                 else
                     this.colors = values;
             }
@@ -860,7 +189,7 @@ var GeoPlot;
         };
         return LinearGradient;
     }());
-    GeoPlot.LinearGradient = LinearGradient;
+    WebApp.LinearGradient = LinearGradient;
     /****************************************/
     var RgbColor = /** @class */ (function () {
         function RgbColor(value) {
@@ -896,7 +225,7 @@ var GeoPlot;
         };
         return RgbColor;
     }());
-    GeoPlot.RgbColor = RgbColor;
+    WebApp.RgbColor = RgbColor;
     /****************************************/
     var Graphics = /** @class */ (function () {
         function Graphics(svg) {
@@ -926,868 +255,291 @@ var GeoPlot;
         };
         return Graphics;
     }());
-    GeoPlot.Graphics = Graphics;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    /****************************************/
-    var EmptyEnumerator = /** @class */ (function () {
-        function EmptyEnumerator() {
-        }
-        Object.defineProperty(EmptyEnumerator.prototype, "current", {
-            get: function () {
-                return undefined;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /****************************************/
-        EmptyEnumerator.prototype.moveNext = function () {
-            return false;
-        };
-        /****************************************/
-        EmptyEnumerator.prototype.reset = function () {
-        };
-        /****************************************/
-        EmptyEnumerator.prototype.count = function () {
-            return 0;
-        };
-        return EmptyEnumerator;
-    }());
-    /****************************************/
-    var DistinctEnumerator = /** @class */ (function () {
-        /****************************************/
-        function DistinctEnumerator(source, selector) {
-            this._selector = selector;
-            this._source = source;
-            if (!this._selector)
-                this._selector = function (a) { return a; };
-            this.reset();
-        }
-        Object.defineProperty(DistinctEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._current;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /****************************************/
-        DistinctEnumerator.prototype.moveNext = function () {
-            while (this._source.moveNext()) {
-                var item = this._selector(this._source.current);
-                if (this._foundItems.indexOf(item) == -1) {
-                    this._foundItems.push(item);
-                    this._current = item;
-                    return true;
-                }
-            }
-            return false;
-        };
-        /****************************************/
-        DistinctEnumerator.prototype.reset = function () {
-            this._source.reset();
-            this._foundItems = [];
-            this._current = undefined;
-        };
-        return DistinctEnumerator;
-    }());
-    /****************************************/
-    var DictionaryEnumerator = /** @class */ (function () {
-        /****************************************/
-        function DictionaryEnumerator(value) {
-            this._keyList = Object.getOwnPropertyNames(value);
+    WebApp.Graphics = Graphics;
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var ConstIndicatorFunction = /** @class */ (function () {
+        function ConstIndicatorFunction(value) {
             this._value = value;
-            this.reset();
         }
-        Object.defineProperty(DictionaryEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return {
-                    key: this._keyList[this._curIndex],
-                    value: this._value[this._keyList[this._curIndex]]
-                };
-            },
-            enumerable: true,
-            configurable: true
-        });
         /****************************************/
-        DictionaryEnumerator.prototype.moveNext = function () {
-            this._curIndex++;
-            return this._curIndex < this._keyList.length;
+        ConstIndicatorFunction.prototype.value = function (main, delta, exMain, exDelta, area) {
+            var result = this._value(main, area);
+            if (exMain) {
+                for (var i in exMain)
+                    result -= this.value(exMain[i], exDelta[i], null, null, area);
+            }
+            return result;
         };
-        /****************************************/
-        DictionaryEnumerator.prototype.reset = function () {
-            this._curIndex = -1;
-        };
-        /****************************************/
-        DictionaryEnumerator.prototype.first = function () {
-            return {
-                key: this._keyList[0],
-                value: this._value[this._keyList[0]]
-            };
-        };
-        /****************************************/
-        DictionaryEnumerator.prototype.last = function () {
-            return {
-                key: this._keyList[this._keyList.length - 1],
-                value: this._value[this._keyList[this._keyList.length - 1]]
-            };
-        };
-        /****************************************/
-        DictionaryEnumerator.prototype.count = function () {
-            return this._keyList.length;
-        };
-        return DictionaryEnumerator;
+        return ConstIndicatorFunction;
     }());
+    WebApp.ConstIndicatorFunction = ConstIndicatorFunction;
     /****************************************/
-    var ArrayEnumerator = /** @class */ (function () {
-        /****************************************/
-        function ArrayEnumerator(value) {
+    var SimpleIndicatorFunction = /** @class */ (function () {
+        function SimpleIndicatorFunction(value) {
             this._value = value;
-            this.reset();
         }
-        Object.defineProperty(ArrayEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._value[this._curIndex];
-            },
-            enumerable: true,
-            configurable: true
-        });
         /****************************************/
-        ArrayEnumerator.prototype.toArray = function () {
-            return this._value;
+        SimpleIndicatorFunction.prototype.value = function (main, delta, exMain, exDelta, area) {
+            var result = this._value(main, area);
+            if (delta)
+                result -= this._value(delta, area);
+            if (exMain) {
+                for (var i in exMain)
+                    result -= this.value(exMain[i], exDelta[i], null, null, area);
+            }
+            return result;
         };
-        /****************************************/
-        ArrayEnumerator.prototype.moveNext = function () {
-            this._curIndex++;
-            return this._curIndex < this._value.length;
-        };
-        /****************************************/
-        ArrayEnumerator.prototype.reset = function () {
-            this._curIndex = -1;
-        };
-        /****************************************/
-        ArrayEnumerator.prototype.first = function () {
-            return this._value[0];
-        };
-        /****************************************/
-        ArrayEnumerator.prototype.last = function () {
-            return this._value[this._value.length - 1];
-        };
-        /****************************************/
-        ArrayEnumerator.prototype.count = function () {
-            return this._value.length;
-        };
-        return ArrayEnumerator;
+        return SimpleIndicatorFunction;
     }());
+    WebApp.SimpleIndicatorFunction = SimpleIndicatorFunction;
     /****************************************/
-    var CollectionEnumerator = /** @class */ (function () {
-        /****************************************/
-        function CollectionEnumerator(value) {
+    var SimpleFactorFunction = /** @class */ (function () {
+        function SimpleFactorFunction(value) {
             this._value = value;
-            this.reset();
         }
-        Object.defineProperty(CollectionEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._value.item(this._curIndex);
-            },
-            enumerable: true,
-            configurable: true
-        });
         /****************************************/
-        CollectionEnumerator.prototype.moveNext = function () {
-            this._curIndex++;
-            return this._curIndex < this._value.length;
+        SimpleFactorFunction.prototype.value = function (main, delta, exMain, exDelta, area, indicator) {
+            var curValue = 0;
+            for (var i in main)
+                curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
+            return this._value(curValue, main[0], area);
         };
-        /****************************************/
-        CollectionEnumerator.prototype.reset = function () {
-            this._curIndex = -1;
-        };
-        /****************************************/
-        CollectionEnumerator.prototype.first = function () {
-            return this._value.item(0);
-        };
-        /****************************************/
-        CollectionEnumerator.prototype.last = function () {
-            return this._value.item(this._value.length - 1);
-        };
-        /****************************************/
-        CollectionEnumerator.prototype.count = function () {
-            return this._value.length;
-        };
-        return CollectionEnumerator;
+        return SimpleFactorFunction;
     }());
+    WebApp.SimpleFactorFunction = SimpleFactorFunction;
     /****************************************/
-    var SelectEnumerator = /** @class */ (function () {
-        /****************************************/
-        function SelectEnumerator(source, selector) {
-            this._selector = selector;
-            this._source = source;
-            this.reset();
+    var DoubleFactorFunction = /** @class */ (function () {
+        function DoubleFactorFunction(value, factor) {
+            this._value = value;
+            this._factor = factor;
         }
-        Object.defineProperty(SelectEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._selector(this._source.current);
-            },
-            enumerable: true,
-            configurable: true
-        });
         /****************************************/
-        SelectEnumerator.prototype.moveNext = function () {
-            return this._source.moveNext();
+        DoubleFactorFunction.prototype.value = function (main, delta, exMain, exDelta, area, indicator) {
+            var curValue = 0;
+            var curFactor = 0;
+            for (var i in main) {
+                curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
+                curFactor += this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area);
+            }
+            return this._value(curValue, curFactor);
         };
-        /****************************************/
-        SelectEnumerator.prototype.reset = function () {
-            this._source.reset();
-        };
-        return SelectEnumerator;
+        return DoubleFactorFunction;
     }());
+    WebApp.DoubleFactorFunction = DoubleFactorFunction;
     /****************************************/
-    var WhereEnumerator = /** @class */ (function () {
-        /****************************************/
-        function WhereEnumerator(source, condition) {
-            this._condition = condition;
-            this._source = source;
-            this.reset();
-        }
-        Object.defineProperty(WhereEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._source.current;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /****************************************/
-        WhereEnumerator.prototype.moveNext = function () {
-            while (this._source.moveNext()) {
-                if (this._condition(this._source.current))
-                    return true;
-            }
-            return false;
-        };
-        /****************************************/
-        WhereEnumerator.prototype.reset = function () {
-            this._source.reset();
-        };
-        return WhereEnumerator;
-    }());
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var AggregationFunc;
+    (function (AggregationFunc) {
+        AggregationFunc[AggregationFunc["SUm"] = 0] = "SUm";
+        AggregationFunc[AggregationFunc["Avg"] = 1] = "Avg";
+    })(AggregationFunc = WebApp.AggregationFunc || (WebApp.AggregationFunc = {}));
+    var GeoAreaType;
+    (function (GeoAreaType) {
+        GeoAreaType[GeoAreaType["Country"] = 0] = "Country";
+        GeoAreaType[GeoAreaType["State"] = 1] = "State";
+        GeoAreaType[GeoAreaType["Region"] = 2] = "Region";
+        GeoAreaType[GeoAreaType["District"] = 3] = "District";
+    })(GeoAreaType = WebApp.GeoAreaType || (WebApp.GeoAreaType = {}));
+})(WebApp || (WebApp = {}));
+/// <reference path="../indicators.ts" />
+var WebApp;
+(function (WebApp) {
     /****************************************/
-    var SkipEnumerator = /** @class */ (function () {
-        /****************************************/
-        function SkipEnumerator(source, count) {
-            this._count = count;
-            this._source = source;
-            this.reset();
-        }
-        Object.defineProperty(SkipEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._source.current;
+    WebApp.InfectionDataSet = {
+        name: "COVID-19",
+        indicators: [
+            {
+                id: "totalPositive",
+                name: "Positivi Totali",
+                colorLight: "#f44336",
+                colorDark: "#b71c1c",
+                compute: new WebApp.SimpleIndicatorFunction(function (a) { return a.totalPositive; })
             },
-            enumerable: true,
-            configurable: true
-        });
-        /****************************************/
-        SkipEnumerator.prototype.moveNext = function () {
-            if (!this._skipped) {
-                var elCount = 0;
-                while (elCount < this._count) {
-                    if (!this._source.moveNext())
-                        return false;
-                    elCount++;
-                }
-                this._skipped = true;
+            {
+                id: "currentPositive",
+                name: "Attuali Positivi",
+                validFor: ["region", "country"],
+                colorLight: "#e91e63",
+                colorDark: "#880e4f",
+                compute: new WebApp.SimpleIndicatorFunction(function (a) { return a.currentPositive; })
+            },
+            {
+                id: "totalDeath",
+                name: "Deceduti",
+                validFor: ["region", "country"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c",
+                compute: new WebApp.SimpleIndicatorFunction(function (a) { return a.totalDeath; })
+            },
+            {
+                id: "totalSevere",
+                name: "Gravi",
+                validFor: ["region", "country"],
+                colorLight: "#ff9800",
+                colorDark: "#e65100",
+                compute: new WebApp.SimpleIndicatorFunction(function (a) { return a.totalSevere; })
+            },
+            {
+                id: "totalHospedalized",
+                name: "Ricoverati",
+                validFor: ["region", "country"],
+                colorLight: "#fdd835",
+                colorDark: "#fbc02d",
+                compute: new WebApp.SimpleIndicatorFunction(function (a) { return a.totalHospedalized; })
+            },
+            {
+                id: "totalHealed",
+                name: "Guariti",
+                validFor: ["region", "country"],
+                colorLight: "#4caf50",
+                colorDark: "#1b5e20",
+                compute: new WebApp.SimpleIndicatorFunction(function (a) { return a.totalHealed; })
+            },
+            {
+                id: "toatlTests",
+                name: "Tamponi",
+                validFor: ["region", "country"],
+                colorLight: "#03a9f4",
+                colorDark: "#01579b",
+                compute: new WebApp.SimpleIndicatorFunction(function (a) { return a.toatlTests; })
+            },
+            {
+                id: "surface",
+                name: "Superfice (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: new WebApp.ConstIndicatorFunction(function (v, a) { return WebApp.MathUtils.round(a.surface, 0); })
+            },
+            {
+                id: "density",
+                name: "Densita (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: new WebApp.ConstIndicatorFunction(function (v, a) { return WebApp.MathUtils.round(a.demography.total / a.surface, 0); })
+            },
+            {
+                id: "population",
+                name: "Popolazione (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: new WebApp.ConstIndicatorFunction(function (v, a) { return a.demography.total; })
+            },
+            {
+                id: "populationOld",
+                name: "Popolazione +65 (Geo)",
+                validFor: ["region", "district"],
+                colorLight: "#777",
+                colorDark: "#222",
+                compute: new WebApp.ConstIndicatorFunction(function (v, a) { return a.demography.over65; })
+            },
+        ],
+        factors: [
+            {
+                id: "none",
+                name: "Nessuno",
+                compute: new WebApp.SimpleFactorFunction(function (i, v, a) { return i; }),
+                format: function (a) { return formatNumber(a); },
+                reference: function (v, a) { return "N/A"; },
+                description: "[indicator]"
+            },
+            {
+                id: "population",
+                name: "Popolazione",
+                compute: new WebApp.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.total) * 100000; }),
+                format: function (a) { return formatNumber(a); },
+                reference: function (v, a) { return formatNumber(a.demography.total); },
+                description: "[indicator] ogni 100.000 abitanti"
+            },
+            {
+                id: "population",
+                name: "Popolazione +65",
+                compute: new WebApp.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.over65) * 100000; }),
+                format: function (a) { return formatNumber(WebApp.MathUtils.round(a, 1)); },
+                reference: function (v, a) { return formatNumber(a.demography.over65); },
+                description: "[indicator] ogni 100.000 abitanti +65"
+            },
+            {
+                id: "density",
+                name: "Densità",
+                compute: new WebApp.SimpleFactorFunction(function (i, v, a) { return (i / (a.demography.total / a.surface)) * 100000; }),
+                format: function (a) { return formatNumber(WebApp.MathUtils.round(a, 1)); },
+                reference: function (v, a) { return formatNumber(WebApp.MathUtils.round(a.demography.total / a.surface, 1)); },
+                description: "[indicator] rispetto densità territorio"
+            },
+            {
+                id: "totalPositive",
+                name: "Positivi Totali",
+                validFor: ["region", "country"],
+                compute: new WebApp.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new WebApp.SimpleIndicatorFunction(function (v) { return v.totalPositive; })),
+                format: function (a) { return WebApp.MathUtils.round(a, 1) + "%"; },
+                reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
+                description: "% [indicator] su positivi totali"
+            },
+            {
+                id: "severe",
+                name: "Gravi",
+                validFor: ["region", "country"],
+                compute: new WebApp.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new WebApp.SimpleIndicatorFunction(function (v) { return v.totalSevere; })),
+                format: function (a) { return WebApp.MathUtils.round(a, 1) + "%"; },
+                reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
+                description: "% [indicator] sui gravi totali"
+            },
+            {
+                id: "test",
+                name: "Tamponi",
+                validFor: ["region", "country"],
+                compute: new WebApp.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new WebApp.SimpleIndicatorFunction(function (v) { return v.toatlTests; })),
+                format: function (a) { return WebApp.MathUtils.round(a, 1) + "%"; },
+                reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
+                description: "% [indicator] sui tamponi eseguiti"
             }
-            return this._source.moveNext();
-        };
-        /****************************************/
-        SkipEnumerator.prototype.reset = function () {
-            this._source.reset();
-            this._skipped = false;
-        };
-        return SkipEnumerator;
-    }());
-    /****************************************/
-    var TakeEnumerator = /** @class */ (function () {
-        /****************************************/
-        function TakeEnumerator(source, count) {
-            this._count = count;
-            this._source = source;
-            this.reset();
+        ]
+    };
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    WebApp.ViewModes = {
+        "district": {
+            label: {
+                singular: "provincia",
+                plural: "province"
+            },
+            mapGroup: "group_district",
+            tab: "districtTab",
+            areaType: WebApp.GeoAreaType.District,
+            validateId: function (id) { return id[0].toLowerCase() == 'd'; }
+        },
+        "region": {
+            label: {
+                singular: "regione",
+                plural: "regioni"
+            },
+            mapGroup: "group_region",
+            tab: "regionTab",
+            areaType: WebApp.GeoAreaType.Region,
+            validateId: function (id) { return id[0].toLowerCase() == 'r'; }
+        },
+        "country": {
+            label: {
+                singular: "italiana",
+                plural: "italiane"
+            },
+            mapGroup: "group_country",
+            tab: "italyTab",
+            areaType: WebApp.GeoAreaType.Country,
+            validateId: function (id) { return id.toLowerCase() == 'it'; }
         }
-        Object.defineProperty(TakeEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._source.current;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /****************************************/
-        TakeEnumerator.prototype.moveNext = function () {
-            if (this._taken >= this._count)
-                return false;
-            if (!this._source.moveNext())
-                return false;
-            this._taken++;
-            return true;
-        };
-        /****************************************/
-        TakeEnumerator.prototype.reset = function () {
-            this._source.reset();
-            this._taken = 0;
-        };
-        return TakeEnumerator;
-    }());
-    /****************************************/
-    var IteratorEnumerator = /** @class */ (function () {
-        /****************************************/
-        function IteratorEnumerator(source) {
-            this._source = source;
-        }
-        Object.defineProperty(IteratorEnumerator.prototype, "current", {
-            /****************************************/
-            get: function () {
-                return this._current;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /****************************************/
-        IteratorEnumerator.prototype.moveNext = function () {
-            var result = this._source.next();
-            if (result.done)
-                return false;
-            this._current = result.value;
-            return true;
-        };
-        /****************************************/
-        IteratorEnumerator.prototype.reset = function () {
-        };
-        return IteratorEnumerator;
-    }());
-    /****************************************/
-    var Linq = /** @class */ (function () {
-        /****************************************/
-        function Linq(value) {
-            this._enumerator = value;
-        }
-        /****************************************/
-        Linq.prototype.select = function (selector) {
-            return linq(new SelectEnumerator(this._enumerator, selector));
-        };
-        /****************************************/
-        Linq.prototype.where = function (condition) {
-            return linq(new WhereEnumerator(this._enumerator, condition));
-        };
-        /****************************************/
-        Linq.prototype.first = function (condition) {
-            if (condition)
-                return this.where(condition).first();
-            if (this._enumerator.first)
-                return this._enumerator.first();
-            this._enumerator.reset();
-            if (this._enumerator.moveNext())
-                return this._enumerator.current;
-        };
-        /****************************************/
-        Linq.prototype.last = function () {
-            if (this._enumerator.last)
-                return this._enumerator.last();
-            this._enumerator.reset();
-            var lastItem;
-            while (this._enumerator.moveNext())
-                lastItem = this._enumerator.current;
-            return lastItem;
-        };
-        /****************************************/
-        Linq.prototype.sum = function (selector) {
-            if (selector)
-                return this.select(selector).sum();
-            var result = 0;
-            this.foreach(function (a) {
-                result += parseFloat(a);
-            });
-            return result;
-        };
-        /****************************************/
-        Linq.prototype.max = function (selector) {
-            if (selector)
-                return this.select(selector).max();
-            var result = Number.NEGATIVE_INFINITY;
-            this.foreach(function (a) {
-                var number = parseFloat(a);
-                if (number > result)
-                    result = number;
-            });
-            return result;
-        };
-        /****************************************/
-        Linq.prototype.avg = function (selector) {
-            if (selector)
-                return this.select(selector).avg();
-            var result = 0;
-            var count = 0;
-            this.foreach(function (a) {
-                result += parseFloat(a);
-                count++;
-            });
-            if (count)
-                return result / count;
-            return NaN;
-        };
-        /****************************************/
-        Linq.prototype.count = function (condition) {
-            if (condition)
-                return this.where(condition).count();
-            if (this._enumerator.count)
-                return this._enumerator.count();
-            this._enumerator.reset();
-            var count = 0;
-            while (this._enumerator.moveNext())
-                count++;
-            return count;
-        };
-        /****************************************/
-        Linq.prototype.concat = function (separator, selector) {
-            var result = "";
-            var index = 0;
-            if (!selector)
-                selector = function (a) { return a.toString(); };
-            this.foreach(function (a) {
-                if (index > 0)
-                    result += separator;
-                result += selector(a);
-                index++;
-            });
-            return result;
-        };
-        /****************************************/
-        Linq.prototype.orderBy = function (selector) {
-            var result = this.toArray();
-            result.sort(function (a, b) {
-                var itemA = selector(a);
-                var itemB = selector(b);
-                return itemA - itemB;
-            });
-            return linq(result);
-        };
-        /****************************************/
-        Linq.prototype.orderByDesc = function (selector) {
-            var result = this.toArray();
-            result.sort(function (a, b) {
-                var itemA = selector(a);
-                var itemB = selector(b);
-                return itemB - itemA;
-            });
-            return linq(result);
-        };
-        /****************************************/
-        Linq.prototype.distinct = function (selector) {
-            return linq(new DistinctEnumerator(this._enumerator, selector));
-        };
-        Linq.prototype.groupBy = function (key) {
-            var keys = {};
-            var result = [];
-            if (typeof key == "function") {
-                var keySelector_1 = key;
-                this.foreach(function (item) {
-                    var itemKey = keySelector_1(item);
-                    var groupItem = linq(result).first(function (a) { return a.key == itemKey; });
-                    if (!groupItem) {
-                        groupItem = {
-                            key: itemKey,
-                            values: linq(new ArrayEnumerator([]))
-                        };
-                        result.push(groupItem);
-                    }
-                    groupItem.values._enumerator.toArray().push(item);
-                });
-            }
-            return linq(result);
-        };
-        /****************************************/
-        Linq.prototype.indexOf = function (condition) {
-            var index = 0;
-            this._enumerator.reset();
-            while (this._enumerator.moveNext()) {
-                if (condition(this._enumerator.current))
-                    return index;
-                index++;
-            }
-        };
-        /****************************************/
-        Linq.prototype.foreach = function (action) {
-            this._enumerator.reset();
-            while (this._enumerator.moveNext())
-                action(this._enumerator.current);
-            return this;
-        };
-        /****************************************/
-        Linq.prototype.any = function (condition) {
-            if (!condition)
-                return this._enumerator.moveNext();
-            return this.where(condition).any();
-        };
-        /****************************************/
-        Linq.prototype.contains = function (item, comparer) {
-            if (!comparer)
-                comparer = function (a, b) { return a == b; };
-            this._enumerator.reset();
-            while (this._enumerator.moveNext())
-                if (comparer(this._enumerator.current, item))
-                    return true;
-            return false;
-        };
-        /****************************************/
-        Linq.prototype.all = function (condition) {
-            return !this.where(function (a) { return !condition(a); }).any();
-        };
-        /****************************************/
-        Linq.prototype.take = function (count) {
-            return linq(new TakeEnumerator(this._enumerator, count));
-        };
-        /****************************************/
-        Linq.prototype.skip = function (count) {
-            return linq(new SkipEnumerator(this._enumerator, count));
-        };
-        /****************************************/
-        Linq.prototype.replace = function (condition, newItem) {
-            if (!(this._enumerator instanceof ArrayEnumerator))
-                throw "Invalid enumerator, expected array";
-            var items = this._enumerator.toArray();
-            for (var i = 0; i < items.length; i++) {
-                if (condition[items[i]])
-                    items[i] == newItem;
-            }
-        };
-        /****************************************/
-        Linq.prototype.toArray = function () {
-            if (this._enumerator.toArray)
-                return this._enumerator.toArray();
-            var result = [];
-            this.foreach(function (a) { return result.push(a); });
-            return result;
-        };
-        /****************************************/
-        Linq.prototype.getEnumerator = function () {
-            return this._enumerator;
-        };
-        /****************************************/
-        Linq.prototype[Symbol.iterator] = function () {
-            var _this = this;
-            this._enumerator.reset();
-            return ({
-                next: function (value) {
-                    return {
-                        done: !_this._enumerator.moveNext(),
-                        value: _this._enumerator.current
-                    };
-                }
-            });
-        };
-        return Linq;
-    }());
-    GeoPlot.Linq = Linq;
-    function linq(value) {
-        var enumerator;
-        if (!value)
-            enumerator = new EmptyEnumerator();
-        else if (Array.isArray(value))
-            enumerator = new ArrayEnumerator(value);
-        else if ("getEnumerator" in value)
-            enumerator = value.getEnumerator();
-        else if ("item" in value)
-            enumerator = new CollectionEnumerator(value);
-        else if ("next" in value && typeof (value["next"]) == "function")
-            enumerator = new IteratorEnumerator(value);
-        else if ("current" in value && "reset" in value && "moveNext" in value)
-            enumerator = value;
-        else
-            enumerator = new DictionaryEnumerator(value);
-        return new Linq(enumerator);
-    }
-    GeoPlot.linq = linq;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var MathUtils = /** @class */ (function () {
-        function MathUtils() {
-        }
-        MathUtils.discretize = function (value, steps) {
-            return Math.round(value * steps) / steps;
-        };
-        /****************************************/
-        MathUtils.round = function (value, digits) {
-            return Math.round(value * Math.pow(10, digits)) / Math.pow(10, digits);
-        };
-        /****************************************/
-        MathUtils.exponential = function (value, weight) {
-            if (weight === void 0) { weight = 2; }
-            return 1 - Math.pow(1 - value, weight);
-        };
-        return MathUtils;
-    }());
-    GeoPlot.MathUtils = MathUtils;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var StringUtils = /** @class */ (function () {
-        function StringUtils() {
-        }
-        StringUtils.random = function (length) {
-            var result = "";
-            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            for (var i = 0; i < length; i++)
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            return result;
-        };
-        /****************************************/
-        StringUtils.repeat = function (value, count) {
-            var result = "";
-            for (var i = 0; i < count; i++)
-                result += value;
-            return result;
-        };
-        /****************************************/
-        StringUtils.padLeft = function (value, count, char) {
-            if (value == null)
-                return;
-            if (value.length >= count)
-                return value;
-            return this.repeat(char, count - value.length) + value;
-        };
-        /****************************************/
-        StringUtils.padRight = function (value, count, char) {
-            if (value == null)
-                return;
-            if (value.length >= count)
-                return value;
-            return value + this.repeat(char, count - value.length);
-        };
-        return StringUtils;
-    }());
-    GeoPlot.StringUtils = StringUtils;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var TimeSpan = /** @class */ (function () {
-        function TimeSpan(ticks) {
-            if (ticks === void 0) { ticks = 0; }
-            this.ticks = ticks;
-        }
-        Object.defineProperty(TimeSpan.prototype, "totalDays", {
-            /****************************************/
-            get: function () {
-                return this.ticks / (1000 * 60 * 60 * 24);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "totalHours", {
-            /****************************************/
-            get: function () {
-                return this.ticks / (1000 * 60 * 60);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "totalMinutes", {
-            /****************************************/
-            get: function () {
-                return this.ticks / (1000 * 60);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "totalSeconds", {
-            /****************************************/
-            get: function () {
-                return this.ticks / (1000);
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "totalMilliseconds", {
-            /****************************************/
-            get: function () {
-                return this.ticks;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "days", {
-            /****************************************/
-            get: function () {
-                return Math.floor(this.ticks / (1000 * 60 * 60 * 24));
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "hours", {
-            /****************************************/
-            get: function () {
-                return Math.floor(this.ticks / (1000 * 60 * 60)) % 24;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "minutes", {
-            /****************************************/
-            get: function () {
-                return Math.floor(this.ticks / (1000 * 60)) % 60;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "seconds", {
-            /****************************************/
-            get: function () {
-                return Math.floor(this.ticks / (1000)) % 60;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(TimeSpan.prototype, "milliseconds", {
-            /****************************************/
-            get: function () {
-                return this.ticks % 1000;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        /****************************************/
-        TimeSpan.prototype.format = function (format) {
-            var _this = this;
-            return GeoPlot.Format.replaceArgs(format, function (arg) { return TimeSpan.formatArgument(_this, arg); });
-        };
-        /****************************************/
-        TimeSpan.prototype.toString = function () {
-            return this.format("{hh}:{mm}:{ss}");
-        };
-        /****************************************/
-        TimeSpan.zero = function () {
-            return new TimeSpan(0);
-        };
-        /****************************************/
-        TimeSpan.fromMilliseconds = function (value) {
-            return new TimeSpan(value);
-        };
-        /****************************************/
-        TimeSpan.fromSeconds = function (value) {
-            return new TimeSpan(value * 1000);
-        };
-        /****************************************/
-        TimeSpan.fromMinutes = function (value) {
-            return new TimeSpan(value * 1000 * 60);
-        };
-        /****************************************/
-        TimeSpan.fromHours = function (value) {
-            return new TimeSpan(value * 1000 * 60 * 60);
-        };
-        /****************************************/
-        TimeSpan.fromDays = function (value) {
-            return new TimeSpan(value * 1000 * 60 * 60 * 24);
-        };
-        /****************************************/
-        TimeSpan.create = function (days, hours, minutes, seconds, milliseconds) {
-            if (days === void 0) { days = 0; }
-            if (hours === void 0) { hours = 0; }
-            if (minutes === void 0) { minutes = 0; }
-            if (seconds === void 0) { seconds = 0; }
-            if (milliseconds === void 0) { milliseconds = 0; }
-            return new TimeSpan((days * 1000 * 60 * 60 * 24) +
-                (hours * 1000 * 60 * 60) +
-                (minutes * 1000 * 60) +
-                (seconds * 1000) +
-                (milliseconds));
-        };
-        /****************************************/
-        TimeSpan.formatArgument = function (value, arg) {
-            switch (arg) {
-                case "d":
-                    return value.days.toString();
-                case "dd":
-                    return GeoPlot.StringUtils.padLeft(value.days.toString(), 2, "0");
-                case "h":
-                    return value.hours.toString();
-                case "hh":
-                    return GeoPlot.StringUtils.padLeft(value.hours.toString(), 2, "0");
-                case "m":
-                    return value.minutes.toString();
-                case "mm":
-                    return GeoPlot.StringUtils.padLeft(value.minutes.toString(), 2, "0");
-                case "s":
-                    return value.seconds.toString();
-                case "ss":
-                    return GeoPlot.StringUtils.padLeft(value.seconds.toString(), 2, "0");
-                case "f":
-                    return (value.milliseconds / 100).toString();
-                case "ff":
-                    return (value.milliseconds / 10).toString();
-                case "fff":
-                    return value.milliseconds.toString();
-            }
-            return arg;
-        };
-        return TimeSpan;
-    }());
-    GeoPlot.TimeSpan = TimeSpan;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
-    var Uri = /** @class */ (function () {
-        function Uri() {
-        }
-        /****************************************/
-        Uri.absolute = function (uri) {
-            if (uri.substr(0, 2) == "./" || uri.substr(0, 2) == "~/")
-                return this.getAbsoluteSegment(document.URL) + this.appRoot.substr(1) + uri.substr(2);
-            else if (uri.substr(0, 1) == "/")
-                return this.getAbsoluteSegment(document.URL) + uri.substr(1);
-            else if (this.isAbsolute(uri))
-                return uri;
-            return this.getRelativeSegment(document.URL) + uri.substr(1);
-        };
-        /****************************************/
-        Uri.isAbsolute = function (uri) {
-            return uri.indexOf("://") != -1;
-        };
-        /****************************************/
-        Uri.getRelativeSegment = function (uri) {
-            if (!this._relativeSegment) {
-                this._relativeSegment = "";
-                var index = uri.lastIndexOf("/");
-                if (index != -1)
-                    this._relativeSegment = uri.substr(0, index + 1);
-            }
-            return this._relativeSegment;
-        };
-        /****************************************/
-        Uri.getAbsoluteSegment = function (uri) {
-            if (!this._absoluteSegment) {
-                this._absoluteSegment = "";
-                var index = uri.indexOf("://");
-                if (index != -1) {
-                    index = uri.indexOf("/", index + 4);
-                    if (index != -1)
-                        this._absoluteSegment = uri.substr(0, index + 1);
-                }
-            }
-            return this._absoluteSegment;
-        };
-        Uri.appRoot = "";
-        return Uri;
-    }());
-    GeoPlot.Uri = Uri;
-})(GeoPlot || (GeoPlot = {}));
-var GeoPlot;
-(function (GeoPlot) {
+    };
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
     /****************************************/
     var IndicatorViewModel = /** @class */ (function () {
         function IndicatorViewModel() {
@@ -1833,8 +585,8 @@ var GeoPlot;
             this._element = document.querySelector(this.value.elementSelector);
             if (!this._element)
                 return;
-            var relY = centerElement(this._element);
-            GeoPlot.DomUtils.addClass(this._element, "pulse");
+            var relY = WebApp.DomUtils.centerElement(this._element);
+            WebApp.DomUtils.addClass(this._element, "pulse");
             var tipElement = document.querySelector(".tip-container");
             if (relY < (tipElement.clientTop + tipElement.clientHeight))
                 this.isTransparent(true);
@@ -1843,7 +595,7 @@ var GeoPlot;
         TipViewModel.prototype.stopPulse = function () {
             if (!this._element)
                 return;
-            GeoPlot.DomUtils.removeClass(this._element, "pulse");
+            WebApp.DomUtils.removeClass(this._element, "pulse");
             this.isTransparent(false);
         };
         /****************************************/
@@ -1874,26 +626,12 @@ var GeoPlot;
         return TipViewModel;
     }());
     /****************************************/
-    function centerElement(element, always) {
-        if (always === void 0) { always = true; }
-        var topOfPage = document.documentElement.scrollTop;
-        var heightOfPage = window.innerHeight;
-        var elY = 0;
-        var elH = 0;
-        for (var p = element; p && p != document.body; p = p.offsetParent)
-            elY += p.offsetTop;
-        elH = element.offsetHeight;
-        if (always || elY + elH > topOfPage + heightOfPage || elY < topOfPage)
-            document.documentElement.scrollTop = Math.max(0, elY - (heightOfPage - elH) / 2);
-        return elY - document.documentElement.scrollTop;
-    }
-    /****************************************/
     var GeoPlotPage = /** @class */ (function () {
         function GeoPlotPage(model) {
             var _this = this;
             this._topAreasVisible = false;
             this._execludedArea = new Map();
-            this._dataSet = GeoPlot.InfectionDataSet;
+            this._dataSet = WebApp.InfectionDataSet;
             this._keepState = false;
             this._debugMode = false;
             this._tips = {
@@ -1917,7 +655,7 @@ var GeoPlot;
                     showAction: function () {
                         if (!_this.currentArea())
                             _this._tips.areaSelected.showAction();
-                        _this.selectedIndicator(GeoPlot.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalDeath"; }));
+                        _this.selectedIndicator(WebApp.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalDeath"; }));
                     }
                 },
                 dayChanged: {
@@ -1980,8 +718,8 @@ var GeoPlot;
                     showAction: function () {
                         if (!_this.currentArea())
                             _this._tips.areaSelected.showAction();
-                        _this.selectedIndicator(GeoPlot.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalPositive"; }));
-                        _this.selectedFactor(GeoPlot.linq(_this._dataSet.factors).first(function (a) { return a.id == "population"; }));
+                        _this.selectedIndicator(WebApp.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalPositive"; }));
+                        _this.selectedFactor(WebApp.linq(_this._dataSet.factors).first(function (a) { return a.id == "population"; }));
                     }
                 },
                 groupChanged: {
@@ -2026,7 +764,7 @@ var GeoPlot;
                     showAction: function () {
                         if (!_this.currentArea())
                             _this._tips.areaSelected.showAction();
-                        _this.selectedIndicator(GeoPlot.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalPositive"; }));
+                        _this.selectedIndicator(WebApp.linq(_this._dataSet.indicators).first(function (a) { return a.id == "totalPositive"; }));
                         _this.autoMaxFactor(false);
                         _this.maxFactor(1000);
                     }
@@ -2090,7 +828,7 @@ var GeoPlot;
             this._mapSvg.addEventListener("click", function (e) { return _this.onMapClick(e); });
             this.days = [];
             for (var i = 0; i < this._data.days.length; i++)
-                this.days.push({ number: i, value: new Date(this._data.days[i].date), text: GeoPlot.DateUtils.format(this._data.days[i].date, "{DD}/{MM}") });
+                this.days.push({ number: i, value: new Date(this._data.days[i].date), text: WebApp.DateUtils.format(this._data.days[i].date, "{DD}/{MM}") });
             M.Tooltip.init(document.querySelectorAll(".tooltipped"));
             M.Sidenav.init(document.getElementById("mobile-menu"));
             var areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
@@ -2107,10 +845,10 @@ var GeoPlot;
             topCasesView.options.onCloseEnd = function () {
                 _this._topAreasVisible = false;
             };
-            this.indicators = ko.computed(function () { return GeoPlot.linq(_this._dataSet.indicators)
+            this.indicators = ko.computed(function () { return WebApp.linq(_this._dataSet.indicators)
                 .where(function (a) { return !a.validFor || a.validFor.indexOf(_this.viewMode()) != -1; })
                 .toArray(); });
-            this.factors = ko.computed(function () { return GeoPlot.linq(_this._dataSet.factors)
+            this.factors = ko.computed(function () { return WebApp.linq(_this._dataSet.factors)
                 .where(function (a) { return !a.validFor || a.validFor.indexOf(_this.viewMode()) != -1; })
                 .toArray(); });
             this.selectedIndicator.subscribe(function (value) {
@@ -2181,13 +919,14 @@ var GeoPlot;
             setTimeout(function () { return _this.loadState(state); }, 0);
             if (!this._debugMode)
                 window.addEventListener("beforeunload", function () { return _this.savePreferences(); });
+            //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
         }
         /****************************************/
         GeoPlotPage.prototype.engageUser = function () {
             var _this = this;
             if (this._preferences.showTips != undefined && !this._preferences.showTips)
                 return;
-            var nextTip = GeoPlot.linq(this._tips).where(function (a) { return a.value.showAfter > 0 && _this._preferences.actions[a.key] == 0; }).first();
+            var nextTip = WebApp.linq(this._tips).where(function (a) { return a.value.showAfter > 0 && _this._preferences.actions[a.key] == 0; }).first();
             if (!this.showTip(nextTip.key, {
                 onClose: function () { return _this.engageUser(); },
                 timeout: nextTip.value.showAfter,
@@ -2198,6 +937,8 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.showTip = function (tipId, options) {
             var _this = this;
+            if (this._preferences.showTips != undefined && !this._preferences.showTips)
+                return false;
             if (options && !options.override && this.tip() && this.tip().isVisible())
                 return false;
             if (options && !options.force && this._preferences.actions[tipId])
@@ -2206,10 +947,12 @@ var GeoPlot;
             var model = new TipViewModel(tip);
             model.dontShowAgain = function () {
                 _this._preferences.showTips = false;
+                _this.savePreferences();
                 model.close();
             };
             model.understood = function () {
                 _this._preferences.actions[tipId]++;
+                _this.savePreferences();
                 model.close();
             };
             model.onClose = function () {
@@ -2217,7 +960,7 @@ var GeoPlot;
                 if (options && options.onClose)
                     options.onClose();
             };
-            var nextTip = GeoPlot.linq(this._tips).where(function (a) { return a.value.order > tip.order && _this._preferences.actions[a.key] == 0; }).first();
+            var nextTip = WebApp.linq(this._tips).where(function (a) { return a.value.order > tip.order && _this._preferences.actions[a.key] == 0; }).first();
             if (nextTip) {
                 model.next = function () {
                     model.close();
@@ -2252,7 +995,7 @@ var GeoPlot;
             if (!state.view)
                 state.view = "region";
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
-            viewTabs.select(GeoPlot.ViewModes[state.view].tab);
+            viewTabs.select(WebApp.ViewModes[state.view].tab);
             document.body.scrollTop = 0;
             if (state.logScale != undefined)
                 this.isLogScale(state.logScale);
@@ -2286,9 +1029,9 @@ var GeoPlot;
                 }
             }
             if (state.indicator)
-                this.selectedIndicator(GeoPlot.linq(this._dataSet.indicators).first(function (a) { return a.id == state.indicator; }));
+                this.selectedIndicator(WebApp.linq(this._dataSet.indicators).first(function (a) { return a.id == state.indicator; }));
             if (state.factor)
-                this.selectedFactor(GeoPlot.linq(this._dataSet.factors).first(function (a) { return a.id == state.factor; }));
+                this.selectedFactor(WebApp.linq(this._dataSet.factors).first(function (a) { return a.id == state.factor; }));
             if (state.area)
                 this.selectedArea = this._geo.areas[state.area.toLowerCase()];
         };
@@ -2305,35 +1048,51 @@ var GeoPlot;
                 groupSize: this.groupSize() == 1 ? undefined : this.groupSize(),
                 startDay: this.startDay() == 0 ? undefined : this.startDay(),
                 logScale: this.isLogScale() ? true : undefined,
-                excludedArea: this._execludedArea.size > 0 ? GeoPlot.linq(this._execludedArea.keys()).toArray() : undefined,
+                excludedArea: this._execludedArea.size > 0 ? WebApp.linq(this._execludedArea.keys()).toArray() : undefined,
                 showEnvData: this.isShowEnvData() ? true : undefined
             };
         };
         /****************************************/
         GeoPlotPage.prototype.loadPreferences = function () {
             var json = localStorage.getItem("preferences");
-            if (!json || this._debugMode)
-                this._preferences = {
-                    isFirstView: true,
-                    showTips: true,
-                    actions: {
-                        areaSelected: 0,
-                        indicatorSelected: 0,
-                        indicatorChanged: 0,
-                        dayChanged: 0,
-                        viewChanged: 0,
-                        chartActionExecuted: 0,
-                        factorChanged: 0,
-                        groupChanged: 0,
-                        maxFactorChanged: 0,
-                        scaleChanged: 0,
-                        topAreasOpened: 0,
-                        deltaSelected: 0,
-                        regionExcluded: 0
-                    }
-                };
+            if (json) {
+                try {
+                    this._preferences = JSON.parse(json);
+                }
+                catch (_a) {
+                }
+                if (!this._preferences || this._preferences.version != 1) {
+                    this._preferences = this.getDefaultPreferences();
+                    this._preferences.isFirstView = false;
+                    this._preferences.showTips = false;
+                    this.savePreferences();
+                }
+            }
             else
-                this._preferences = JSON.parse(json);
+                this._preferences = this.getDefaultPreferences();
+        };
+        /****************************************/
+        GeoPlotPage.prototype.getDefaultPreferences = function () {
+            return ({
+                isFirstView: true,
+                showTips: true,
+                version: 1,
+                actions: {
+                    areaSelected: 0,
+                    indicatorSelected: 0,
+                    indicatorChanged: 0,
+                    dayChanged: 0,
+                    viewChanged: 0,
+                    chartActionExecuted: 0,
+                    factorChanged: 0,
+                    groupChanged: 0,
+                    maxFactorChanged: 0,
+                    scaleChanged: 0,
+                    topAreasOpened: 0,
+                    deltaSelected: 0,
+                    regionExcluded: 0
+                }
+            });
         };
         /****************************************/
         GeoPlotPage.prototype.savePreferences = function () {
@@ -2344,6 +1103,57 @@ var GeoPlot;
         GeoPlotPage.prototype.toggleChartZoom = function () {
             this._preferences.actions.chartActionExecuted++;
             this.isZoomChart(!this.isZoomChart());
+        };
+        /****************************************/
+        GeoPlotPage.prototype.copyMap = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                var element, svgText, blob, svgImage_1, element_1;
+                return __generator(this, function (_a) {
+                    element = document.querySelector("svg.map");
+                    svgText = element.outerHTML;
+                    blob = new Blob([svgText], { type: "image/svg+xml" });
+                    if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
+                        svgImage_1 = document.createElement('img');
+                        svgImage_1.style.width = element.clientWidth + "px";
+                        svgImage_1.style.height = element.clientHeight + "px";
+                        svgImage_1.onload = function () {
+                            var _this = this;
+                            var canvas = document.createElement("canvas");
+                            canvas.width = element.clientWidth;
+                            canvas.height = element.clientHeight;
+                            var ctx = canvas.getContext("2d");
+                            ctx.fillStyle = "white";
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(svgImage_1, 0, 0);
+                            canvas.toBlob(function (pngBlob) { return __awaiter(_this, void 0, void 0, function () {
+                                var item;
+                                var _a;
+                                return __generator(this, function (_b) {
+                                    switch (_b.label) {
+                                        case 0:
+                                            item = new ClipboardItem((_a = {}, _a[pngBlob.type] = pngBlob, _a));
+                                            return [4 /*yield*/, navigator.clipboard.write([item])];
+                                        case 1:
+                                            _b.sent();
+                                            M.toast({ html: "Mappa copiata negli appunti." });
+                                            return [2 /*return*/];
+                                    }
+                                });
+                            }); });
+                        };
+                        svgImage_1.src = window.URL.createObjectURL(blob);
+                    }
+                    else {
+                        element_1 = document.createElement("a");
+                        element_1.href = window.URL.createObjectURL(blob);
+                        element_1.target = "_blan";
+                        element_1.download = "map.svg";
+                        element_1.click();
+                        M.toast({ html: "Funzionalità non supportata, download in corso." });
+                    }
+                    return [2 /*return*/];
+                });
+            });
         };
         /****************************************/
         GeoPlotPage.prototype.copyChart = function () {
@@ -2384,8 +1194,8 @@ var GeoPlot;
                     data = this._chart.data.datasets[0].data;
                     text = "";
                     for (i = 0; i < data.length; i++)
-                        text += GeoPlot.DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + GeoPlot.MathUtils.round(data[i].y, 1) + "\n";
-                    GeoPlot.DomUtils.copyText(text);
+                        text += WebApp.DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + WebApp.MathUtils.round(data[i].y, 1) + "\n";
+                    WebApp.DomUtils.copyText(text);
                     M.toast({ html: "Serie copiata sugli appunti." });
                     this._preferences.actions.chartActionExecuted++;
                     return [2 /*return*/];
@@ -2394,6 +1204,8 @@ var GeoPlot;
         };
         /****************************************/
         GeoPlotPage.prototype.play = function () {
+            if (this.dayNumber() == this._data.days.length - 1)
+                this.dayNumber(0);
             this.isPlaying(true);
             this.nextFrame();
         };
@@ -2505,7 +1317,7 @@ var GeoPlot;
         GeoPlotPage.prototype.getIndicatorValue = function (dayNumber, areaOrId, indicatorId) {
             var _this = this;
             var areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
-            var indicator = GeoPlot.linq(this._dataSet.indicators).first(function (a) { return a.id == indicatorId; });
+            var indicator = WebApp.linq(this._dataSet.indicators).first(function (a) { return a.id == indicatorId; });
             var dataAtDay = function (number, curAreaId) {
                 return number < 0 ? undefined : _this._data.days[number].values[curAreaId];
             };
@@ -2567,10 +1379,10 @@ var GeoPlot;
             if (!this.isPlaying())
                 return;
             if (this.dayNumber() >= this._data.days.length - 1)
-                this.dayNumber(0);
+                this.pause();
             else
                 this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
-            setTimeout(function () { return _this.nextFrame(); }, 100);
+            setTimeout(function () { return _this.nextFrame(); }, 1000);
         };
         /****************************************/
         GeoPlotPage.prototype.changeArea = function () {
@@ -2697,7 +1509,7 @@ var GeoPlot;
             if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
                 return;
             var result = Number.NEGATIVE_INFINITY;
-            var curView = GeoPlot.ViewModes[this.viewMode()];
+            var curView = WebApp.ViewModes[this.viewMode()];
             for (var i = 0; i < this._data.days.length; i++) {
                 var day = this._data.days[i];
                 for (var areaId in day.values) {
@@ -2763,7 +1575,7 @@ var GeoPlot;
                     tooltips: {
                         callbacks: {
                             label: function (t, d) {
-                                return t.xLabel + ": " + GeoPlot.MathUtils.round(parseFloat(t.value), 1);
+                                return t.xLabel + ": " + WebApp.MathUtils.round(parseFloat(t.value), 1);
                             }
                         }
                     },
@@ -2841,7 +1653,7 @@ var GeoPlot;
             }
             value.data(day.values[id]);
             value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
-            value.factor(GeoPlot.MathUtils.round(this.getFactorValue(dayNumber, area), 1));
+            value.factor(WebApp.MathUtils.round(this.getFactorValue(dayNumber, area), 1));
             value.reference(this.selectedFactor().reference(day.values[id], area));
         };
         /****************************************/
@@ -2851,8 +1663,8 @@ var GeoPlot;
             var _loop_2 = function (i) {
                 var day = this_1._data.days[i];
                 var item = {};
-                var isInArea = GeoPlot.ViewModes[this_1.viewMode()].validateId;
-                item.topAreas = GeoPlot.linq(day.values).select(function (a) { return ({
+                var isInArea = WebApp.ViewModes[this_1.viewMode()].validateId;
+                item.topAreas = WebApp.linq(day.values).select(function (a) { return ({
                     factor: _this.getFactorValue(i, a.key),
                     value: a
                 }); })
@@ -2874,7 +1686,7 @@ var GeoPlot;
         /****************************************/
         GeoPlotPage.prototype.updateDayData = function () {
             var day = this._data.days[this.dayNumber()];
-            this.currentData(GeoPlot.DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
+            this.currentData(WebApp.DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
             this.updateMap();
             this.updateArea(this.currentArea());
             this.updateAreaIndicators();
@@ -2887,7 +1699,7 @@ var GeoPlot;
             if (!this._keepState)
                 return;
             var state = this.saveStata();
-            var url = GeoPlot.Uri.appRoot + "Overview";
+            var url = WebApp.app.appRoot + "Overview";
             if (!this.isDefaultState(state))
                 url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
             history.replaceState(null, null, url);
@@ -2910,12 +1722,12 @@ var GeoPlot;
                 return;
             if (this.viewMode() != "country") {
                 var day = this._data.days[this.dayNumber()];
-                var gradient = new GeoPlot.LinearGradient("#fff", this.selectedIndicator().colorDark);
+                var gradient = new WebApp.LinearGradient("#fff", this.selectedIndicator().colorDark);
                 for (var key in day.values) {
                     var element = document.getElementById(key.toUpperCase());
                     if (element) {
                         var area = this._geo.areas[key];
-                        if (area.type != GeoPlot.ViewModes[this.viewMode()].areaType)
+                        if (area.type != WebApp.ViewModes[this.viewMode()].areaType)
                             continue;
                         var factor = this.getFactorValue(this.dayNumber(), area);
                         if (factor == Number.POSITIVE_INFINITY)
@@ -2930,7 +1742,7 @@ var GeoPlot;
                         else {
                             if (!element.classList.contains("valid"))
                                 element.classList.add("valid");
-                            var value = GeoPlot.MathUtils.discretize(GeoPlot.MathUtils.exponential(factor), 20);
+                            var value = WebApp.MathUtils.discretize(WebApp.MathUtils.exponential(factor), 20);
                             //element.style.fillOpacity = value.toString();
                             element.style.fill = gradient.valueAt(factor).toString();
                         }
@@ -2938,7 +1750,7 @@ var GeoPlot;
                 }
             }
             else {
-                GeoPlot.linq(document.querySelectorAll("g.region")).foreach(function (element) {
+                WebApp.linq(document.querySelectorAll("g.region")).foreach(function (element) {
                     if (_this._execludedArea.has(element.id))
                         element.style.fill = "#444";
                     else
@@ -2948,6 +1760,6 @@ var GeoPlot;
         };
         return GeoPlotPage;
     }());
-    GeoPlot.GeoPlotPage = GeoPlotPage;
-})(GeoPlot || (GeoPlot = {}));
+    WebApp.GeoPlotPage = GeoPlotPage;
+})(WebApp || (WebApp = {}));
 //# sourceMappingURL=app.js.map

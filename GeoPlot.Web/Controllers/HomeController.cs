@@ -31,7 +31,7 @@ namespace GeoPlot.Web.Controllers
             return RedirectToAction("Overview");
         }
 
-        [ResponseCache(Duration = 3600, VaryByHeader ="X-App-Version")]
+        //[ResponseCache(Duration = 3600, VaryByHeader ="X-App-Version")]
         public async Task<IActionResult> Overview(string state)
         {
             var lastUpdate = await GetLastCommit();
@@ -120,8 +120,13 @@ namespace GeoPlot.Web.Controllers
 
                 foreach (var area in day.GroupBy(a => a.AreaId))
                 {
-                    var value = area.OrderByDescending(a => a.Date).First();
-                    item.Values[area.Key] = value.Value;
+                    if (area.Key == "R4")
+                        item.Values[area.Key] = InfectionData.Combine(area.Select(a => a.Value));
+                    else
+                    {
+                        var value = area.OrderByDescending(a => a.Date).First();
+                        item.Values[area.Key] = value.Value;
+                    }
                 }
 
                 result.Days.Add(item);

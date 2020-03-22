@@ -481,7 +481,20 @@ ul.collapsible li {
         }
     }
 }
+
 /****************************************/
+
+.map-container{
+    position: relative;
+
+    .actions{
+        position: absolute;
+        right: 0;
+    }
+}
+
+/****************************************/
+
 svg.map {
     width: 50vh;
     max-width: 100%;

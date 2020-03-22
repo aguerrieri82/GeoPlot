@@ -55,15 +55,15 @@
                 <ul id="nav-mobile" class="right hide-on-med-and-down">
                     @foreach (var item in menu)
                     {
-                    <li class="@Html.ActiveClass(item.Action, item.Controller)">
-                        <a asp-controller="@item.Controller" asp-action="@item.Action">
-                            @if (item.Icon != null)
-                        {
-                            <i class="material-icons left">@item.Icon</i>
-    }
-                            @item.Name
-                        </a>
-                    </li>
+                        <li class="@Html.ActiveClass(item.Action, item.Controller)">
+                            <a asp-controller="@item.Controller" asp-action="@item.Action">
+                                @if (item.Icon != null)
+                                {
+                                    <i class="material-icons left">@item.Icon</i>
+                                }
+                                @item.Name
+                            </a>
+                        </li>
                     }
                     <li><a href="https://youtu.be/6GxybVPwiDc" target="_blank"><i class="material-icons left">help</i>Guida</a></li>
                 </ul>
@@ -73,17 +73,17 @@
     </header>
     <ul class="sidenav" id="mobile-menu">
         @foreach (var item in menu)
-            {
-        <li class="@Html.ActiveClass(item.Action, item.Controller)">
-            <a asp-controller="@item.Controller" asp-action="@item.Action">
-                @if (item.Icon != null)
-                        {
-                <i class="material-icons left">@item.Icon</i>
-    }
-                @item.Name
-            </a>
-        </li>
-            }
+        {
+            <li class="@Html.ActiveClass(item.Action, item.Controller)">
+                <a asp-controller="@item.Controller" asp-action="@item.Action">
+                    @if (item.Icon != null)
+                    {
+                        <i class="material-icons left">@item.Icon</i>
+                    }
+                    @item.Name
+                </a>
+            </li>
+        }
         <li><a href="https://youtu.be/6GxybVPwiDc" target="_blank"><i class="material-icons left">help</i>Guida</a></li>
     </ul>
     <main role="main">
@@ -102,11 +102,17 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.debug.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js"></script>
+    <script type="text/javascript">
+        if (!("Promise" in self))
+            document.write("<script src='@Url.Content("https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js")'><\/script>");
+        if (!("Symbol" in self))
+            self["Symbol"] = { iterator: "$iterator" };
+    </script>
     <environment include="Production">
         <script src="~/js/app.min.js" asp-append-version="true"></script>
     </environment>
     <environment include="Development">
+        <script src="~/lib/webapp/webapp.core.js" asp-append-version="true"></script>
         <script src="~/js/app.js" asp-append-version="true"></script>
     </environment>
 

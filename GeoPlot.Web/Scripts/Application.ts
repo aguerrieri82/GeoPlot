@@ -1,24 +1,23 @@
-﻿
-/// <reference path="Framework/HttpClient.ts" />
-/// <reference path="Framework/Services.ts" />
+﻿namespace WebApp {
 
-namespace GeoPlot {
+    class GeoPlotApplication {
 
-    class Application {
-
-        constructor(){
+        constructor() {
+            
         }
 
         /****************************************/
 
         initServices() {
 
-            Services.httpClient = new XHRHttpClient();
+            Services.httpClient = new XHRHttpClient(); 
         }
+
+        appRoot: string;
     }
 
     /****************************************/
 
-    export var app = new Application();
+    export var app = new GeoPlotApplication();
 }
  

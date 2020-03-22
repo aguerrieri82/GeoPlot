@@ -21,7 +21,66 @@
                     <div id="districtTab" data-view-mode="district"></div>
                     <div id="italyTab" data-view-mode="country"></div>
                     <div class="center-align map-container">
-                        <svg class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+                        <div class="actions">
+                            <a href="#!" title="Copia mappa" data-bind="click: copyMap"><i class="material-icons">image</i></a>
+                        </div>
+                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+                            <style type="text/css">
+                                svg.map .environment > circle {
+                                    stroke: #000;
+                                    stroke-width: 500;
+                                    fill-opacity: 0.7;
+                                }
+
+                                svg.map .group .area {
+                                    fill: none;
+                                }
+
+                                    svg.map .group .area.region {
+                                        stroke: #000;
+                                        stroke-width: 0.2%;
+                                    }
+
+                                    svg.map .group .area.district {
+                                        stroke: #999;
+                                        stroke-width: 0.05%;
+                                    }
+
+                                svg.map .group.active .area {
+                                    fill: white;
+                                }
+
+                                    svg.map .group.active .area.region {
+                                        stroke-width: 0.15%;
+                                    }
+                            </style>
+                            <style type="text/css">
+                                .good {
+                                    fill: #4caf50;
+                                    background-color: #4caf50;
+                                }
+
+                                .medium {
+                                    fill: #ffeb3b;
+                                    background-color: #ffeb3b;
+                                }
+
+                                .bad {
+                                    fill: #ff9800;
+                                    background-color: #ff9800;
+                                }
+
+                                .sever {
+                                    fill: #f44336;
+                                    background-color: #f44336;
+                                }
+
+                                .verysevere {
+                                    fill: #9c27b0;
+                                    background-color: #9c27b0;
+                                }
+
+                            </style>
                             @foreach (var areaType in typeOrder)
                             {
                                 <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: viewMode() == '@(areaType.ToString().ToLower())'}">
@@ -44,6 +103,7 @@
                                 }
                             </g>
                         </svg>
+
                     </div>
                 </div>
             </section>
@@ -150,7 +210,7 @@
                     <div class="empty-text flex-row-inline item-margin-small">
                         <i class="material-icons small orange-text">warning</i>
                         <div>
-                            Selezionare una <span data-bind="text: GeoPlot.ViewModes[viewMode()].label.singular"></span>  per vedere gli indicatori
+                            Selezionare una <span data-bind="text: WebApp.ViewModes[viewMode()].label.singular"></span>  per vedere gli indicatori
                         </div>
                     </div>
                     <!--/ko-->
@@ -202,7 +262,7 @@
             <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
                 <li>
                     <div class="card-title collapsible-header">
-                        <span data-bind="text: capitalizeFirst(GeoPlot.ViewModes[viewMode()].label.plural)"></span>&nbsp;più colpite
+                        <span data-bind="text: capitalizeFirst(WebApp.ViewModes[viewMode()].label.plural)"></span>&nbsp;più colpite
                         <i class="material-icons">chevron_right</i>
                     </div>
                     <div class="collapsible-body">
@@ -318,8 +378,8 @@
 
 @section Scripts {
     <script>
-        GeoPlot.app.initServices();
-        GeoPlot.Uri.appRoot = '@Url.Content("~/")';
-        ko.applyBindings(new GeoPlot.GeoPlotPage(@Html.Json(Model)));
+        WebApp.app.appRoot = '@Url.Content("~/")';
+        WebApp.app.initServices();
+        ko.applyBindings(new WebApp.GeoPlotPage(@Html.Json(Model)));
     </script>
 }

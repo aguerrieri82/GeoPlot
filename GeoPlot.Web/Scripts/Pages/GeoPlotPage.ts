@@ -1,4 +1,4 @@
-﻿namespace GeoPlot {
+﻿namespace WebApp {
 
     type TData = IInfectionData;
 
@@ -66,6 +66,7 @@
         isFirstView: boolean;
         showTips: boolean;
         actions: IViewActions<number>;
+        version: number;
     }
 
     /****************************************/
@@ -157,12 +158,12 @@
             this._element = document.querySelector(this.value.elementSelector);
             if (!this._element)
                 return;
-            let relY = centerElement(this._element);
+            let relY = DomUtils.centerElement(this._element);
 
             DomUtils.addClass(this._element, "pulse")
 
             let tipElement = document.querySelector(".tip-container");
-            if (relY < (tipElement.clientTop + tipElement.clientHeight)
+            if (relY < (tipElement.clientTop + tipElement.clientHeight))
                 this.isTransparent(true);
         }
 
@@ -219,27 +220,7 @@
         isTransparent = ko.observable(false);
     }
 
-    /****************************************/
 
-    function centerElement(element: HTMLElement, always = true) : number{
-
-        var topOfPage = document.documentElement.scrollTop;
-        var heightOfPage = window.innerHeight;
-
-        var elY = 0;
-        var elH = 0;
-
-        for (var p = element; p && p != document.body; p = <HTMLElement>p.offsetParent) 
-            elY += p.offsetTop;
-
-        elH = element.offsetHeight;
-
-        if (always || elY + elH > topOfPage + heightOfPage || elY < topOfPage)
-            document.documentElement.scrollTop = Math.max(0, elY - (heightOfPage - elH) / 2);
-
-        return elY - document.documentElement.scrollTop;
-
-    }
 
     /****************************************/
 
@@ -557,6 +538,8 @@
 
             if (!this._debugMode)
                 window.addEventListener("beforeunload", () => this.savePreferences());
+
+            //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
         } 
 
         /****************************************/
@@ -581,6 +564,9 @@
 
         protected showTip(tipId: keyof IViewActions<IViewActionTip>, options?: IShowTipOptions) {
 
+            if (this._preferences.showTips != undefined && !this._preferences.showTips)
+                return false;
+
             if (options && !options.override && this.tip() && this.tip().isVisible())
                 return false;
 
@@ -593,11 +579,13 @@
 
             model.dontShowAgain = () => {
                 this._preferences.showTips = false;
+                this.savePreferences();
                 model.close();
             }
 
             model.understood = () => {
                 this._preferences.actions[tipId]++;
+                this.savePreferences();
                 model.close();
             };
 
@@ -718,28 +706,48 @@
         loadPreferences() {
             let json = localStorage.getItem("preferences");
 
-            if (!json || this._debugMode)
-                this._preferences = {
-                    isFirstView: true,
-                    showTips: true,
-                    actions: {
-                        areaSelected: 0,
-                        indicatorSelected: 0,
-                        indicatorChanged: 0,
-                        dayChanged: 0,
-                        viewChanged: 0,
-                        chartActionExecuted: 0,
-                        factorChanged: 0,
-                        groupChanged: 0,
-                        maxFactorChanged: 0,
-                        scaleChanged: 0,
-                        topAreasOpened: 0,
-                        deltaSelected: 0,
-                        regionExcluded: 0
-                    }
-                };
+            if (json) {
+
+                try {
+                    this._preferences = JSON.parse(json);
+                }
+                catch{
+                }
+
+                if (!this._preferences || this._preferences.version != 1) {
+                    this._preferences = this.getDefaultPreferences();
+                    this._preferences.isFirstView = false;
+                    this._preferences.showTips = false;
+                    this.savePreferences();
+                }
+            }
             else
-                this._preferences = JSON.parse(json);
+                this._preferences = this.getDefaultPreferences();
+        }
+
+        /****************************************/
+
+        protected getDefaultPreferences(): IViewPreferences {
+            return ({
+                isFirstView: true,
+                showTips: true,
+                version: 1,
+                actions: {
+                    areaSelected: 0,
+                    indicatorSelected: 0,
+                    indicatorChanged: 0,
+                    dayChanged: 0,
+                    viewChanged: 0,
+                    chartActionExecuted: 0,
+                    factorChanged: 0,
+                    groupChanged: 0,
+                    maxFactorChanged: 0,
+                    scaleChanged: 0,
+                    topAreasOpened: 0,
+                    deltaSelected: 0,
+                    regionExcluded: 0
+                }
+            });
         }
 
         /****************************************/
@@ -756,6 +764,46 @@
 
             this._preferences.actions.chartActionExecuted++;
             this.isZoomChart(!this.isZoomChart());
+        }
+
+        /****************************************/
+
+        async copyMap() {
+            const element = document.querySelector("svg.map");
+            const svgText = element.outerHTML;
+            const blob = new Blob([svgText], { type: "image/svg+xml" });
+
+            if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
+                const svgImage = document.createElement('img');
+                svgImage.style.width = element.clientWidth + "px";
+                svgImage.style.height = element.clientHeight + "px";
+                svgImage.onload = function () {
+
+                    const canvas = document.createElement("canvas");
+                    canvas.width = element.clientWidth;
+                    canvas.height = element.clientHeight;
+
+                    const ctx = canvas.getContext("2d");
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(svgImage, 0, 0);
+
+                    canvas.toBlob(async pngBlob => {
+                        let item = new ClipboardItem({ [pngBlob.type]: pngBlob });
+                        await navigator.clipboard.write([item]);
+                        M.toast({ html: "Mappa copiata negli appunti." })
+                    })
+                }
+                svgImage.src = window.URL.createObjectURL(blob);
+            }
+            else {
+                const element = document.createElement("a");
+                element.href = window.URL.createObjectURL(blob);
+                element.target = "_blan";
+                element.download = "map.svg";
+                element.click();
+                M.toast({ html: "Funzionalità non supportata, download in corso." })
+            }
         }
 
         /****************************************/
@@ -798,6 +846,8 @@
         /****************************************/
 
         play() {
+            if (this.dayNumber() == this._data.days.length - 1)
+                this.dayNumber(0);
             this.isPlaying(true);
             this.nextFrame();
         }
@@ -1004,11 +1054,11 @@
                 return;
 
             if (this.dayNumber() >= this._data.days.length - 1)
-                this.dayNumber(0);
+                this.pause();
             else
                 this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
 
-            setTimeout(() => this.nextFrame(), 100);
+            setTimeout(() => this.nextFrame(), 1000);
         }
 
         /****************************************/
@@ -1032,7 +1082,6 @@
                 this.updateAreaIndicators();
 
                 this.updateChart();
-
 
                 if (isEmptyArea) {
                     M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
@@ -1385,7 +1434,7 @@
             if (!this._keepState)
                 return;
             const state = this.saveStata();
-            let url = Uri.appRoot + "Overview";
+            let url = app.appRoot + "Overview";
             if (!this.isDefaultState(state))
                 url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
             history.replaceState(null, null, url);

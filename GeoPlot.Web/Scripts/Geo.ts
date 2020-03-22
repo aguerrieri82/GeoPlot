@@ -1,4 +1,4 @@
-﻿namespace GeoPlot {
+﻿namespace WebApp {
 
     export interface IGeoPoint {
         lat: number;

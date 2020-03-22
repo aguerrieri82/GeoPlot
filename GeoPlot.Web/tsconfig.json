@@ -7,11 +7,13 @@
     "target": "ES5",
     "downlevelIteration": true,
     "outFile": "wwwroot/js/app.js",
-    "lib": [ "es5", "es2015.promise", "dom", "es2015.iterable", "es2017.string" , "ES2020"]
+    "lib": [ "es5", "es2015.promise", "dom", "es2015.iterable", "es2017.string", "ES2020" ]
   },
   "compileOnSave": true,
-  "exclude": [
-    "node_modules",
-    "wwwroot"
+  "references": [
+    { "path": "../../Eusoft/WebApp/src/Eusoft.WebApp/Scripts/core" }
+  ],
+  "include": [
+    "scripts"
   ]
 }
