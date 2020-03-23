@@ -1,8 +1,39 @@
 ﻿
 declare namespace Desmos {
 
+    /****************************************/
+    /* TYPES
+    /****************************************/
+
+    type Expression = IMathExpression | IFolderExpression | ITableExpression;
+
+    type LatexString = string | number;
+
+    type HexColor = string;
+
+    type EnumValue = string;
+
+    type AxisArrowMode = EnumValue;
+
+    type Style = EnumValue;
+
+    type DragMode = EnumValue;
+
+    type LabelSize = EnumValue;
+
+    type LabelOrientation = EnumValue;
+
+    type MathBounds = "top" | "bottom" | "left" | "right";
+
+    /****************************************/
+    /* FUNCTIONS
+    /****************************************/
+
     function GraphingCalculator(element: HTMLElement, options?: IGraphingCalculatorOptions): IGraphingCalculator;
 
+    /****************************************/
+    /* CLASSES
+    /****************************************/
 
     interface IGraphingCalculator extends IObservable<IGraphingCalculatorObservableMap> {
         getState(): IGraphState;
@@ -20,7 +51,7 @@ declare namespace Desmos {
         unobserveEvent(type: keyof IEventHandlerMap): void;
         setExpression(state: Expression): void;
         HelperExpression(state: Expression): IHelperExpression;
-        removeExpression(state: { id: string }): void;
+        removeExpression(state: IExpressionReference): void;
         expressionAnalysis(): { [id: string]: IExpressionAnalysis };
         getExpressions(): Expression[];
         updateSettings(settings: IGraphingCalculatorOptions): void;
@@ -28,7 +59,19 @@ declare namespace Desmos {
         mathToPixels(point: IPoint): IPoint;
         pixelsToMath(point: IPoint): IPoint;
         readonly settings: IObservable<IGraphingCalculatorOptions>;
+    }
 
+    interface IObservable<T> {
+        observe(property: keyof T, handler: () => void): void;
+        unobserve(property: keyof T): void;
+    }
+
+    /****************************************/
+    /* EXPRESSIONS
+    /****************************************/
+
+    interface IExpressionReference {
+        id: string;
     }
 
     interface IBaseExpression {
@@ -64,13 +107,12 @@ declare namespace Desmos {
         latex?: string;
         color?: HexColor;
         hidden?: boolean;
-        pointStyle?: GraphStyle;
-        lineStyle?: GraphStyle;
+        pointStyle?: Style;
+        lineStyle?: Style;
         points?: boolean;
         lines?: boolean;
         dragMode?: DragMode;
     }
-
 
     interface IMathExpression extends IBaseExpression, IBaseExpressionProperties {
         type: "expression";
@@ -86,17 +128,49 @@ declare namespace Desmos {
         labelOrientation?: LabelOrientation;
     }
 
+    /****************************************/
+    /* MAPS
+    /****************************************/
 
     interface IGraphingCalculatorObservableMap {
         expressionAnalysis: any;
         graphpaperBounds: any;
     }
 
+    interface IEventHandlerMap {
+        "change": () => void;
+        "graphReset": () => void;
+    }
+
+    /****************************************/
+    /* ENTITIES
+    /****************************************/
+
+    interface IGraphState {
+        degreeMode?: boolean;
+        showGrid?: boolean;
+        polarMode?: boolean;
+        showXAxis?: boolean;
+        showYAxis?: boolean;
+        xAxisNumbers?: boolean;
+        yAxisNumbers?: boolean;
+        polarNumbers?: boolean;
+        xAxisStep?: number;
+        yAxisStep?: number;
+        xAxisMinorSubdivisions?: number;
+        yAxisMinorSubdivisions?: number;
+        xAxisArrowMode?: AxisArrowMode;
+        yAxisArrowMode?: AxisArrowMode;
+        xAxisLabel?: string;
+        yAxisLabel?: string;
+        randomSeed?: string;
+        expressions?: { list: Expression[] };
+    }
+
     interface IGraphBounds {
         mathCoordinates: IRect;
         pixelCoordinates: IRect;
     }
-
 
     interface IPoint {
         x: number;
@@ -125,45 +199,19 @@ declare namespace Desmos {
         numericValue?: number[];
     }
 
-    interface IObservable<T> {
-        observe(property: keyof T, handler: () => void): void;
-        unobserve(property: keyof T): void;
-    }
-
 
     interface IDomain {
         min?: number;
         max?: number;
     }
 
-    interface ISliderBounds extends IDomain {     
+    interface ISliderBounds extends IDomain {
         step?: number;
     }
 
-    interface IEventHandlerMap {
-        "change": () => void;
-        "graphReset": () => void;        
-    }
-
-    type Expression = IMathExpression | IFolderExpression | ITableExpression;
-
-    type LatexString = string|number;
-
-    type HexColor = string;
-
-    type EnumValue = any;
-
-    type AxisArrowMode = EnumValue;
-
-    type GraphStyle = EnumValue;
-
-    type DragMode = EnumValue;
-
-    type LabelSize = EnumValue;
-
-    type LabelOrientation = EnumValue;
-
-    type MathBounds = "top" | "bottom" | "left" | "right";
+    /****************************************/
+    /* ENUMS
+    /****************************************/
 
     var LabelSizes: {
         SMALL: LabelSize,
@@ -171,7 +219,7 @@ declare namespace Desmos {
         LARGE: LabelSize,
     }
 
-    var labelOrientation : {
+    var LabelOrientations : {
         ABOVE: LabelOrientation,
         BELOW: LabelOrientation,
         LEFT: LabelOrientation,
@@ -179,7 +227,7 @@ declare namespace Desmos {
         DEFAULT: LabelOrientation,
     }
 
-    var DragMode: {
+    var DragModes: {
         X: DragMode,
         Y: DragMode,
         XY: DragMode,
@@ -193,13 +241,17 @@ declare namespace Desmos {
     }
 
     var Styles: {
-        POINT: GraphStyle,
-        OPEN: GraphStyle,
-        CROSS: GraphStyle
-        SOLID: GraphStyle
-        DASHED: GraphStyle
-        DOTTED: GraphStyle
+        POINT: Style,
+        OPEN: Style,
+        CROSS: Style,
+        SOLID: Style,
+        DASHED: Style,
+        DOTTED: Style
     }
+
+    /****************************************/
+    /* OPTIONS
+    /****************************************/
 
     interface IScreenshotOptions {
         width?: number;
@@ -217,27 +269,7 @@ declare namespace Desmos {
     interface ISetStateOptions {
         allowUndo?: boolean;
         remapColors?: boolean;
-    }
-
-    interface IGraphState {
-        degreeMode?: boolean;
-        showGrid?: boolean;
-        polarMode?: boolean;
-        showXAxis?: boolean;
-        showYAxis?: boolean;
-        xAxisNumbers?: boolean;
-        yAxisNumbers?: boolean;
-        polarNumbers?: boolean;
-        xAxisStep?: number;
-        yAxisStep?: number;
-        xAxisMinorSubdivisions?: number;
-        yAxisMinorSubdivisions?: number;
-        xAxisArrowMode?: AxisArrowMode;
-        yAxisArrowMode?: AxisArrowMode;
-        xAxisLabel?: string;
-        yAxisLabel?: string;
-        randomSeed?: string;
-    }
+    }  
 
     interface IGraphingCalculatorOptions extends IGraphState {
         keypad?: boolean;
@@ -263,6 +295,7 @@ declare namespace Desmos {
         qwertyKeyboard?: boolean;
         distributions?: boolean;
         restrictedFunctions?: boolean;
+        restrictGridToFirstQuadrant?: boolean;
         pasteGraphLink?: boolean;
         pasteTableData?: boolean;
         clearIntoDegreeMode?: boolean;
@@ -276,6 +309,10 @@ declare namespace Desmos {
         fontSize?: number;
         invertedColors?: boolean;
         language?: boolean;
+        authorIDE?: boolean;
+        advancedStyling?: boolean;
+
+
     }
 
 }

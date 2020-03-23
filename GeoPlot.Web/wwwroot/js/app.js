@@ -768,6 +768,46 @@ var WebApp;
                     color: "#000",
                     width: 0.5,
                     label: "Giorno corrente"
+                },
+                "dpcm8": {
+                    date: new Date(2020, 2, 7),
+                    color: "#000",
+                    dash: [5, 5],
+                    width: 1,
+                    visible: true,
+                    label: "DPCM 8 Marzo (italia zona rossa)"
+                },
+                "dpcm9": {
+                    date: new Date(2020, 2, 9),
+                    color: "#000",
+                    dash: [5, 5],
+                    width: 1,
+                    visible: true,
+                    label: "DPCM 9 Marzo (italia zona rossa)"
+                },
+                "dpcm11": {
+                    date: new Date(2020, 2, 11),
+                    color: "#000",
+                    dash: [5, 5],
+                    width: 1,
+                    visible: true,
+                    label: "DPCM 11 Marzo (chiusura attività)"
+                },
+                "mds20": {
+                    date: new Date(2020, 2, 20),
+                    color: "#070",
+                    dash: [5, 5],
+                    width: 1,
+                    visible: false,
+                    label: "MDS 20 Marzo (chiura parchi, motoria nelle vicinane)"
+                },
+                "dpcm22": {
+                    date: new Date(2020, 2, 21),
+                    color: "#000",
+                    dash: [5, 5],
+                    width: 1,
+                    visible: true,
+                    label: "DPCM 22 Marzo (chiusura ulteriore attività)"
                 }
             };
             /****************************************/
@@ -918,9 +958,9 @@ var WebApp;
             var _this = this;
             if (this._preferences.showTips != undefined && !this._preferences.showTips)
                 return false;
-            if (options && !options.override && this.tip() && this.tip().isVisible())
+            if ((!options || !options.override) && this.tip() && this.tip().isVisible())
                 return false;
-            if (options && !options.force && this._preferences.actions[tipId])
+            if ((!options || !options.force) && this._preferences.actions[tipId])
                 return false;
             var tip = this._tips[tipId];
             var model = new TipViewModel(tip);
@@ -1524,6 +1564,8 @@ var WebApp;
                         ctx.strokeStyle = item.color || "#000";
                         if (item.dash)
                             ctx.setLineDash(item.dash);
+                        else
+                            ctx.setLineDash([]);
                         if (item.dashOffset)
                             ctx.lineDashOffset = item.dashOffset;
                         ctx.stroke();
@@ -1743,26 +1785,225 @@ var WebApp;
 })(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
+    function setExpression(calc, value) {
+        var state = calc.getState();
+        var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
+        if (!curExp)
+            state.expressions.list.push(value);
+        else {
+            for (var prop in curExp)
+                curExp[prop] = value[prop];
+        }
+        calc.setState(state);
+    }
+    /****************************************/
+    /* Regression
+    /****************************************/
+    var StudioSerieRegression = /** @class */ (function () {
+        function StudioSerieRegression() {
+            this.itemType = "regression";
+            this.icon = "show_chart";
+        }
+        /****************************************/
+        StudioSerieRegression.prototype.updateGraph = function (options) {
+        };
+        Object.defineProperty(StudioSerieRegression.prototype, "label", {
+            /****************************************/
+            get: function () {
+                return "";
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return StudioSerieRegression;
+    }());
+    /****************************************/
+    var StudioProject = /** @class */ (function () {
+        function StudioProject(config) {
+            /****************************************/
+            this.name = ko.observable();
+            this.series = ko.observableArray();
+            this.itemType = "project";
+            this.icon = "folder";
+            if (config) {
+                if (config.name)
+                    this.name(config.name);
+            }
+        }
+        /****************************************/
+        StudioProject.prototype.updateGraph = function (options) {
+            this._calculator = options.calculator;
+            if (!this.folderId)
+                this.folderId = WebApp.StringUtils.uuidv4();
+            setExpression(options.calculator, { type: "folder", id: this.folderId, title: this.name() });
+            if (options.recursive)
+                this.series().forEach(function (a) { return a.updateGraph(options); });
+        };
+        /****************************************/
+        StudioProject.prototype.addSerie = function (config) {
+            var result = new StudioSerie(config);
+            result.project = this;
+            result.node = new TreeNodeViewModel(result);
+            this.node.nodes.push(result.node);
+            if (this._calculator)
+                result.updateGraph({ calculator: this._calculator });
+            return result;
+        };
+        Object.defineProperty(StudioProject.prototype, "label", {
+            /****************************************/
+            get: function () {
+                return this.name();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return StudioProject;
+    }());
+    /****************************************/
+    var StudioSerie = /** @class */ (function () {
+        function StudioSerie(config) {
+            /****************************************/
+            this.name = ko.observable();
+            this.color = ko.observable();
+            this.offsetX = ko.observable(0);
+            this.graphFolderId = ko.observable(0);
+            this.itemType = "serie";
+            this.icon = "insert_chart";
+            if (config) {
+                if (config.name)
+                    this.name(config.name);
+            }
+        }
+        /****************************************/
+        StudioSerie.prototype.updateGraph = function (options) {
+            this._calculator = options.calculator;
+            if (!this.folderId)
+                this.folderId = WebApp.StringUtils.uuidv4();
+            setExpression(options.calculator, { type: "folder", id: this.folderId, folderId: this.project.folderId, title: this.name() });
+        };
+        Object.defineProperty(StudioSerie.prototype, "label", {
+            /****************************************/
+            get: function () {
+                return this.name();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return StudioSerie;
+    }());
+    /****************************************/
+    var ActionViewModel = /** @class */ (function () {
+        function ActionViewModel() {
+        }
+        ActionViewModel.prototype.execute = function () {
+        };
+        return ActionViewModel;
+    }());
+    /****************************************/
+    var TreeNodeViewModel = /** @class */ (function () {
+        function TreeNodeViewModel(value) {
+            /****************************************/
+            this.nodes = ko.observableArray();
+            this.value = ko.observable();
+            this.isSelected = ko.observable(true);
+            this.isExpanded = ko.observable(false);
+            this.actions = ko.observableArray();
+            this.value(value);
+        }
+        /****************************************/
+        TreeNodeViewModel.prototype.toggleSelection = function () {
+            this.isSelected(!this.isSelected());
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.expandCollapse = function () {
+            this.isExpanded(!this.isExpanded());
+        };
+        return TreeNodeViewModel;
+    }());
+    /****************************************/
+    var TreeViewModel = /** @class */ (function () {
+        function TreeViewModel() {
+            this.root = ko.observable();
+        }
+        return TreeViewModel;
+    }());
+    WebApp.TreeViewModel = TreeViewModel;
+    /****************************************/
     var StudioPage = /** @class */ (function () {
         function StudioPage() {
+            var _this = this;
+            /****************************************/
+            this.series = new TreeViewModel();
             this._calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                 xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                 pasteGraphLink: true,
-                administerSecretFolders: true
+                restrictedFunctions: true,
+                restrictGridToFirstQuadrant: true,
+                administerSecretFolders: true,
+                authorIDE: true,
+                advancedStyling: true
             });
+            /*
             this._calculator.setExpression({
-                id: "xxx",
+                id: "xzxxz",
                 type: "table", columns: [{
-                        latex: "x_{1}",
-                        values: [0, 1, 2, 3]
-                    }, {
-                        latex: "y_{1}",
-                        lines: true,
-                        points: true,
-                        values: [10, 12, 25, 11]
-                    }]
+                    latex: "x_{1}",
+                    values: [0, 1, 2, 3]
+                }, {
+                    latex: "y_{1}",
+                    lines: true,
+                    points: true,
+                    values: [10, 12, 25, 11]
+                }]
+            })
+            */
+            this.series.root(new TreeNodeViewModel());
+            window.addEventListener("beforeunload", function () { return _this.saveState(); });
+            setTimeout(function () {
+                //this.loadState();
+                _this.demo();
             });
         }
+        /****************************************/
+        StudioPage.prototype.demo = function () {
+            var proj = this.addProject({ name: "Project 1" });
+            this.addProject({ name: "Project 2" });
+            this.addProject({ name: "Project 3" });
+            proj.addSerie({
+                name: "Serie 1"
+            });
+        };
+        /****************************************/
+        StudioPage.prototype.addProject = function (config) {
+            var project = new StudioProject(config);
+            project.node = new TreeNodeViewModel(project);
+            this.series.root().nodes.push(project.node);
+            project.updateGraph({ calculator: this._calculator });
+            return project;
+        };
+        /****************************************/
+        StudioPage.prototype.loadState = function () {
+            var json = localStorage.getItem("studio");
+            if (json)
+                this.setState(JSON.parse(json));
+        };
+        /****************************************/
+        StudioPage.prototype.saveState = function () {
+            localStorage.setItem("studio", JSON.stringify(this.getState()));
+        };
+        /****************************************/
+        StudioPage.prototype.getState = function () {
+            var result = { version: 1 };
+            result.graphState = this._calculator.getState();
+            return result;
+        };
+        /****************************************/
+        StudioPage.prototype.setState = function (value) {
+            if (!value)
+                return;
+            if (value.graphState)
+                this._calculator.setState(value.graphState);
+        };
         /****************************************/
         StudioPage.prototype.test = function () {
             var state = this._calculator.getState();

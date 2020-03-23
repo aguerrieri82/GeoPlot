@@ -3,11 +3,49 @@
 }
 <div class="container">
     <div class="studio-page">
-        <div id="calculator"></div>
-        <button data-bind="click: test">Test</button>
+        <div class="side-bar">
+            <section class="panel series">
+                <header>
+                    <h6>Serie</h6>
+                </header>
+                <div class="content">
+                    <div class="tree-view" >
+                        <ul data-bind="template: {foreach: series.root().nodes, name: 'TreeItemTemplate'}">
+
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            <section class="panel options">
+                <header>
+                    <h6>Opzioni</h6>
+                </header>
+                <div class="content">
+                </div>
+            </section>
+        </div>
+        <section class="content main">
+            <div id="calculator"></div>
+        </section>
     </div>
 </div>
 
+<script type="text/html" id="TreeItemTemplate">
+    <li data-bind="css: {selected: isSelected, expanded: isExpanded}">
+        <header data-bind="css: value().itemType">
+            <a class="expand-collapse" href="#!" data-bind="click: expandCollapse"><i class="material-icons">arrow_drop_down</i></a>
+            <a class="selector" href="#!" data-bind="click: toggleSelection"><i class="material-icons" data-bind="text: value().icon"></i></a>
+            <span class="label" data-bind="text: value().label"></span>
+            <div class="actions" data-bind="foreach: actions">
+                <a data-bind="text: text, css: {icon}, click: execute"></a>
+            </div>
+        </header>
+        <!--ko if: nodes().length > 0-->
+        <ul class="child-nodes" data-bind="template: {foreach: nodes, name: 'TreeItemTemplate'}">
+        </ul>
+        <!--/ko-->
+    </li>
+</script>
 
 @section Head{
 

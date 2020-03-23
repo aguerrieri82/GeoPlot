@@ -394,5 +394,72 @@ svg.map.experimental {
 /****************************************/
 /* StudioPage                           */
 /****************************************/
-.studio-page #calculator {
-  height: 70vh; }
+.studio-page {
+  display: flex;
+  flex-direction: row;
+  border-bottom: solid 1px #ccc; }
+  .studio-page .tree-view .selected > header.project .selector {
+    color: #ffc107; }
+  .studio-page .tree-view .selected > header.serie .selector {
+    color: #1565c0; }
+  .studio-page .tree-view .selected > header.regression .selector {
+    color: #4caf50; }
+  .studio-page .side-bar {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    border-right: solid 4px #ccc;
+    border-left: solid 1px #ccc; }
+    .studio-page .side-bar .series {
+      flex-grow: 1;
+      flex-shrink: 1; }
+    .studio-page .side-bar .options {
+      max-height: 20vh; }
+    .studio-page .side-bar .panel {
+      border-bottom: solid 4px #ccc; }
+      .studio-page .side-bar .panel > header {
+        padding: 16px;
+        background-color: #1565c0;
+        color: white; }
+        .studio-page .side-bar .panel > header h6 {
+          margin: 0; }
+      .studio-page .side-bar .panel > .child-nodes {
+        padding: 16px;
+        overflow: auto; }
+      .studio-page .side-bar .panel:last-of-type {
+        border-bottom: none; }
+  .studio-page .content {
+    flex-grow: 1; }
+  .studio-page #calculator {
+    height: 70vh; }
+
+/****************************************/
+.tree-view ul {
+  list-style: none; }
+  .tree-view ul > li {
+    overflow: hidden;
+    position: relative;
+    transition-duration: 0.3s; }
+    .tree-view ul > li > header {
+      display: flex;
+      white-space: nowrap; }
+      .tree-view ul > li > header .expand-collapse i {
+        transition-duration: 0.3s;
+        transform: rotate(-90deg); }
+      .tree-view ul > li > header .selector {
+        color: #ddd; }
+    .tree-view ul > li > .child-nodes {
+      position: relative;
+      opacity: 0;
+      top: -20px;
+      height: 0;
+      transition-duration: 0.3s; }
+    .tree-view ul > li.expanded > .child-nodes {
+      opacity: 1;
+      top: 0;
+      height: auto; }
+    .tree-view ul > li.expanded > header .expand-collapse i {
+      transform: rotate(0); }
+
+.tree-view .child-nodes {
+  margin-left: 40px; }

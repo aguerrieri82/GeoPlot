@@ -395,6 +395,46 @@
                 color: "#000",
                 width: 0.5,
                 label: "Giorno corrente"
+            },
+            "dpcm8": {
+                date: new Date(2020, 2, 7),
+                color: "#000",
+                dash: [5, 5],
+                width: 1,
+                visible: true,
+                label: "DPCM 8 Marzo (italia zona rossa)"
+            },
+            "dpcm9": {
+                date: new Date(2020, 2, 9),
+                color: "#000",
+                dash: [5,5],
+                width: 1,
+                visible: true,
+                label: "DPCM 9 Marzo (italia zona rossa)"
+            },
+            "dpcm11": {
+                date: new Date(2020, 2, 11),
+                color: "#000",
+                dash: [5, 5],
+                width: 1,
+                visible: true,
+                label: "DPCM 11 Marzo (chiusura attività)"
+            },
+            "mds20": {
+                date: new Date(2020, 2, 20),
+                color: "#070",
+                dash: [5, 5],
+                width: 1,
+                visible: false,
+                label: "MDS 20 Marzo (chiura parchi, motoria nelle vicinane)"
+            },
+            "dpcm22": {
+                date: new Date(2020, 2, 21),
+                color: "#000",
+                dash: [5, 5],
+                width: 1,
+                visible: true,
+                label: "DPCM 22 Marzo (chiusura ulteriore attività)"
             }
         };
 
@@ -567,10 +607,10 @@
             if (this._preferences.showTips != undefined && !this._preferences.showTips)
                 return false;
 
-            if (options && !options.override && this.tip() && this.tip().isVisible())
+            if ((!options || !options.override) && this.tip() && this.tip().isVisible())
                 return false;
 
-            if (options && !options.force && this._preferences.actions[tipId])
+            if ((!options || !options.force) && this._preferences.actions[tipId])
                 return false;
 
             const tip = this._tips[tipId];
@@ -1227,8 +1267,11 @@
                         ctx.moveTo(offset, chart.chartArea.top);
                         ctx.lineTo(offset, chart.chartArea.bottom);
                         ctx.strokeStyle = item.color || "#000";
+                        
                         if (item.dash)
                             ctx.setLineDash(item.dash);
+                        else
+                            ctx.setLineDash([]);
                         if (item.dashOffset)
                             ctx.lineDashOffset = item.dashOffset;
                         ctx.stroke();

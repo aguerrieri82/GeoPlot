@@ -3,8 +3,139 @@
 /* StudioPage                           */
 /****************************************/
 
-.studio-page{
-    #calculator{
+.studio-page {
+    display: flex;
+    flex-direction: row;
+    border-bottom: solid 1px #ccc;
+
+
+
+    .tree-view .selected > header {
+        &.project {
+            .selector {
+                color: #ffc107;
+            }
+        }
+
+        &.serie {
+            .selector {
+                color: #1565c0;
+            }
+        }
+
+        &.regression {
+            .selector {
+                color: #4caf50;
+            }
+        }
+    }
+
+    .side-bar {
+        width: 200px;
+        display: flex;
+        flex-direction: column;
+        border-right: solid 4px #ccc;
+        border-left: solid 1px #ccc;
+
+        .series {
+            flex-grow: 1;
+            flex-shrink: 1;
+        }
+
+        .options {
+            max-height: 20vh;
+        }
+
+        .panel {
+            border-bottom: solid 4px #ccc;
+
+            > header {
+                padding: 16px;
+                background-color: #1565c0;
+                color: white;
+
+                h6 {
+                    margin: 0;
+                }
+            }
+
+            > .child-nodes {
+                padding: 16px;
+                overflow: auto;
+            }
+
+            &:last-of-type {
+                border-bottom: none;
+            }
+        }
+    }
+
+    .content {
+        flex-grow: 1;
+    }
+
+    #calculator {
         height: 70vh;
+    }
+}
+
+/****************************************/
+
+.tree-view {
+    ul {
+        list-style: none;
+
+        > li {
+            overflow: hidden;
+            position: relative;
+            transition-duration: 0.3s;
+
+            > header {
+                display: flex;
+                white-space:nowrap;
+
+                .expand-collapse i {
+                    transition-duration: 0.3s;
+                    transform: rotate(-90deg);
+                }
+
+                .selector {
+                    color: #ddd;
+                }
+            }
+
+            > .child-nodes {
+                position: relative;
+                opacity: 0;
+                top: -20px;
+                height: 0;
+                transition-duration: 0.3s;
+            }
+
+            &.selected {
+                > header {
+                    .selector {
+                    }
+                }
+            }
+
+            &.expanded {
+                > .child-nodes {
+                    opacity: 1;
+                    top: 0;
+                    height: auto;
+                }
+
+                > header {
+                    .expand-collapse i {
+                        transform: rotate(0);
+                    }
+                }
+            }
+        }
+    }
+
+    .child-nodes {
+        margin-left: 40px;
     }
 }
