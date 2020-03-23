@@ -57,7 +57,7 @@ var WebApp;
         return GeoPlotApplication;
     }());
     /****************************************/
-    WebApp.app = new GeoPlotApplication();
+    WebApp.app = (new GeoPlotApplication());
 })(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
@@ -121,36 +121,15 @@ function expandCollapse(elment) {
     }
 }
 /****************************************/
-function scrollIntoViewIfOutOfView(el) {
-    var topOfPage = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-    var heightOfPage = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-    var elY = 0;
-    var elH = 0;
-    if (document["layers"]) { // NS4
-        elY = el.y;
-        elH = el.height;
-    }
-    else {
-        for (var p = el; p && p.tagName != 'BODY'; p = p.offsetParent) {
-            elY += p.offsetTop;
+if (window["Chart"]) {
+    Chart.plugins.register({
+        beforeDraw: function (chartInstance) {
+            var ctx = chartInstance.ctx;
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, chartInstance.width, chartInstance.height);
         }
-        elH = el.offsetHeight;
-    }
-    if ((topOfPage + heightOfPage) < (elY + elH)) {
-        el.scrollIntoView(false);
-    }
-    else if (elY < topOfPage) {
-        el.scrollIntoView(true);
-    }
+    });
 }
-/****************************************/
-Chart.plugins.register({
-    beforeDraw: function (chartInstance) {
-        var ctx = chartInstance.ctx;
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, chartInstance.width, chartInstance.height);
-    }
-});
 var WebApp;
 (function (WebApp) {
     /****************************************/
@@ -1699,7 +1678,7 @@ var WebApp;
             if (!this._keepState)
                 return;
             var state = this.saveStata();
-            var url = WebApp.app.appRoot + "Overview";
+            var url = WebApp.app.baseUrl + "Overview";
             if (!this.isDefaultState(state))
                 url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
             history.replaceState(null, null, url);
@@ -1761,5 +1740,35 @@ var WebApp;
         return GeoPlotPage;
     }());
     WebApp.GeoPlotPage = GeoPlotPage;
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var StudioPage = /** @class */ (function () {
+        function StudioPage() {
+            this._calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
+                xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
+                pasteGraphLink: true,
+                administerSecretFolders: true
+            });
+            this._calculator.setExpression({
+                id: "xxx",
+                type: "table", columns: [{
+                        latex: "x_{1}",
+                        values: [0, 1, 2, 3]
+                    }, {
+                        latex: "y_{1}",
+                        lines: true,
+                        points: true,
+                        values: [10, 12, 25, 11]
+                    }]
+            });
+        }
+        /****************************************/
+        StudioPage.prototype.test = function () {
+            var state = this._calculator.getState();
+        };
+        return StudioPage;
+    }());
+    WebApp.StudioPage = StudioPage;
 })(WebApp || (WebApp = {}));
 //# sourceMappingURL=app.js.map

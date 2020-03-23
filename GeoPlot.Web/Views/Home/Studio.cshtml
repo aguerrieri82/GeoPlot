@@ -2,8 +2,9 @@
     ViewData["Title"] = "Studio";
 }
 <div class="container">
-    <div class="valign-wrapper" style="min-height: 400px">
-        <img style="display: block; margin: auto;" src="~/image/Under-Construction-Sign-e1546880752659.png" />
+    <div class="studio-page">
+        <div id="calculator"></div>
+        <button data-bind="click: test">Test</button>
     </div>
 </div>
 
@@ -13,4 +14,10 @@
 }
 
 @section Scripts {
+    <script src="https://www.desmos.com/api/v1.4/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    <script>
+        WebApp.app.baseUrl = '@Url.Content("~/")';
+        WebApp.app.initServices();
+        ko.applyBindings(new WebApp.StudioPage());
+    </script>
 }

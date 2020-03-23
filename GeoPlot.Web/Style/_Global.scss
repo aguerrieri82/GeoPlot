@@ -1,0 +1,425 @@
+﻿@import "_Vars.scss";
+
+/****************************************/
+/* Theme                                */
+/****************************************/
+
+body {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+
+/****************************************/
+
+main {
+    flex: 1 0 auto;
+    padding-bottom: 24px;
+    overflow: hidden;
+}
+
+/****************************************/
+
+.material-tooltip {
+    max-width: 300px !important;
+    white-space: pre-wrap;
+}
+
+/****************************************/
+
+ul.collapsible li {
+    .collapsible-header {
+        position: relative;
+
+        i {
+            position: absolute;
+            right: 0;
+            transition-duration: 0.3s;
+        }
+    }
+
+    &.active {
+        .collapsible-header {
+            i {
+                transform: rotate(90deg);
+            }
+        }
+    }
+}
+
+@media #{$small-and-down} {
+
+    .container {
+        width: auto !important;
+    }
+
+    main {
+        background-color: #eee;
+
+        .container {
+            margin: 0;
+            width: auto;
+        }
+
+        .card, .collapsible {
+            background-color: white;
+            box-shadow: none;
+            border: none;
+            border-radius: 0;
+            border-bottom: solid 1px #bbb;
+            border-top: solid 1px #bbb;
+            margin-left: 0;
+            margin-right: 0;
+            padding: 0;
+
+            .card-content {
+                padding: 1rem;
+            }
+        }
+
+        .row .col.main {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        section.main {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    }
+}
+
+/****************************************/
+/* Components                           */
+/****************************************/
+
+.flex-col-3 {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+
+    > * {
+        width: (100 /3) + %;
+        box-sizing: border-box;
+        margin-bottom: 16px;
+    }
+}
+
+/****************************************/
+
+.stack-horizontal {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    > * {
+        margin-right: 25px;
+
+        &.stack-fit {
+            flex-grow: 1;
+            flex-basis: 0;
+        }
+
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
+
+/****************************************/
+
+.summary-field {
+    label {
+        display: block;
+    }
+}
+
+/****************************************/
+
+.card {
+    .card-section {
+        border-bottom: solid 1px #ddd;
+
+        &:last-of-type {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 400;
+        }
+
+        .section-content {
+            margin-top: 16px;
+        }
+
+        &.expandable {
+            .section-title {
+                position: relative;
+                cursor: pointer;
+
+                i {
+                    position: absolute;
+                    right: 0;
+                    transition-duration: 0.3s;
+                    transform: rotate(90deg);
+                }
+            }
+
+            .section-content {
+                transition-duration: 0.3s;
+            }
+
+            &.closed {
+                margin-bottom: 12px;
+                border-bottom: none;
+
+                .section-title {
+                    i {
+                        transform: rotate(0);
+                    }
+
+                    border-bottom: solid 1px #ddd;
+                    padding-bottom: 12px;
+                }
+
+                .section-content {
+                    overflow: hidden;
+                    opacity: 0;
+                    max-height: 0;
+                    margin: 0;
+                    margin-top: -20px;
+                }
+            }
+        }
+    }
+}
+
+/****************************************/
+@keyframes pulse {
+    0% {
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        box-shadow: 0 0 0px 1px #0094ff;
+        opacity: 0.8;
+    }
+
+    100% {
+        top: -20px;
+        bottom: -20px;
+        right: -20px;
+        left: -20px;
+        opacity: 0;
+        box-shadow: 0 0 3px 20px #0094ff;
+    }
+}
+
+/****************************************/
+
+.pulse {
+    position: relative;
+
+    &::after {
+        animation: pulse;
+        animation-duration: 1s;
+        animation-iteration-count: infinite;
+        animation-timing-function: ease-out;
+        position: absolute;
+        border-radius: 10px;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        content: ' ';
+    }
+}
+
+/****************************************/
+
+.tip-container {
+    position: fixed;
+    top: 60px;
+    max-width: 60vw;
+    margin: auto;
+    z-index: 50;
+
+    @media #{$small-and-down} {
+        max-width: none;
+        right: 0;
+        left: 0;
+    }
+
+    .tip {
+        border: solid 1px #ccc;
+        background-color: #ffecb3;
+        opacity: 0;
+        transition-duration: 0.3s;
+        transition-timing-function: ease-in;
+        margin-top: -200px;
+
+
+        &.visible {
+            margin-top: 0;
+            opacity: 1;
+
+            &.transparent-element {
+                opacity: 0.7;
+            }
+        }
+
+        .main {
+            padding: 16px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+
+            i {
+                margin-right: 16px;
+                display: inline-block;
+                font-size: 48px;
+            }
+
+            .body {
+            }
+
+            .title {
+            }
+
+            .not-show {
+                font-size: 0.8em;
+            }
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: row;
+            border-top: solid 1px #ccc;
+            padding: 0;
+            margin: 0;
+
+            li {
+                border-right: solid 1px #ccc;
+                flex-basis: 0;
+                flex-grow: 1;
+                text-align: center;
+
+                &:last-of-type {
+                    border-right: none;
+                }
+
+                a {
+                    padding: 8px 16px 8px 16px;
+                    display: block;
+
+                    &:hover {
+                    }
+                }
+            }
+        }
+    }
+}
+/****************************************/
+.legend {
+    i {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        content: ' ';
+    }
+}
+/****************************************/
+/* Helpers                              */
+/****************************************/
+.hidden {
+    display: none;
+}
+
+.flex-row-inline {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.item-margin-small {
+    > * {
+        margin-right: 8px;
+    }
+
+    &:last-child {
+        margin-right: 0;
+    }
+}
+
+.empty-text {
+    font-style: italic;
+    color: #999;
+    font-weight: bold;
+}
+
+.no-margin {
+    margin: 0 !important;
+}
+
+.relative {
+    position: relative;
+}
+
+.title-actions {
+    display: flex;
+    flex-direction: row;
+
+    label.title {
+        margin-bottom: 8px;
+        display: block;
+        font-size: 15px;
+        flex-grow: 1;
+        flex-basis: 0;
+        margin-right: 16px;
+    }
+
+    .actions {
+        a {
+            margin-right: 8px;
+        }
+    }
+}
+
+.selectable {
+    transition-duration: 0.2s;
+    cursor: pointer;
+
+    &:hover {
+        background-color: #eee;
+    }
+}
+/****************************************/
+/* Custom                               */
+/****************************************/
+
+.good {
+    fill: #4caf50;
+    background-color: #4caf50;
+}
+
+.medium {
+    fill: #ffeb3b;
+    background-color: #ffeb3b;
+}
+
+.bad {
+    fill: #ff9800;
+    background-color: #ff9800;
+}
+
+.sever {
+    fill: #f44336;
+    background-color: #f44336;
+}
+
+.verysevere {
+    fill: #9c27b0;
+    background-color: #9c27b0;
+}

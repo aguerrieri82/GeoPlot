@@ -49,31 +49,6 @@ function expandCollapse(elment: HTMLElement) {
 }
 
 /****************************************/
-
-function scrollIntoViewIfOutOfView(el) {
-    var topOfPage = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
-    var heightOfPage = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-    var elY = 0;
-    var elH = 0;
-    if (document["layers"]) { // NS4
-        elY = el.y;
-        elH = el.height;
-    }
-    else {
-        for (var p = el; p && p.tagName != 'BODY'; p = p.offsetParent) {
-            elY += p.offsetTop;
-        }
-        elH = el.offsetHeight;
-    }
-    if ((topOfPage + heightOfPage) < (elY + elH)) {
-        el.scrollIntoView(false);
-    }
-    else if (elY < topOfPage) {
-        el.scrollIntoView(true);
-    }
-}
-
-/****************************************/
 /* Definitions
 /****************************************/
 
@@ -89,14 +64,14 @@ declare var ClipboardItem: {
     new(items: { [type: string]: Blob | string }): ClipboardItem;
 };
 
-
-
 /****************************************/
 
-Chart.plugins.register({
-    beforeDraw: function (chartInstance) {
-        var ctx = chartInstance.ctx;
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, chartInstance.width, chartInstance.height);
-    }
-});
+if (window["Chart"]) {
+    Chart.plugins.register({
+        beforeDraw: function (chartInstance) {
+            var ctx = chartInstance.ctx;
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, chartInstance.width, chartInstance.height);
+        }
+    });
+}

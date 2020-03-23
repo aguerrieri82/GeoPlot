@@ -1434,7 +1434,7 @@
             if (!this._keepState)
                 return;
             const state = this.saveStata();
-            let url = app.appRoot + "Overview";
+            let url = app.baseUrl + "Overview";
             if (!this.isDefaultState(state))
                 url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
             history.replaceState(null, null, url);

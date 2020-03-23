@@ -378,7 +378,7 @@
 
 @section Scripts {
     <script>
-        WebApp.app.appRoot = '@Url.Content("~/")';
+        WebApp.app.baseUrl = '@Url.Content("~/")';
         WebApp.app.initServices();
         ko.applyBindings(new WebApp.GeoPlotPage(@Html.Json(Model)));
     </script>

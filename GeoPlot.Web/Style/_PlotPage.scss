@@ -1,0 +1,185 @@
+﻿
+/****************************************/
+/* PlotPage                            */
+/****************************************/
+
+.data-source {
+    .note {
+        margin-left: 24px;
+    }
+
+    ul {
+        li {
+            label {
+                display: block;
+                font-size: 14px;
+            }
+
+            .last-update {
+                font-size: 13px;
+
+                &::before {
+                    content: ' (';
+                }
+
+                &::after {
+                    content: ')';
+                }
+            }
+
+            margin-bottom: 8px;
+        }
+    }
+}
+
+.card-map {
+    padding: 0;
+
+    .tabs {
+        margin-bottom: 8px;
+    }
+}
+/****************************************/
+.chart {
+    position: relative;
+    margin-bottom: 24px;
+    background-color: white;
+
+    .chart-container {
+        position: relative;
+        height: 30vh;
+        transition-duration: 0.3s;
+
+        canvas {
+            background-color: white;
+        }
+    }
+
+    &.zoom {
+        position: fixed;
+        top: 20px;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        padding: 24px;
+        z-index: 2000;
+        overflow: hidden;
+
+        .chart-container {
+            position: absolute;
+            top: 60px;
+            right: 24px;
+            left: 24px;
+            bottom: 24px;
+            height: auto;
+        }
+    }
+}
+
+/****************************************/
+
+.map-container{
+    position: relative;
+
+    .actions{
+        position: absolute;
+        right: 0;
+    }
+}
+
+/****************************************/
+
+svg.map {
+    width: 50vh;
+    max-width: 100%;
+    pointer-events: painted;
+
+    .environment {
+        > circle {
+            stroke: #000;
+            stroke-width: 500;
+            fill-opacity: 0.7;
+        }
+    }
+
+    .group {
+
+        .area {
+            fill: none;
+
+            &.region {
+                stroke: #000;
+                stroke-width: 0.2%;
+            }
+
+            &.district {
+                stroke: #999;
+                stroke-width: 0.05%;
+            }
+        }
+
+        &.active {
+            .area {
+                fill: white;
+
+                &.region {
+                    stroke-width: 0.15%;
+                }
+
+                &.selected, &:hover {
+                    stroke: #F57F17;
+                    stroke-width: 0.3%;
+                }
+            }
+        }
+    }
+}
+
+
+svg.map.experimental {
+    width: 50vh;
+    max-width: 100%;
+    pointer-events: painted;
+
+    .environment {
+        > circle {
+            stroke: #000;
+            stroke-width: 500;
+            fill-opacity: 0.7;
+        }
+    }
+
+    .group {
+
+        .area {
+            fill: none;
+
+            &.region {
+                stroke: #f0f0f0;
+                stroke-width: 4000;
+            }
+
+            &.district {
+                stroke: #f0f0f0;
+                stroke-width: 2000;
+            }
+        }
+
+        &.active {
+            .area {
+                fill: white;
+
+                &.region {
+                    stroke-width: 4000;
+                    stroke: #fff;
+                    stroke-opacity: 0;
+                }
+
+                &.selected, &:hover {
+                    stroke: #F57F17;
+                    stroke-width: 0.3%;
+                }
+            }
+        }
+    }
+}

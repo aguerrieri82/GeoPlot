@@ -1,0 +1,297 @@
+{
+  "version": 7,
+  "graph": {
+    "viewport": {
+      "xmin": -23.9234529098635,
+      "ymin": -484.93110647913863,
+      "xmax": 99.23500160101982,
+      "ymax": 1240.482138904744
+    },
+    "xAxisStep": 1,
+    "squareAxes": false
+  },
+  "randomSeed": "c0b722e01483ddd7dc21df60c94d37d5",
+  "expressions": {
+    "list": [
+      {
+        "type": "text",
+        "id": "101",
+        "text": "x1 = giorno dall'inizio epidemia"
+      },
+      {
+        "type": "text",
+        "id": "106",
+        "text": "y1 = nuovi gravi rispetto al giorno prima"
+      },
+      {
+        "type": "text",
+        "id": "107",
+        "text": "y2 = nuovi decessi rispetto al giorno prima"
+      },
+      {
+        "id": "147",
+        "type": "table",
+        "columns": [
+          {
+            "values": [ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27" ],
+            "hidden": true,
+            "id": "144",
+            "color": "#c74440",
+            "latex": "x_{1}"
+          },
+          {
+            "values": [ "9", "1", "20", "8", "41", "35", "26", "63", "66", "56", "111", "105", "83", "83", "144", "151", "125", "175", "190", "154", "179", "209", "197", "241", "157", "202", "152" ],
+            "id": "145",
+            "color": "#fa7e19",
+            "lines": true,
+            "latex": "y_{1}"
+          },
+          {
+            "values": [ "3", "2", "5", "4", "8", "5", "18", "27", "28", "41", "49", "36", "133", "97", "168", "196", "189", "250", "175", "368", "349", "345", "475", "427", "627", "793", "651" ],
+            "id": "146",
+            "color": "#000000",
+            "lines": true,
+            "latex": "y_{2}"
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "id": "108",
+        "text": "c1 = stima gravi totali, c2 = stima decessi totali, p = numero di punti da tenere in considerazione per la previsione"
+      },
+      {
+        "type": "expression",
+        "id": "199",
+        "color": "#388c46",
+        "latex": "c_{1}=4250",
+        "slider": {
+          "hardMin": true,
+          "hardMax": true,
+          "min": "500",
+          "max": "10000",
+          "step": "1"
+        }
+      },
+      {
+        "type": "expression",
+        "id": "200",
+        "color": "#6042a6",
+        "latex": "c_{2}=19500",
+        "slider": {
+          "max": "40000",
+          "step": "1"
+        }
+      },
+      {
+        "type": "expression",
+        "id": "267",
+        "color": "#2d70b3"
+      },
+      {
+        "type": "expression",
+        "id": "212",
+        "color": "#6042a6",
+        "latex": "p=27",
+        "slider": {
+          "hardMin": true,
+          "hardMax": true,
+          "min": "1",
+          "max": "\\max\\left(x_{1}\\right)",
+          "step": "1"
+        }
+      },
+      {
+        "type": "text",
+        "id": "109",
+        "text": "t1 = giorno da testare, g3 = numero gravi sul giorno t1, d3 = numero decessi sul giorno t1"
+      },
+      {
+        "type": "expression",
+        "id": "98",
+        "color": "#388c46",
+        "latex": "t_{1}=26",
+        "slider": {
+          "hardMin": true,
+          "hardMax": true,
+          "min": "2",
+          "max": "t_{3}",
+          "step": "1"
+        }
+      },
+      {
+        "type": "expression",
+        "id": "69",
+        "color": "#6042a6",
+        "latex": "g_{3}=g_{2}\\left(t_{1}\\right)",
+        "hidden": true
+      },
+      {
+        "type": "expression",
+        "id": "86",
+        "color": "#c74440",
+        "latex": "d_{3}=d_{2}\\left(t_{1}\\right)",
+        "hidden": true
+      },
+      {
+        "type": "text",
+        "id": "171",
+        "text": "GRAVI"
+      },
+      {
+        "type": "expression",
+        "id": "162",
+        "color": "#2d70b3",
+        "latex": "y_{1}\\ \\sim c_{1}\\cdot\\frac{e^{-\\frac{\\left(\\ln\\ \\left(x_{2}-a_{1}\\right)\\ -u_{1}\\right)^{2}}{2o_{1}^{2}}}}{\\left(x_{2}-a_{1}\\right)\\sqrt{2\\pi}o_{1}}",
+        "hidden": true,
+        "residualVariable": "e_4",
+        "regressionParameters": {
+          "a_1": -433.0618999491735,
+          "u_1": 6.122470633111145,
+          "o_1": 0.019325889791385355
+        }
+      },
+      {
+        "type": "expression",
+        "id": "163",
+        "color": "#fa7e19",
+        "latex": "g_{1}\\left(x\\right)=c_{1}\\cdot\\frac{e^{-\\frac{\\left(\\ln\\ \\left(x-a_{1}\\right)\\ -u_{1}\\right)^{2}}{2o_{1}^{2}}}}{\\left(x-a_{1}\\right)\\sqrt{2\\pi}o_{1}}",
+        "lineStyle": "DASHED",
+        "residualVariable": "e_{2}"
+      },
+      {
+        "type": "expression",
+        "id": "152",
+        "color": "#388c46",
+        "latex": "g_{2}\\left(x\\right)=\\sum_{n=1}^{x}\\operatorname{round}\\left(g_{1}\\left(n\\right)\\right)",
+        "hidden": true
+      },
+      {
+        "type": "expression",
+        "id": "149",
+        "color": "#fa7e19",
+        "latex": "\\left(n_{2},\\ g_{2}\\left(n_{2}\\right)\\right)",
+        "points": false,
+        "lines": true,
+        "lineStyle": "DASHED",
+        "dragMode": "NONE"
+      },
+      {
+        "type": "expression",
+        "id": "113",
+        "color": "#fa7e19",
+        "latex": "\\left(t_{1},g_{3}\\right)",
+        "showLabel": true,
+        "label": "Gravi",
+        "dragMode": "XY"
+      },
+      {
+        "type": "text",
+        "id": "143",
+        "text": "DECESSI"
+      },
+      {
+        "type": "expression",
+        "id": "164",
+        "color": "#6042a6",
+        "latex": "y_{2}\\ \\sim c_{2}\\cdot\\frac{e^{-\\frac{\\left(\\ln\\ \\left(x_{2}-a_{2}\\right)\\ -u_{2}\\right)^{2}}{2o_{2}^{2}}}}{\\left(x_{2}-a_{2}\\right)\\sqrt{2\\pi}o_{2}}",
+        "hidden": true,
+        "residualVariable": "e_2",
+        "regressionParameters": {
+          "a_2": -314.4284712110088,
+          "u_2": 5.8504634012053405,
+          "o_2": 0.02658536456974489
+        }
+      },
+      {
+        "type": "expression",
+        "id": "165",
+        "color": "#000000",
+        "latex": "d_{1}\\left(x\\right)=c_{2}\\cdot\\frac{e^{-\\frac{\\left(\\ln\\ \\left(x-a_{2}\\right)\\ -u_{2}\\right)^{2}}{2o_{2}^{2}}}}{\\left(x-a_{2}\\right)\\sqrt{2\\pi}o_{2}}",
+        "lineStyle": "DASHED",
+        "residualVariable": "e_{5}"
+      },
+      {
+        "type": "expression",
+        "id": "153",
+        "color": "#6042a6",
+        "latex": "d_{2}\\left(x\\right)=\\sum_{n=1}^{x}\\operatorname{round}\\left(d_{1}\\left(n\\right)\\right)",
+        "hidden": true
+      },
+      {
+        "type": "expression",
+        "id": "151",
+        "color": "#000000",
+        "latex": "\\left(n_{2},d_{2}\\left(n_{2}\\right)\\right)",
+        "points": false,
+        "lines": true,
+        "lineStyle": "DASHED",
+        "dragMode": "NONE"
+      },
+      {
+        "type": "expression",
+        "id": "114",
+        "color": "#000000",
+        "latex": "\\left(t_{1},d_{3}\\right)",
+        "showLabel": true,
+        "label": "Decessi"
+      },
+      {
+        "type": "text",
+        "id": "170",
+        "text": "t3 = giorno fine"
+      },
+      {
+        "type": "expression",
+        "id": "166",
+        "color": "#c74440",
+        "latex": "t_{3}=50",
+        "slider": {
+          "hardMin": true,
+          "hardMax": true,
+          "min": "0",
+          "max": "60",
+          "step": "1"
+        }
+      },
+      {
+        "type": "expression",
+        "id": "150",
+        "color": "#c74440",
+        "latex": "n_{2}=\\left[1,...,t_{3}\\right]"
+      },
+      {
+        "type": "expression",
+        "id": "210",
+        "color": "#2d70b3",
+        "latex": "x_{2}=\\left[1,...,p\\right]"
+      },
+      {
+        "type": "expression",
+        "id": "214",
+        "color": "#6042a6",
+        "latex": "\\left(x_{2},y_{1}\\right)",
+        "lines": false
+      },
+      {
+        "type": "expression",
+        "id": "215",
+        "color": "#2d70b3",
+        "latex": "y_{2}\\ \\sim c_{3}\\cdot\\frac{e^{-\\frac{\\left(\\ln\\ \\left(x_{2}-a_{3}\\right)\\ -u_{3}\\right)^{2}}{2o_{3}^{2}}}}{\\left(x_{2}-a_{3}\\right)\\sqrt{2\\pi}o_{3}}",
+        "hidden": true,
+        "residualVariable": "e_1",
+        "regressionParameters": {
+          "c_3": 3.4828026813400733e+161,
+          "a_3": -2.9122000978693845,
+          "u_3": 170.38683172006927,
+          "o_3": 6.230069127585368
+        }
+      },
+      {
+        "type": "expression",
+        "id": "216",
+        "color": "#388c46"
+      }
+    ]
+  }
+}

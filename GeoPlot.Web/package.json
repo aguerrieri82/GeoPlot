@@ -5,9 +5,6 @@
   "devDependencies": {
     "@types/knockout": "3.4.66",
     "@types/chart.js": "2.9.15",
-    "@types/geojson": "7946.0.7",
-    "@types/materialize-css": "1.0.7",
-    "chartjs-plugin-zoom": "0.7.5",
-    "materialize-css": "1.0.0"
+    "@types/materialize-css": "1.0.7"
   }
 }

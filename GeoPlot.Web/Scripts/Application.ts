@@ -1,6 +1,6 @@
 ﻿namespace WebApp {
 
-    class GeoPlotApplication {
+    class GeoPlotApplication   {
 
         constructor() {
             
@@ -13,11 +13,13 @@
             Services.httpClient = new XHRHttpClient(); 
         }
 
-        appRoot: string;
+        /****************************************/
+
+        baseUrl: string;
     }
 
     /****************************************/
 
-    export var app = new GeoPlotApplication();
+    export var app : IApplication = <any>(new GeoPlotApplication());
 }
  
