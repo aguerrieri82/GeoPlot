@@ -48,9 +48,16 @@ namespace GeoPlot.Web.Controllers
             return View(model);
         }
 
-        public IActionResult Studio()
+        public async Task<IActionResult> Studio()
         {
-            return View();
+            var lastUpdate = await GetLastCommit();
+
+            var model = new StudioViewModel()
+            {
+                Geo = await LoadGeoAreas(),
+                Data = await LoadInfectionData(lastUpdate),
+            };
+            return View(model);
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

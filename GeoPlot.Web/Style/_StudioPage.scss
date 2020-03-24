@@ -3,35 +3,54 @@
 /* StudioPage                           */
 /****************************************/
 
+.dev-message {
+    font-weight: bold;
+    padding: 16px;
+    text-align: center;
+    color: #777;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: center;
+
+    i {
+        color: #ffc107;
+    }
+}
+
 .studio-page {
     display: flex;
     flex-direction: row;
     border-bottom: solid 1px #ccc;
+    height: 70vh;
 
+    .tree-view {
+        height: 100%;
 
-
-    .tree-view .selected > header {
-        &.project {
-            .selector {
-                color: #ffc107;
+        .visible > header {
+            &.project {
+                .visibility {
+                    color: #ffc107;
+                }
             }
-        }
 
-        &.serie {
-            .selector {
-                color: #1565c0;
+            &.serie {
+                .visibility {
+                    color: #1565c0;
+                }
             }
-        }
 
-        &.regression {
-            .selector {
-                color: #4caf50;
+            &.regression {
+                .visibility {
+                    color: #4caf50;
+                }
             }
         }
     }
 
     .side-bar {
-        width: 200px;
+        width: 300px;
+        max-width: 30%;
         display: flex;
         flex-direction: column;
         border-right: solid 4px #ccc;
@@ -45,29 +64,6 @@
         .options {
             max-height: 20vh;
         }
-
-        .panel {
-            border-bottom: solid 4px #ccc;
-
-            > header {
-                padding: 16px;
-                background-color: #1565c0;
-                color: white;
-
-                h6 {
-                    margin: 0;
-                }
-            }
-
-            > .child-nodes {
-                padding: 16px;
-                overflow: auto;
-            }
-
-            &:last-of-type {
-                border-bottom: none;
-            }
-        }
     }
 
     .content {
@@ -75,7 +71,62 @@
     }
 
     #calculator {
-        height: 70vh;
+        height: 100%;
+    }
+}
+
+/****************************************/
+
+.panel {
+    border-bottom: solid 4px #ccc;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    > header {
+        padding: 8px;
+        background-color: #1565c0;
+        color: white;
+        display: flex;
+        flex-shrink: 0;
+
+        h6 {
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .actions {
+            margin-left: 8px;
+
+            a {
+                margin-right: 8px;
+
+                i {
+                    color: #eee;
+                }
+
+                &:last-of-type {
+                    margin-right: 0;
+                }
+            }
+        }
+    }
+
+    > .content {
+        padding: 8px;
+        flex-grow: 1;
+        position: relative;
+    }
+
+    &:last-of-type {
+        border-bottom: none;
+    }
+
+    &.scroll {
+        > .content {
+            overflow: scroll;
+        }
     }
 }
 
@@ -84,23 +135,27 @@
 .tree-view {
     ul {
         list-style: none;
+        margin: 0;
 
         > li {
-            overflow: hidden;
             position: relative;
             transition-duration: 0.3s;
 
             > header {
                 display: flex;
-                white-space:nowrap;
+                white-space: nowrap;
 
                 .expand-collapse i {
                     transition-duration: 0.3s;
                     transform: rotate(-90deg);
                 }
 
-                .selector {
+                .visibility {
                     color: #ddd;
+                }
+
+                .label {
+                    color: #000;
                 }
             }
 
@@ -109,12 +164,21 @@
                 opacity: 0;
                 top: -20px;
                 height: 0;
+                pointer-events: none;
                 transition-duration: 0.3s;
             }
 
             &.selected {
                 > header {
-                    .selector {
+                    .label {
+                        font-weight: bold;
+                    }
+                }
+            }
+
+            &.visible {
+                > header {
+                    .visibility {
                     }
                 }
             }
@@ -124,6 +188,7 @@
                     opacity: 1;
                     top: 0;
                     height: auto;
+                    pointer-events: all;
                 }
 
                 > header {

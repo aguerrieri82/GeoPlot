@@ -1,3 +1,14 @@
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -33,17 +44,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
-};
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 var WebApp;
 (function (WebApp) {
@@ -307,7 +307,133 @@ var WebApp;
         return DoubleFactorFunction;
     }());
     WebApp.DoubleFactorFunction = DoubleFactorFunction;
-    /****************************************/
+    var IndicatorCalculator = /** @class */ (function () {
+        function IndicatorCalculator(data, dataSet, geo) {
+            this._data = data;
+            this._dataSet = dataSet;
+            this._geo = geo;
+        }
+        /****************************************/
+        IndicatorCalculator.prototype.getFactorValue = function (options) {
+            var e_1, _a;
+            var _this = this;
+            var areaId = (typeof options.areaOrId == "string" ? options.areaOrId : options.areaOrId.id).toLowerCase();
+            var dataAtDay = function (number, curAreaId) {
+                return number < 0 ? undefined : _this._data.days[number].values[curAreaId];
+            };
+            var dayGroup;
+            if (!Array.isArray(options.dayNumberOrGroup))
+                dayGroup = [options.dayNumberOrGroup];
+            else
+                dayGroup = options.dayNumberOrGroup;
+            var main = [];
+            var delta = [];
+            var exMain = [];
+            var exDelta = [];
+            try {
+                for (var dayGroup_1 = __values(dayGroup), dayGroup_1_1 = dayGroup_1.next(); !dayGroup_1_1.done; dayGroup_1_1 = dayGroup_1.next()) {
+                    var dayNumber = dayGroup_1_1.value;
+                    main.push(dataAtDay(dayNumber, areaId));
+                    if (options.isDayDelta)
+                        delta.push(dataAtDay(dayNumber - 1, areaId));
+                    if (options.execludedAreas) {
+                        var curExMain = [];
+                        var curExDelta = [];
+                        for (var exAreaId in options.execludedAreas) {
+                            curExMain.push(dataAtDay(dayNumber, exAreaId.toLowerCase()));
+                            if (options.isDayDelta)
+                                curExDelta.push(dataAtDay(dayNumber - 1, exAreaId.toLowerCase()));
+                        }
+                        exMain.push(curExMain);
+                        exDelta.push(curExDelta);
+                    }
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (dayGroup_1_1 && !dayGroup_1_1.done && (_a = dayGroup_1.return)) _a.call(dayGroup_1);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            var factor = WebApp.linq(this._dataSet.factors).first(function (a) { return a.id == options.factorId; });
+            var indicator = WebApp.linq(this._dataSet.indicators).first(function (a) { return a.id == options.indicatorId; });
+            return factor.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId], indicator.compute);
+        };
+        /****************************************/
+        IndicatorCalculator.prototype.getIndicatorValue = function (options) {
+            var _this = this;
+            var areaId = (typeof options.areaOrId == "string" ? options.areaOrId : options.areaOrId.id).toLowerCase();
+            var indicator = WebApp.linq(this._dataSet.indicators).first(function (a) { return a.id == options.indicatorId; });
+            var dataAtDay = function (number, curAreaId) {
+                return number < 0 ? undefined : _this._data.days[number].values[curAreaId];
+            };
+            var main = dataAtDay(options.dayNumber, areaId);
+            var delta;
+            var exMain;
+            var exDelta;
+            if (options.isDayDelta)
+                delta = dataAtDay(options.dayNumber - 1, areaId);
+            if (options.execludedAreas) {
+                exMain = [];
+                exDelta = [];
+                for (var exAreaId in options.execludedAreas) {
+                    exMain.push(dataAtDay(options.dayNumber, exAreaId.toLowerCase()));
+                    if (options.isDayDelta)
+                        exDelta.push(dataAtDay(options.dayNumber - 1, exAreaId.toLowerCase()));
+                }
+                ;
+            }
+            return indicator.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId]);
+        };
+        /****************************************/
+        IndicatorCalculator.prototype.getSerie = function (source) {
+            var result = [];
+            if (source.groupSize > 1) {
+                var count = source.groupSize;
+                var group = [];
+                for (var i = 0 + source.startDay; i < this._data.days.length; i++) {
+                    group.push(i);
+                    count--;
+                    if (count == 0) {
+                        var item = {
+                            x: source.xAxis == "date" ? new Date(this._data.days[i].date) : i,
+                            y: this.getFactorValue({
+                                dayNumberOrGroup: group,
+                                areaOrId: source.areaId,
+                                factorId: source.factorId,
+                                indicatorId: source.indicatorId,
+                                execludedAreas: source.exeludedAreaIds,
+                                isDayDelta: source.isDelta
+                            })
+                        };
+                        result.push(item);
+                        count = source.groupSize;
+                        group = [];
+                    }
+                }
+            }
+            else {
+                for (var i = 0 + source.startDay; i < this._data.days.length; i++) {
+                    var item = {
+                        x: source.xAxis == "date" ? new Date(this._data.days[i].date) : i,
+                        y: this.getFactorValue({
+                            dayNumberOrGroup: i,
+                            areaOrId: source.areaId,
+                            factorId: source.factorId,
+                            indicatorId: source.indicatorId,
+                            execludedAreas: source.exeludedAreaIds,
+                            isDayDelta: source.isDelta
+                        })
+                    };
+                    result.push(item);
+                }
+            }
+            return result;
+        };
+        return IndicatorCalculator;
+    }());
+    WebApp.IndicatorCalculator = IndicatorCalculator;
 })(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
@@ -835,6 +961,7 @@ var WebApp;
             this._data = model.data;
             this._geo = model.geo;
             this._debugMode = model.debugMode;
+            this._calculator = new WebApp.IndicatorCalculator(this._data, this._dataSet, this._geo);
             this.totalDays(this._data.days.length - 1);
             this.dayNumber.subscribe(function (value) {
                 if (value != _this._data.days.length - 1)
@@ -1010,7 +1137,7 @@ var WebApp;
         };
         /****************************************/
         GeoPlotPage.prototype.loadState = function (state) {
-            var e_1, _a;
+            var e_2, _a;
             if (!state.view)
                 state.view = "region";
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
@@ -1039,12 +1166,12 @@ var WebApp;
                         this._execludedArea.set(areaId, this._geo.areas[areaId.toLowerCase()]);
                     }
                 }
-                catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                catch (e_2_1) { e_2 = { error: e_2_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_1) throw e_1.error; }
+                    finally { if (e_2) throw e_2.error; }
                 }
             }
             if (state.indicator)
@@ -1222,6 +1349,33 @@ var WebApp;
             });
         };
         /****************************************/
+        GeoPlotPage.prototype.copySerieForStudio = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                var obj;
+                return __generator(this, function (_a) {
+                    obj = {
+                        type: "serie",
+                        version: 1,
+                        serie: {
+                            areaId: this.selectedArea.id,
+                            indicatorId: this.selectedIndicator().id,
+                            xAxis: "dayNumber",
+                            startDay: this.startDay(),
+                            exeludedAreaIds: WebApp.linq(this._execludedArea.keys()).toArray(),
+                            factorId: this.selectedFactor().id,
+                            groupSize: this.groupSize(),
+                            isDelta: this.isDayDelta(),
+                        },
+                        title: this.factorDescription()
+                    };
+                    obj.values = this._calculator.getSerie(obj.serie);
+                    WebApp.DomUtils.copyText(JSON.stringify(obj));
+                    M.toast({ html: "Serie copiata sugli appunti." });
+                    return [2 /*return*/];
+                });
+            });
+        };
+        /****************************************/
         GeoPlotPage.prototype.play = function () {
             if (this.dayNumber() == this._data.days.length - 1)
                 this.dayNumber(0);
@@ -1292,70 +1446,24 @@ var WebApp;
         });
         /****************************************/
         GeoPlotPage.prototype.getFactorValue = function (dayNumberOrGroup, areaOrId) {
-            var e_2, _a;
-            var _this = this;
-            var areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
-            var dataAtDay = function (number, curAreaId) {
-                return number < 0 ? undefined : _this._data.days[number].values[curAreaId];
-            };
-            if (!Array.isArray(dayNumberOrGroup))
-                dayNumberOrGroup = [dayNumberOrGroup];
-            var main = [];
-            var delta = [];
-            var exMain = [];
-            var exDelta = [];
-            try {
-                for (var dayNumberOrGroup_1 = __values(dayNumberOrGroup), dayNumberOrGroup_1_1 = dayNumberOrGroup_1.next(); !dayNumberOrGroup_1_1.done; dayNumberOrGroup_1_1 = dayNumberOrGroup_1.next()) {
-                    var dayNumber = dayNumberOrGroup_1_1.value;
-                    main.push(dataAtDay(dayNumber, areaId));
-                    if (this.isDayDelta())
-                        delta.push(dataAtDay(dayNumber - 1, areaId));
-                    if (this._execludedArea.size > 0) {
-                        var curExMain = [];
-                        var curExDelta = [];
-                        this._execludedArea.forEach(function (a) {
-                            curExMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
-                            if (_this.isDayDelta())
-                                curExDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
-                        });
-                        exMain.push(curExMain);
-                        exDelta.push(curExDelta);
-                    }
-                }
-            }
-            catch (e_2_1) { e_2 = { error: e_2_1 }; }
-            finally {
-                try {
-                    if (dayNumberOrGroup_1_1 && !dayNumberOrGroup_1_1.done && (_a = dayNumberOrGroup_1.return)) _a.call(dayNumberOrGroup_1);
-                }
-                finally { if (e_2) throw e_2.error; }
-            }
-            return this.selectedFactor().compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId], this.selectedIndicator().compute);
+            return this._calculator.getFactorValue({
+                dayNumberOrGroup: dayNumberOrGroup,
+                areaOrId: areaOrId,
+                factorId: this.selectedFactor().id,
+                indicatorId: this.selectedIndicator().id,
+                isDayDelta: this.isDayDelta(),
+                execludedAreas: WebApp.linq(this._execludedArea.keys()).toArray()
+            });
         };
         /****************************************/
         GeoPlotPage.prototype.getIndicatorValue = function (dayNumber, areaOrId, indicatorId) {
-            var _this = this;
-            var areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
-            var indicator = WebApp.linq(this._dataSet.indicators).first(function (a) { return a.id == indicatorId; });
-            var dataAtDay = function (number, curAreaId) {
-                return number < 0 ? undefined : _this._data.days[number].values[curAreaId];
-            };
-            var main = dataAtDay(dayNumber, areaId);
-            var delta;
-            var exMain;
-            var exDelta;
-            if (this.isDayDelta())
-                delta = dataAtDay(dayNumber - 1, areaId);
-            if (this._execludedArea.size > 0) {
-                exMain = [];
-                exDelta = [];
-                this._execludedArea.forEach(function (a) {
-                    exMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
-                    if (_this.isDayDelta())
-                        exDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
-                });
-            }
-            return indicator.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId]);
+            return this._calculator.getIndicatorValue({
+                dayNumber: dayNumber,
+                areaOrId: areaOrId,
+                indicatorId: indicatorId,
+                isDayDelta: this.isDayDelta(),
+                execludedAreas: WebApp.linq(this._execludedArea.keys()).toArray()
+            });
         };
         /****************************************/
         GeoPlotPage.prototype.computeStartDayForGroup = function () {
@@ -1630,33 +1738,16 @@ var WebApp;
                 this._chart.options.scales.yAxes[0].type = "linear";
             this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
             this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
-            this._chart.data.datasets[0].data = [];
-            if (this.groupSize() > 1) {
-                var count = this.groupSize();
-                var group = [];
-                for (var i = 0 + this.startDay(); i < this._data.days.length; i++) {
-                    group.push(i);
-                    count--;
-                    if (count == 0) {
-                        var item = {
-                            x: new Date(this._data.days[i].date),
-                            y: this.getFactorValue(group, area)
-                        };
-                        this._chart.data.datasets[0].data.push(item);
-                        count = this.groupSize();
-                        group = [];
-                    }
-                }
-            }
-            else {
-                for (var i = 0 + this.startDay(); i < this._data.days.length; i++) {
-                    var item = {
-                        x: new Date(this._data.days[i].date),
-                        y: this.getFactorValue(i, area)
-                    };
-                    this._chart.data.datasets[0].data.push(item);
-                }
-            }
+            this._chart.data.datasets[0].data = this._calculator.getSerie({
+                areaId: area.id,
+                indicatorId: this.selectedIndicator().id,
+                xAxis: "date",
+                startDay: this.startDay(),
+                exeludedAreaIds: WebApp.linq(this._execludedArea.keys()).toArray(),
+                factorId: this.selectedFactor().id,
+                groupSize: this.groupSize(),
+                isDelta: this.isDayDelta()
+            });
             this._chart.update();
         };
         /****************************************/
@@ -1786,13 +1877,25 @@ var WebApp;
 var WebApp;
 (function (WebApp) {
     function setExpression(calc, value) {
+        var e_6, _a;
         var state = calc.getState();
         var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
         if (!curExp)
             state.expressions.list.push(value);
         else {
-            for (var prop in curExp)
-                curExp[prop] = value[prop];
+            try {
+                for (var _b = __values(Object.getOwnPropertyNames(value)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var prop = _c.value;
+                    curExp[prop] = value[prop];
+                }
+            }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_6) throw e_6.error; }
+            }
         }
         calc.setState(state);
     }
@@ -1804,6 +1907,13 @@ var WebApp;
             this.itemType = "regression";
             this.icon = "show_chart";
         }
+        /****************************************/
+        StudioSerieRegression.prototype.remove = function () {
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.attachNode = function (node) {
+            this.node = node;
+        };
         /****************************************/
         StudioSerieRegression.prototype.updateGraph = function (options) {
         };
@@ -1822,7 +1932,6 @@ var WebApp;
         function StudioProject(config) {
             /****************************************/
             this.name = ko.observable();
-            this.series = ko.observableArray();
             this.itemType = "project";
             this.icon = "folder";
             if (config) {
@@ -1831,28 +1940,78 @@ var WebApp;
             }
         }
         /****************************************/
-        StudioProject.prototype.updateGraph = function (options) {
-            this._calculator = options.calculator;
-            if (!this.folderId)
-                this.folderId = WebApp.StringUtils.uuidv4();
-            setExpression(options.calculator, { type: "folder", id: this.folderId, title: this.name() });
-            if (options.recursive)
-                this.series().forEach(function (a) { return a.updateGraph(options); });
+        StudioProject.prototype.remove = function () {
+            this.series.foreach(function (a) { return a.remove(); });
+            this.node.remove();
         };
         /****************************************/
-        StudioProject.prototype.addSerie = function (config) {
-            var result = new StudioSerie(config);
-            result.project = this;
-            result.node = new TreeNodeViewModel(result);
-            this.node.nodes.push(result.node);
+        StudioProject.prototype.attachNode = function (node) {
+            var _this = this;
+            this.node = node;
+            this.node.isVisible.subscribe(function (value) { return _this.updateGraph({ calculator: _this._calculator, recursive: true }); });
+        };
+        /****************************************/
+        StudioProject.prototype.updateGraph = function (ctx) {
+            this._calculator = ctx.calculator;
+            if (ctx.recursive)
+                this.series.foreach(function (a) { return a.updateGraph(ctx); });
+        };
+        /****************************************/
+        StudioProject.prototype.addSerie = function (configOrSerie) {
+            var serie = configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie);
+            var node = new TreeNodeViewModel(serie);
+            this.node.addNode(node);
+            serie.attachNode(node);
             if (this._calculator)
-                result.updateGraph({ calculator: this._calculator });
-            return result;
+                serie.updateGraph({ calculator: this._calculator });
+            return serie;
         };
         Object.defineProperty(StudioProject.prototype, "label", {
             /****************************************/
             get: function () {
                 return this.name();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(StudioProject.prototype, "series", {
+            /****************************************/
+            get: function () {
+                function items() {
+                    var _a, _b, node, e_7_1;
+                    var e_7, _c;
+                    return __generator(this, function (_d) {
+                        switch (_d.label) {
+                            case 0:
+                                _d.trys.push([0, 5, 6, 7]);
+                                _a = __values(this.node.nodes()), _b = _a.next();
+                                _d.label = 1;
+                            case 1:
+                                if (!!_b.done) return [3 /*break*/, 4];
+                                node = _b.value;
+                                return [4 /*yield*/, node.value()];
+                            case 2:
+                                _d.sent();
+                                _d.label = 3;
+                            case 3:
+                                _b = _a.next();
+                                return [3 /*break*/, 1];
+                            case 4: return [3 /*break*/, 7];
+                            case 5:
+                                e_7_1 = _d.sent();
+                                e_7 = { error: e_7_1 };
+                                return [3 /*break*/, 7];
+                            case 6:
+                                try {
+                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                }
+                                finally { if (e_7) throw e_7.error; }
+                                return [7 /*endfinally*/];
+                            case 7: return [2 /*return*/];
+                        }
+                    });
+                }
+                return WebApp.linq(items());
             },
             enumerable: true,
             configurable: true
@@ -1866,7 +2025,6 @@ var WebApp;
             this.name = ko.observable();
             this.color = ko.observable();
             this.offsetX = ko.observable(0);
-            this.graphFolderId = ko.observable(0);
             this.itemType = "serie";
             this.icon = "insert_chart";
             if (config) {
@@ -1875,16 +2033,50 @@ var WebApp;
             }
         }
         /****************************************/
-        StudioSerie.prototype.updateGraph = function (options) {
-            this._calculator = options.calculator;
+        StudioSerie.fromText = function (text) {
+            try {
+                var obj = JSON.parse(text);
+                if (obj && obj.type == "serie")
+                    return new StudioSerie({
+                        name: obj.title,
+                        values: obj.values,
+                        source: obj.serie
+                    });
+            }
+            catch (_a) {
+            }
+        };
+        /****************************************/
+        StudioSerie.prototype.remove = function () {
+            if (this._calculator)
+                this._calculator.removeExpression({ id: this.folderId });
+            this.node.remove();
+        };
+        /****************************************/
+        StudioSerie.prototype.attachNode = function (node) {
+            var _this = this;
+            this.node = node;
+            this.node.isVisible.subscribe(function (value) { return _this.updateGraph({ calculator: _this._calculator, recursive: true }); });
+        };
+        /****************************************/
+        StudioSerie.prototype.updateGraph = function (ctx) {
+            this._calculator = ctx.calculator;
             if (!this.folderId)
                 this.folderId = WebApp.StringUtils.uuidv4();
-            setExpression(options.calculator, { type: "folder", id: this.folderId, folderId: this.project.folderId, title: this.name() });
+            setExpression(ctx.calculator, { type: "folder", id: this.folderId, hidden: !this.node.isVisible() || !this.project.node.isVisible(), title: this.project.name() + " - " + this.name() });
         };
         Object.defineProperty(StudioSerie.prototype, "label", {
             /****************************************/
             get: function () {
                 return this.name();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(StudioSerie.prototype, "project", {
+            /****************************************/
+            get: function () {
+                return this.node.value();
             },
             enumerable: true,
             configurable: true
@@ -1902,14 +2094,63 @@ var WebApp;
     /****************************************/
     var TreeNodeViewModel = /** @class */ (function () {
         function TreeNodeViewModel(value) {
+            var _this = this;
             /****************************************/
             this.nodes = ko.observableArray();
             this.value = ko.observable();
-            this.isSelected = ko.observable(true);
+            this.isSelected = ko.observable(false);
+            this.isVisible = ko.observable(true);
             this.isExpanded = ko.observable(false);
             this.actions = ko.observableArray();
             this.value(value);
+            this.isSelected.subscribe(function (a) {
+                if (a)
+                    _this._treeView.select(_this);
+            });
         }
+        /****************************************/
+        TreeNodeViewModel.prototype.remove = function () {
+            if (this._parentNode)
+                this._parentNode.nodes.remove(this);
+            if (this._treeView.selectedNode == this)
+                this._treeView.select(null);
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.addNode = function (node) {
+            node.attach(this._treeView, this);
+            this.nodes.push(node);
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.attach = function (treeView, parent) {
+            var e_8, _a;
+            this._treeView = treeView;
+            this._parentNode = parent;
+            try {
+                for (var _b = __values(this.nodes()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var childNode = _c.value;
+                    childNode.attach(treeView);
+                }
+            }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_8) throw e_8.error; }
+            }
+        };
+        Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
+            /****************************************/
+            get: function () {
+                return this._parentNode;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /****************************************/
+        TreeNodeViewModel.prototype.toggleVisible = function () {
+            this.isVisible(!this.isVisible());
+        };
         /****************************************/
         TreeNodeViewModel.prototype.toggleSelection = function () {
             this.isSelected(!this.isSelected());
@@ -1923,17 +2164,44 @@ var WebApp;
     /****************************************/
     var TreeViewModel = /** @class */ (function () {
         function TreeViewModel() {
+            /****************************************/
             this.root = ko.observable();
         }
+        /****************************************/
+        TreeViewModel.prototype.select = function (node) {
+            if (this._selectedNode == node)
+                return;
+            if (this._selectedNode)
+                this._selectedNode.isSelected(false);
+            this._selectedNode = node;
+            if (this._selectedNode)
+                this._selectedNode.isSelected(true);
+        };
+        Object.defineProperty(TreeViewModel.prototype, "selectedNode", {
+            get: function () {
+                return this._selectedNode;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /****************************************/
+        TreeViewModel.prototype.setRoot = function (node) {
+            node.attach(this);
+            this.root(node);
+        };
         return TreeViewModel;
     }());
     WebApp.TreeViewModel = TreeViewModel;
     /****************************************/
     var StudioPage = /** @class */ (function () {
-        function StudioPage() {
+        function StudioPage(model) {
             var _this = this;
+            this._dataSet = WebApp.InfectionDataSet;
             /****************************************/
-            this.series = new TreeViewModel();
+            this.items = new TreeViewModel();
+            this._data = model.data;
+            this._geo = model.geo;
+            this._serieCalculator = new WebApp.IndicatorCalculator(this._data, this._dataSet, this._geo);
             this._calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                 xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                 pasteGraphLink: true,
@@ -1943,53 +2211,48 @@ var WebApp;
                 authorIDE: true,
                 advancedStyling: true
             });
-            /*
-            this._calculator.setExpression({
-                id: "xzxxz",
-                type: "table", columns: [{
-                    latex: "x_{1}",
-                    values: [0, 1, 2, 3]
-                }, {
-                    latex: "y_{1}",
-                    lines: true,
-                    points: true,
-                    values: [10, 12, 25, 11]
-                }]
-            })
-            */
-            this.series.root(new TreeNodeViewModel());
+            this.items.setRoot(new TreeNodeViewModel());
             window.addEventListener("beforeunload", function () { return _this.saveState(); });
-            setTimeout(function () {
-                //this.loadState();
-                _this.demo();
+            document.body.addEventListener("paste", function (ev) {
+                ev.preventDefault();
+                _this.onPaste(ev.clipboardData);
             });
+            document.body.addEventListener("keydown", function (ev) {
+                _this.onKeyDown(ev);
+            });
+            setTimeout(function () { return _this.init(); });
         }
         /****************************************/
-        StudioPage.prototype.demo = function () {
-            var proj = this.addProject({ name: "Project 1" });
-            this.addProject({ name: "Project 2" });
-            this.addProject({ name: "Project 3" });
-            proj.addSerie({
-                name: "Serie 1"
-            });
+        StudioPage.prototype.removeSelected = function () {
+            if (!this.items.selectedNode)
+                return;
+            var value = this.items.selectedNode.value();
+            value.remove();
+        };
+        /****************************************/
+        StudioPage.prototype.getSelectedProject = function () {
+            if (!this.items.selectedNode)
+                return;
+            var value = this.items.selectedNode.value();
+            if (value.itemType == "project")
+                return value;
+            if (value.itemType == "serie")
+                return value.project;
+        };
+        /****************************************/
+        StudioPage.prototype.newProject = function () {
+            var proj = this.addProject({ name: "Project " + (this.projects.count() + 1) });
+            proj.node.isSelected(true);
+            return proj;
         };
         /****************************************/
         StudioPage.prototype.addProject = function (config) {
             var project = new StudioProject(config);
-            project.node = new TreeNodeViewModel(project);
-            this.series.root().nodes.push(project.node);
+            var node = new TreeNodeViewModel(project);
+            this.items.root().addNode(node);
+            project.attachNode(node);
             project.updateGraph({ calculator: this._calculator });
             return project;
-        };
-        /****************************************/
-        StudioPage.prototype.loadState = function () {
-            var json = localStorage.getItem("studio");
-            if (json)
-                this.setState(JSON.parse(json));
-        };
-        /****************************************/
-        StudioPage.prototype.saveState = function () {
-            localStorage.setItem("studio", JSON.stringify(this.getState()));
         };
         /****************************************/
         StudioPage.prototype.getState = function () {
@@ -2005,8 +2268,94 @@ var WebApp;
                 this._calculator.setState(value.graphState);
         };
         /****************************************/
-        StudioPage.prototype.test = function () {
-            var state = this._calculator.getState();
+        StudioPage.prototype.loadState = function () {
+            var json = localStorage.getItem("studio");
+            if (json)
+                this.setState(JSON.parse(json));
+        };
+        /****************************************/
+        StudioPage.prototype.saveState = function () {
+            localStorage.setItem("studio", JSON.stringify(this.getState()));
+        };
+        /****************************************/
+        StudioPage.prototype.demo = function () {
+            var proj = this.addProject({ name: "Project 1" });
+            this.addProject({ name: "Project 2" });
+            this.addProject({ name: "Project 3" });
+            proj.addSerie({
+                name: "Serie 1"
+            });
+        };
+        /****************************************/
+        StudioPage.prototype.onKeyDown = function (ev) {
+            if (ev.keyCode == 46) {
+                ev.preventDefault();
+                this.removeSelected();
+            }
+        };
+        /****************************************/
+        StudioPage.prototype.onPaste = function (data) {
+            var project = this.getSelectedProject();
+            if (!project && !this.projects.any())
+                project = this.newProject();
+            if (project) {
+                var text = data.getData("text/plain").toString();
+                if (text) {
+                    var serie = StudioSerie.fromText(text);
+                    if (serie) {
+                        project.addSerie(serie);
+                        project.node.isExpanded(true);
+                        serie.node.isSelected(true);
+                    }
+                }
+            }
+        };
+        Object.defineProperty(StudioPage.prototype, "projects", {
+            /****************************************/
+            get: function () {
+                function items() {
+                    var _a, _b, node, e_9_1;
+                    var e_9, _c;
+                    return __generator(this, function (_d) {
+                        switch (_d.label) {
+                            case 0:
+                                _d.trys.push([0, 5, 6, 7]);
+                                _a = __values(this.node.nodes()), _b = _a.next();
+                                _d.label = 1;
+                            case 1:
+                                if (!!_b.done) return [3 /*break*/, 4];
+                                node = _b.value;
+                                return [4 /*yield*/, node.value()];
+                            case 2:
+                                _d.sent();
+                                _d.label = 3;
+                            case 3:
+                                _b = _a.next();
+                                return [3 /*break*/, 1];
+                            case 4: return [3 /*break*/, 7];
+                            case 5:
+                                e_9_1 = _d.sent();
+                                e_9 = { error: e_9_1 };
+                                return [3 /*break*/, 7];
+                            case 6:
+                                try {
+                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                }
+                                finally { if (e_9) throw e_9.error; }
+                                return [7 /*endfinally*/];
+                            case 7: return [2 /*return*/];
+                        }
+                    });
+                }
+                return WebApp.linq(items());
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /****************************************/
+        StudioPage.prototype.init = function () {
+            //this.loadState();
+            this.demo();
         };
         return StudioPage;
     }());

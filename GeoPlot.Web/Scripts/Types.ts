@@ -85,6 +85,41 @@
         indicators: IIndicator<TData>[];
         factors: IFactor<TData>[];
     }
+
+    /****************************************/
+
+    export interface IStudioData {
+        version: number;
+    }
+
+    export interface IStudioData {
+        type: "serie";
+        serie: ISerieSource;
+        title: string;
+        values?: IFunctionPoint<number>[];
+    }
+
+    /****************************************/
+
+    export interface ISerieSource {
+        areaId: string;
+        exeludedAreaIds?: string[];
+        indicatorId: string;
+        factorId?: string;
+        groupSize?: number;
+        startDay?: number;
+        endDay?: number;
+        isDelta?: boolean;
+        xAxis: "dayNumber" | "date";
+
+    }
+
+    /****************************************/
+
+    export interface IFunctionPoint<TX extends Date|number> {
+        x: TX;
+        y: number;
+    }
 }
 
 

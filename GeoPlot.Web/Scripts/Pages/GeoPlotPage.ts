@@ -238,6 +238,7 @@
         private _keepState = false;
         private _debugMode = false;
         private _preferences: IViewPreferences;   
+        private _calculator: IndicatorCalculator<TData>;
         
         private _tips: IViewActions<IViewActionTip> = {
             areaSelected: {
@@ -443,6 +444,7 @@
             this._data = model.data;
             this._geo = model.geo;
             this._debugMode = model.debugMode;
+            this._calculator = new IndicatorCalculator(this._data, this._dataSet, this._geo);
 
             this.totalDays(this._data.days.length - 1);
 
@@ -885,6 +887,33 @@
 
         /****************************************/
 
+        async copySerieForStudio() {
+
+            let obj: IStudioData = {
+                type: "serie",
+                version: 1,
+                serie: {
+                    areaId: this.selectedArea.id,
+                    indicatorId: this.selectedIndicator().id,
+                    xAxis: "dayNumber",
+                    startDay: this.startDay(),
+                    exeludedAreaIds: linq(this._execludedArea.keys()).toArray(),
+                    factorId: this.selectedFactor().id,
+                    groupSize: this.groupSize(),
+                    isDelta: this.isDayDelta(),
+                },
+                title: this.factorDescription()
+            };
+
+            obj.values = this._calculator.getSerie(obj.serie);
+
+            DomUtils.copyText(JSON.stringify(obj));
+
+            M.toast({ html: "Serie copiata sugli appunti." })
+        }
+
+        /****************************************/
+
         play() {
             if (this.dayNumber() == this._data.days.length - 1)
                 this.dayNumber(0);
@@ -974,73 +1003,27 @@
 
         protected getFactorValue(dayNumberOrGroup: number | number[], areaOrId: string | IGeoArea): number {
 
-            const areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
-
-            const dataAtDay = (number: number, curAreaId: string) =>
-                number < 0 ? undefined : this._data.days[number].values[curAreaId];
-
-            if (!Array.isArray(dayNumberOrGroup))
-                dayNumberOrGroup = [dayNumberOrGroup];
-
-            let main: TData[] = [];
-            let delta: TData[] = [];
-            let exMain: TData[][] = [];
-            let exDelta: TData[][] = [];
-
-            for (var dayNumber of dayNumberOrGroup) {
-
-                main.push(dataAtDay(dayNumber, areaId));
-
-                if (this.isDayDelta())
-                    delta.push(dataAtDay(dayNumber - 1, areaId));
-
-                if (this._execludedArea.size > 0) {
-                    var curExMain = [];
-                    var curExDelta = [];
-                    this._execludedArea.forEach(a => {
-                        curExMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
-                        if (this.isDayDelta())
-                            curExDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
-                    });
-                    exMain.push(curExMain)
-                    exDelta.push(curExDelta)
-                }
-            }
-
-            return this.selectedFactor().compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId], this.selectedIndicator().compute);
+            return this._calculator.getFactorValue({
+                dayNumberOrGroup: dayNumberOrGroup,
+                areaOrId: areaOrId,
+                factorId: this.selectedFactor().id,
+                indicatorId: this.selectedIndicator().id,
+                isDayDelta: this.isDayDelta(),
+                execludedAreas: linq(this._execludedArea.keys()).toArray()
+            });
         }
 
         /****************************************/
 
         protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicatorId: keyof TData | string): number {
 
-            const areaId = (typeof areaOrId == "string" ? areaOrId : areaOrId.id).toLowerCase();
-
-            const indicator = linq(this._dataSet.indicators).first(a => a.id == indicatorId);
-
-            const dataAtDay = (number: number, curAreaId: string) =>
-                number < 0 ? undefined : this._data.days[number].values[curAreaId];
-
-
-            let main = dataAtDay(dayNumber, areaId);
-            let delta: TData;
-            let exMain: TData[];
-            let exDelta: TData[];
-
-            if (this.isDayDelta())
-                delta = dataAtDay(dayNumber - 1, areaId);
-
-            if (this._execludedArea.size > 0) {
-                exMain = [];
-                exDelta = [];
-                this._execludedArea.forEach(a => {
-                    exMain.push(dataAtDay(dayNumber, a.id.toLowerCase()));
-                    if (this.isDayDelta())
-                        exDelta.push(dataAtDay(dayNumber - 1, a.id.toLowerCase()));
-                });
-            }
-
-            return indicator.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId]);
+            return this._calculator.getIndicatorValue({
+                dayNumber: dayNumber,
+                areaOrId: areaOrId,
+                indicatorId: indicatorId,
+                isDayDelta: this.isDayDelta(),
+                execludedAreas: linq(this._execludedArea.keys()).toArray()
+            });
         }
 
         /****************************************/
@@ -1348,38 +1331,16 @@
             this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
             this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
 
-            this._chart.data.datasets[0].data = [];
-
-            if (this.groupSize() > 1) {
-
-                let count = this.groupSize();
-                let group: number[] = [];
-                for (let i = 0 + this.startDay(); i < this._data.days.length; i++) {
-                    group.push(i);
-                    count--;
-                    if (count == 0) {
-                        const item: Chart.ChartPoint = {
-                            x: new Date(this._data.days[i].date),
-                            y: this.getFactorValue(group, area)
-                        };
-                        this._chart.data.datasets[0].data.push(<any>item);
-                        count = this.groupSize();
-                        group = [];
-                    }
-                }
-            }
-            else {
-                for (let i = 0 + this.startDay(); i < this._data.days.length; i++) {
-
-                    const item: Chart.ChartPoint = {
-                        x: new Date(this._data.days[i].date),
-                        y: this.getFactorValue(i, area)
-                    };
-                    this._chart.data.datasets[0].data.push(<any>item);
-                }
-            }
-
-
+            this._chart.data.datasets[0].data = this._calculator.getSerie({
+                areaId: area.id,
+                indicatorId: this.selectedIndicator().id,
+                xAxis: "date",
+                startDay: this.startDay(),
+                exeludedAreaIds: linq(this._execludedArea.keys()).toArray(),
+                factorId: this.selectedFactor().id,
+                groupSize: this.groupSize(),
+                isDelta: this.isDayDelta()
+            });
 
             this._chart.update();
         }

@@ -146,7 +146,7 @@ declare namespace Desmos {
     /* ENTITIES
     /****************************************/
 
-    interface IGraphState {
+    interface IGraphStateOptions {
         degreeMode?: boolean;
         showGrid?: boolean;
         polarMode?: boolean;
@@ -164,7 +164,20 @@ declare namespace Desmos {
         xAxisLabel?: string;
         yAxisLabel?: string;
         randomSeed?: string;
+    }
+
+    interface IGraphViewport {
+        xmax: number;
+        xmin: number;
+        ymax: number;
+        ymin: number;
+    }
+
+    interface IGraphState {
         expressions?: { list: Expression[] };
+        graph: IGraphStateOptions & {viewport: IGraphViewport };
+        randomSeed: string;
+        version: number;
     }
 
     interface IGraphBounds {
@@ -271,7 +284,7 @@ declare namespace Desmos {
         remapColors?: boolean;
     }  
 
-    interface IGraphingCalculatorOptions extends IGraphState {
+    interface IGraphingCalculatorOptions extends IGraphStateOptions {
         keypad?: boolean;
         graphpaper?: boolean;
         expressions?: boolean;

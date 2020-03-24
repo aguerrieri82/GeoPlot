@@ -1,17 +1,26 @@
-﻿@{
+﻿@model StudioViewModel
+@{
     ViewData["Title"] = "Studio";
 }
 <div class="container">
+    <environment include="Production">
+        <div class="dev-message">
+            <i class="material-icons">warning</i> ATTENZIONE! Sistema in fase di sviluppo, non ottimizzato mobile! <i class="material-icons">warning</i>
+        </div>
+    </environment>
+
     <div class="studio-page">
         <div class="side-bar">
-            <section class="panel series">
+            <section class="panel series scroll">
                 <header>
                     <h6>Serie</h6>
+                    <div class="actions">
+                        <a href="#!" title="Nuovo progetto" data-bind="click: newProject"><i class="material-icons">create_new_folder</i></a>
+                    </div>
                 </header>
                 <div class="content">
-                    <div class="tree-view" >
-                        <ul data-bind="template: {foreach: series.root().nodes, name: 'TreeItemTemplate'}">
-
+                    <div class="tree-view">
+                        <ul data-bind="template: {foreach: items.root().nodes, name: 'TreeItemTemplate'}">
                         </ul>
                     </div>
                 </div>
@@ -31,11 +40,11 @@
 </div>
 
 <script type="text/html" id="TreeItemTemplate">
-    <li data-bind="css: {selected: isSelected, expanded: isExpanded}">
+    <li data-bind="css: {selected: isSelected, visible: isVisible, expanded: isExpanded}">
         <header data-bind="css: value().itemType">
             <a class="expand-collapse" href="#!" data-bind="click: expandCollapse"><i class="material-icons">arrow_drop_down</i></a>
-            <a class="selector" href="#!" data-bind="click: toggleSelection"><i class="material-icons" data-bind="text: value().icon"></i></a>
-            <span class="label" data-bind="text: value().label"></span>
+            <a class="visibility" href="#!" data-bind="click: toggleVisible"><i class="material-icons" data-bind="text: value().icon"></i></a>
+            <a href="#!" data-bind="click: toggleSelection"><span class="label" data-bind="text: value().label"></span></a>
             <div class="actions" data-bind="foreach: actions">
                 <a data-bind="text: text, css: {icon}, click: execute"></a>
             </div>
@@ -56,6 +65,6 @@
     <script>
         WebApp.app.baseUrl = '@Url.Content("~/")';
         WebApp.app.initServices();
-        ko.applyBindings(new WebApp.StudioPage());
+        ko.applyBindings(new WebApp.StudioPage(@Html.Json(Model)));
     </script>
 }
