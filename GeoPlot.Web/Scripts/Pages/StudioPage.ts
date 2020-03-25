@@ -4,7 +4,6 @@
 
     type GraphVarMap = IDictionary<string>;
 
-
     /****************************************/
     /* Regression
     /****************************************/
@@ -134,8 +133,251 @@
     interface IGraphItem {
 
         attachGraph(ctx: GraphContext);
+        updateGraphVisibility(recursive?: boolean);
         updateGraph(recursive?: boolean);
         folderId: string;
+    }
+
+
+    /****************************************/
+    /* BaseItem
+    /****************************************/
+
+    interface IItemConfig {
+        name?: string;
+        visible?: boolean;
+        color?: string;
+    }
+
+    /****************************************/
+
+    interface IItemState extends IItemConfig {
+        folderId?: string;
+        visible?: boolean;
+        opened?: boolean;
+    }
+
+    /****************************************/
+
+    abstract class BaseItem<TState extends IItemState, TParent extends ITreeItem & IGraphItem, TChild extends ITreeItem & IGraphItem> implements ITreeItem, IGraphItem {
+
+        protected _graphCtx: GraphContext;
+        protected _varsMap: IDictionary<string>;
+
+        constructor() {
+        }
+
+        /****************************************/
+
+        setState(state: TState) {
+            if (state.name)
+                this.name(state.name);
+
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+
+            if (state.color)
+                this.color(state.color);
+
+            if (state.opened != undefined)
+                this.node.isExpanded(state.opened);
+
+            if (state.folderId)
+                this.folderId = state.folderId;
+
+            this.setStateWork(state);
+
+            this.updateGraph();
+
+            this.setChildrenStateWork(state);
+        }
+
+        /****************************************/
+
+        getState(): TState {
+
+            return <TState>{
+                name: this.name(),
+                visible: this.node.isVisible(),
+                folderId: this.folderId
+            };
+        }
+
+        /****************************************/
+
+        getVar(name: string): string {
+
+            return this._varsMap[name];
+        }
+
+        /****************************************/
+
+        remove() {
+
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
+            this.node.remove();
+        }
+
+        /****************************************/
+
+        attachNode(node: TreeNodeViewModel<ITreeItem>) {
+            this.node = node;
+            this.node.isVisible.subscribe(value => this.updateGraphVisibility());
+            this.node.isSelected.subscribe(value => {
+                if (value)
+                    this.onSelected();
+            })
+        }
+
+        /****************************************/
+
+        attachGraph(ctx: GraphContext) {
+            this._graphCtx = ctx;
+
+            this._graphCtx.calculator.observe("expressionAnalysis", () => this.onGraphChanged());
+            this.color.subscribe(value => this.updateColor());
+        }
+
+        /****************************************/
+
+        updateGraphVisibility(recorsive = true) {
+
+            let curNode = this.node;
+            let isVisible = true;
+
+            while (curNode) {
+                if (!curNode.isVisible()) {
+                    isVisible = false;
+                    break;
+                }
+                curNode = curNode.parentNode;
+            }
+
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+
+            if (recorsive)
+                this.children.foreach(a => a.updateGraphVisibility());
+        }
+
+        /****************************************/
+
+        updateGraph(recursive = true) {
+
+            if (!this._graphCtx)
+                return;
+
+            if (!this.folderId)
+                this.folderId = StringUtils.uuidv4();
+
+            const values = this.getExpressions();
+
+            this._graphCtx.setExpressions(values);
+
+            this.updateGraphWork();
+
+            this.updateGraphVisibility();
+
+            if (recursive)
+                this.children.foreach(a => a.updateGraph(recursive));
+        }
+
+        /****************************************/
+
+        get parent(): TParent {
+            return <TParent>this.node.parentNode.value();
+        }
+
+        /****************************************/
+
+        get children(): Linq<TChild> {
+            return linq(this.node.nodes()).select(a => <TChild>a.value());
+        }
+
+        /****************************************/
+
+        protected abstract setStateWork(state: TState);
+
+        protected abstract getExpressions(): Desmos.Expression[];
+
+        /****************************************/
+
+        protected replaceVars(value: string): string {
+            for (let item in this._varsMap) {
+                var reg = new RegExp("\\$" + item, "g");
+                value = value.replace(reg, this._varsMap[item]);
+            }
+            return value;
+        }
+
+        /****************************************/
+
+        protected getGraphId(section: string) {
+            return this.folderId + "/" + section;
+        }
+
+        /****************************************/
+
+        protected addChildrenWork(value: TChild, updateGraph = true): TChild {
+
+            const node = new TreeNodeViewModel(value);
+
+            this.node.addNode(node);
+
+            value.attachNode(node);
+
+            value.attachGraph(this._graphCtx);
+
+            if (updateGraph)
+                value.updateGraph();
+
+            return value;
+        }
+
+        /****************************************/
+
+        protected updateGraphWork() {
+
+        }
+
+        /****************************************/
+
+        protected setChildrenStateWork(state: TState) {
+
+        }
+
+        /****************************************/
+
+        protected onSelected() {
+
+        }
+
+        /****************************************/
+
+        protected onGraphChanged() {
+
+        }
+
+        /****************************************/
+
+        protected updateColor() {
+
+        }
+
+        /****************************************/
+
+        folderId: string;
+        node: TreeNodeViewModel<ITreeItem>;
+        name = ko.observable<string>();
+        time = ko.observable(0);
+        color = ko.observable<string>();
+        itemType: string;
+        icon: string;
+        optionsTemplateName: string;
+        readonly actions: ActionViewModel[] = [];
     }
 
     /****************************************/
@@ -144,20 +386,17 @@
 
     type RegressionFunctionType = "linear" | "exponential" | "normal" | "log-normal";
 
-    interface IStudioRegressionConfig {
-        name?: string;
-        visible?: boolean;
+    interface IStudioRegressionConfig extends IItemConfig {
         function?: IRegressionFunction;
     }
 
     /****************************************/
 
-    interface IStudioRegressionState extends IStudioRegressionConfig {
-        folderId?: string;
+    interface IStudioRegressionState extends IStudioRegressionConfig, IItemState {
     }
 
-
     /****************************************/
+
     interface IRegressionFunctionVar {
         name: string;
         label?: string;
@@ -177,13 +416,11 @@
         vars: IRegressionFunctionVar[];
     }
 
-
     /****************************************/
 
     class RegressionFunctionViewModel {
 
         select() {
-
         }
 
         /****************************************/
@@ -193,7 +430,6 @@
         vars = ko.observable<RegressionFunctionVarViewModel[]>();
     }
 
-
     /****************************************/
 
     class RegressionFunctionVarViewModel {
@@ -201,25 +437,36 @@
         value: IRegressionFunctionVar;
     }
 
-
     /****************************************/
 
-    class StudioSerieRegression implements ITreeItem, IGraphItem {
+    class StudioSerieRegression extends BaseItem<IStudioRegressionState, StudioSerie, any> {
 
-        protected _graphCtx: GraphContext;
-
-        protected _varsMap: IDictionary<string> = {
-            "fun": null,
-            "sum": null,
-            "n1": null,
-            "n2": null,
-            "value": null,
-            "time": null
-        };
+        protected _varsMap: IDictionary<string> = {};
 
         /****************************************/
 
         constructor(config?: IStudioRegressionConfig) {
+
+            super();
+
+            this._varsMap = {
+                "fun": null,
+                "sum": null,
+                "n1": null,
+                "n2": null,
+                "value": null,
+                "time": null
+            };
+
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = () => this.remove();
+            }));
+
+            this.itemType = "regression";
+            this.icon = "show_chart";
+            this.optionsTemplateName = "RegressionOptionsTemplate";
 
             this.functions = [];
 
@@ -258,7 +505,6 @@
 
             if (config)
                 this.setState(config);
-
         }
 
         /****************************************/
@@ -275,95 +521,33 @@
 
         /****************************************/
 
-        protected getGraphId(section: string) {
-            return this.folderId + "/" + section;
+        protected setStateWork(state: IStudioRegressionState) {
+
         }
 
         /****************************************/
 
-        setState(state: IStudioRegressionState) {
-            if (state.name)
-                this.name(state.name);
-
-            if (state.visible != undefined)
-                this.node.isVisible(state.visible);
-
-            if (state.folderId)
-                this.folderId = state.folderId;
-
-            this.updateGraph();
-        }
-
-        /****************************************/
-
-        getState(): IStudioRegressionState {
-
-            return {
-                name: this.name(),
-                visible: this.node.isVisible(),
-                folderId: this.folderId
-            }
-        }
-
-        /****************************************/
-
-        remove() {
-
-            if (this._graphCtx) {
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
-            }
-            this.node.remove();
-        }
-
-        /****************************************/
-
-        attachNode(node: TreeNodeViewModel<ITreeItem>) {
-            this.node = node;
-            this.node.isVisible.subscribe(value => this.updateGraphVisibility());
-        }
-
-        /****************************************/
-
-        attachGraph(ctx: GraphContext) {
-            this._graphCtx = ctx;
-        }
-
-        /****************************************/
-
-        updateGraphVisibility() {
-            const isVisible = this.node.isVisible() && this.serie.node.isVisible() && this.serie.project.node.isVisible();
-            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
-            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
-        }
-
-        /****************************************/
-
-        updateGraph() {
-            if (!this._graphCtx)
-                return;
-
-            if (!this.folderId)
-                this.folderId = StringUtils.uuidv4();
+        protected getExpressions(): Desmos.Expression[] {
 
             let values: Desmos.Expression[] = [];
+
             values.push({
                 type: "folder",
                 id: this.getGraphId("public"),
-                title: this.serie.name() + " - " + this.name(),
+                title: this.parent.name() + " - " + this.name(),
             });
             values.push({
                 type: "folder",
                 id: this.getGraphId("private"),
                 secret: true,
-                title: this.serie.name() + " - " + this.name(),
+                title: this.parent.name() + " - " + this.name(),
             });
 
             const func = this.selectedFunction().value;
 
-            this._varsMap["x"] = this.serie.getVar("xofs");
-            this._varsMap["y"] = this.serie.getVar("y");
-            this._varsMap["time"] = this.serie.project.getVar("time");
+            this._varsMap["x"] = this.parent.getVar("xofs");
+            this._varsMap["y"] = this.parent.getVar("y");
+            this._varsMap["time"] = this.parent.parent.getVar("time");
 
             for (var item of func.vars) {
                 if (!this._varsMap[item.name])
@@ -377,7 +561,7 @@
                 id: this.getGraphId("main"),
                 folderId: this.getGraphId("private"),
                 latex: this.replaceVars(func.value),
-                hidden: true                
+                hidden: true
             });
 
             values.push({
@@ -385,9 +569,9 @@
                 id: this.getGraphId("main-func"),
                 folderId: this.getGraphId("private"),
                 latex: this.replaceVars(func.value.replace("$y\\ \\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
-                color: this.serie.color(),
+                color: this.parent.color(),
                 lineStyle: Desmos.Styles.DASHED
-            }); 
+            });
 
             values.push({
                 type: "expression",
@@ -395,7 +579,7 @@
                 folderId: this.getGraphId("private"),
                 latex: this.replaceVars("$sum\\left(x\\right)=\\sum_{$n1=1}^{x}\\operatorname{round}\\left($fun\\left($n1\\right)\\right)"),
                 hidden: true
-            }); 
+            });
 
 
             values.push({
@@ -403,18 +587,18 @@
                 id: this.getGraphId("sum-x-time"),
                 folderId: this.getGraphId("private"),
                 latex: this.replaceVars("$n2=\\left[1,...,$time\\right]"),
-            }); 
+            });
 
             values.push({
                 type: "expression",
                 id: this.getGraphId("sum-serie"),
                 folderId: this.getGraphId("private"),
                 latex: this.replaceVars("\\left($n2,\\ $sum\\left($n2\\right)\\right)"),
-                color: this.serie.color(),
+                color: this.parent.color(),
                 lines: true,
                 points: false,
                 lineStyle: Desmos.Styles.POINT
-            }); 
+            });
 
             values.push({
                 type: "expression",
@@ -428,47 +612,19 @@
                 id: this.getGraphId("sum-point"),
                 folderId: this.getGraphId("private"),
                 latex: this.replaceVars("\\left($time,$value\\right)"),
-                color: this.serie.color(),
-                label: this.serie.name(),
+                color: this.parent.color(),
+                label: this.parent.name(),
                 dragMode: "XY",
                 showLabel: true
-            }); 
-          
+            });
 
-            this._graphCtx.setExpressions(values);
-
-            this.updateGraphVisibility();
+            return values;
         }
 
         /****************************************/
-
-        protected replaceVars(value: string): string {
-            for (let item in this._varsMap) {
-                var reg = new RegExp("\\$" + item , "g");
-                value = value.replace(reg, this._varsMap[item]);
-            }
-            return value;
-        }
-
-        /****************************************/
-
-        get serie(): StudioSerie {
-            return <StudioSerie>this.node.parentNode.value();
-        }
-
-        /****************************************/
-
-        folderId: string;
 
         functions: RegressionFunctionViewModel[];
         selectedFunction = ko.observable<RegressionFunctionViewModel>();
-        node: TreeNodeViewModel<ITreeItem>;
-        name = ko.observable<string>();
-        time = ko.observable(0);
-        readonly itemType = "regression";
-        readonly icon = "show_chart";
-        readonly optionsTemplateName = "RegressionOptionsTemplate";
-        readonly actions: ActionViewModel[] = [];
     }
 
     /****************************************/
@@ -487,49 +643,40 @@
 
     /****************************************/
 
-    interface IStudioSerieConfig {
-        name?: string;
+    interface IStudioSerieConfig extends IItemConfig {
         source?: ISerieSource;
         values?: IFunctionPoint<number>[];
-        color?: string;
         offsetX?: number;
-        regressions?: IStudioRegressionConfig[];
+        children?: IStudioRegressionConfig[];
     }
 
     /****************************************/
 
-    interface IStudioSerieState extends IStudioSerieConfig {
-        folderId?: string;
-        varsMap?: IDictionary<string>;
-        visible?: boolean;
-        opened?: boolean;
+    interface IStudioSerieState extends IStudioSerieConfig, IItemState {
     }
 
     /****************************************/
 
-    class StudioSerie implements ITreeItem, IDiscreteFunction, IGraphItem {
-
-        protected _graphCtx: GraphContext;
-
-        protected _varsMap: IDictionary<string> = {
-            "x": null,
-            "y": null,
-            "ofs": null,
-            "xofs": null,
-        };
-
-        /****************************************/
+    class StudioSerie extends BaseItem<IStudioSerieState, StudioProject, StudioSerieRegression> implements IDiscreteFunction {
 
         constructor(config?: IStudioSerieConfig) {
+            super();
+
+            this.itemType = "serie";
+            this.icon = "insert_chart";
+            this.optionsTemplateName = "StudioOptionsTemplate";
+
+            this._varsMap = {
+                "x": null,
+                "y": null,
+                "ofs": null,
+                "xofs": null,
+            };
 
             if (config) {
                 this.setState(config);
             }
-            this.actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Elimina";
-                action.icon = "delete";
-                action.execute = () => this.remove();
-            }));
+
             this.actions.push(apply(new ActionViewModel(), action => {
                 action.text = "Aggiorna";
                 action.icon = "autorenew";
@@ -563,182 +710,25 @@
             catch{
             }
         }
-
         /****************************************/
 
-        getVar(name: string): string {
-
-            return this._varsMap[name];
-        }
-
-        /****************************************/
-
-        addRegression(configOrValue?: IStudioRegressionConfig | StudioSerieRegression, updateGraph = true): StudioSerieRegression {
-
-            var reg = configOrValue instanceof StudioSerieRegression ? configOrValue : new StudioSerieRegression(configOrValue);
-
-            const node = new TreeNodeViewModel(reg);
-
-            this.node.addNode(node);
-
-            reg.attachNode(node);
-
-            reg.attachGraph(this._graphCtx);
-
-            if (updateGraph)
-                reg.updateGraph();
-
-            return reg;
-        }
-
-        /****************************************/
-
-        setState(state: IStudioSerieState) {
-
-            if (state.name)
-                this.name(state.name);
-            if (state.color)
-                this.color(state.color);
-            if (state.offsetX != undefined)
-                this.offsetX(state.offsetX);
-            if (state.source)
-                this.source = state.source;
-            if (state.values != undefined)
-                this.values = state.values;
-            if (state.folderId != undefined)
-                this.folderId = state.folderId;
-            if (state.opened != undefined)
-                this.node.isExpanded(state.opened);
-
-            /*
-            if (state.varsMap) {
-                for (var key in state.varsMap)
-                    this._varsMap[key] = state.varsMap[key];
-            }*/
-
-            if (state.visible != undefined)
-                this.node.isVisible(state.visible);
-
-            this.updateGraph();
-
-            if (state.regressions != undefined) {
-
-                this.regressions.foreach(a => a.remove());
-
-                state.regressions.forEach(a => {
-                    const reg = this.addRegression(null, false);
-                    reg.setState(a);
-                });
-            }
-        }
-
-        /****************************************/
-
-        getState(): IStudioSerieState {
-            return {
-                color: this.color(),
-                name: this.name(),
-                offsetX: this.offsetX(),
-                source: this.source,
-                values: this.values,
-                folderId: this.folderId,
-                varsMap: this._varsMap,
-                visible: this.node.isVisible(),
-                opened: this.node.isExpanded(),
-                regressions: this.regressions.select(a => a.getState()).toArray(),
-            }
-        }
-
-        /****************************************/
-
-        updateSerie() {
-            this.values = this._graphCtx.serieCalculator.getSerie(this.source);
-            this._graphCtx.updateTable(this.getGraphId("table"), this.values);
-        }
-
-        /****************************************/
-
-        remove() {
-            if (this._graphCtx) {
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
-            }
-            this.node.remove();
-        }
-
-        /****************************************/
-
-        attachNode(node: TreeNodeViewModel<ITreeItem>) {
-            this.node = node;
-            this.node.isVisible.subscribe(value => this.updateGraphVisibility());
-            this.node.isSelected.subscribe(value => {
-                if (value)
-                    this.onSelected();
-            })
-        }
-
-        /****************************************/
-
-        attachGraph(ctx: GraphContext) {
-            this._graphCtx = ctx;
-            this._graphCtx.calculator.observe("expressionAnalysis", () => {
-                let anal = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
-                this.offsetX(anal.evaluation.value);
-            });
-
-            this.color.subscribe(value => {
-                this._graphCtx.setColor(this.getGraphId("offset-x-serie"), value);
-            });
-
-        }
-
-        /****************************************/
-
-        protected onSelected() {
-            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
-        }
-
-        /****************************************/
-
-        protected getGraphId(section: string) {
-            return this.folderId + "/" + section;
-        }
-
-        /****************************************/
-
-        updateGraphVisibility(recusrive= true) {
-            const isVisible = this.node.isVisible() && this.project.node.isVisible();
-            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
-            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
-            if (recusrive)
-                this.regressions.foreach(a => a.updateGraphVisibility());
-        }
-
-        /****************************************/
-
-        updateGraph(recursive = false) {
-
-            if (!this._graphCtx)
-                return;
-
-            if (!this.folderId)
-                this.folderId = StringUtils.uuidv4();
+        protected getExpressions(): Desmos.Expression[] {
 
             if (!this.color())
                 this.color("#0000ff");
 
             this._graphCtx.generateVars(this._varsMap);
 
-            this._graphCtx.setExpressions([
+            const values: Desmos.Expression[] = [
                 {
                     type: "folder",
                     id: this.getGraphId("public"),
-                    title: this.project.name() + " - " + this.name(),
+                    title: this.parent.name() + " - " + this.name(),
                 }, {
                     type: "folder",
                     id: this.getGraphId("private"),
-                    title: this.project.name() + " - " + this.name(),
-                    secret: true                    
+                    title: this.parent.name() + " - " + this.name(),
+                    secret: true
                 }, {
                     type: "expression",
                     id: this.getGraphId("offset"),
@@ -780,179 +770,138 @@
                             hidden: true
                         }
                     ]
-                }]);
+                }];
 
+
+
+            return values;
+        }
+
+        /****************************************/
+
+        protected updateGraphWork() {
             this._graphCtx.updateTable(this.getGraphId("table"), this.values);
-
-            this.updateGraphVisibility();
         }
 
         /****************************************/
 
-        get regressions(): Linq<StudioSerieRegression> {
-
-            function* items() {
-                for (var node of this.node.nodes())
-                    yield (<StudioSerieRegression>node.value());
-            }
-
-            return linq(items.apply(this));
+        protected onGraphChanged() {
+            let anal = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+            this.offsetX(anal.evaluation.value);
         }
 
         /****************************************/
 
-        get project(): StudioProject {
-            return <StudioProject>this.node.parentNode.value();
+        protected onSelected() {
+            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
         }
 
         /****************************************/
 
-        name = ko.observable<string>();
-        color = ko.observable<string>();
-        offsetX = ko.observable<number>(0);
-        source: ISerieSource;
-        values: IFunctionPoint<number>[];
-        folderId: string;
-        node: TreeNodeViewModel<ITreeItem>;
-        readonly itemType = "serie";
-        readonly icon = "insert_chart";
-        readonly optionsTemplateName = "StudioOptionsTemplate";
-        readonly actions: ActionViewModel[] = [];
-    }
-
-
-
-    /****************************************/
-    /* Project
-    /****************************************/
-
-    interface IStudioProjectConfig {
-        name?: string;
-    }
-
-    interface IStudioProjectState extends IStudioProjectConfig {
-        series?: IStudioSerieState[];
-        visible?: boolean;
-        opened?: boolean;
-        time?: number;
-    }
-
-    /****************************************/
-
-    class StudioProject implements ITreeItem, IGraphItem {
-
-        protected _graphCtx: GraphContext;
-        protected _varsMap: IDictionary<string> = {
-            "time": null
-        };
-
-        constructor(config?: IStudioProjectConfig) {
-            if (config)
-                this.setState(config);
-
-            this.actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Elimina";
-                action.icon = "delete";
-                action.execute = () => this.remove();
-            }));
-        }
+        protected updateColor() {
+            this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
+        }     
 
         /****************************************/
 
-        getVar(name: string): string {
+        protected setChildrenStateWork(state: IStudioSerieState) {
+            if (state.children != undefined) {
 
-            return this._varsMap[name];
-        }
+                this.children.foreach(a => a.remove());
 
-
-        /****************************************/
-
-        protected getGraphId(section: string) {
-            return this.folderId + "/" + section;
-        }
-
-        /****************************************/
-
-        setState(state: IStudioProjectState) {
-            if (state.name)
-                this.name(state.name);
-
-            if (state.visible != undefined)
-                this.node.isVisible(state.visible);
-
-            if (state.opened != undefined)
-                this.node.isExpanded(state.opened);
-
-            if (state.time != undefined)
-                this.time(state.time);
-
-            this.updateGraph(false);
-
-            if (state.series != undefined) {
-
-                this.series.foreach(a => a.remove());
-
-                state.series.forEach(a => {
-                    const serie = this.addSerie(null, false);
-                    serie.setState(a);
+                state.children.forEach(a => {
+                    const reg = this.addRegression(null, false);
+                    reg.setState(a);
                 });
             }
         }
 
         /****************************************/
 
-        getState(): IStudioProjectState {
+        protected setStateWork(state: IStudioSerieState) {
 
-            return {
-                name: this.name(),
-                series: this.series.select(a => a.getState()).toArray(),
-                visible: this.node.isVisible(),
-                opened: this.node.isExpanded(),
-                time: this.time()
-            }
+            if (state.offsetX != undefined)
+                this.offsetX(state.offsetX);
+
+            if (state.source)
+                this.source = state.source;
+
+            if (state.values != undefined)
+                this.values = state.values;
         }
 
         /****************************************/
 
-        remove() {
-            if (this._graphCtx) {
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
-            }
-            this.series.foreach(a => a.remove());
-            this.node.remove();
+        getState(): IStudioSerieState {
+            const state = super.getState();
+            state.offsetX = this.offsetX();
+            state.source = this.source;
+            state.values = this.values;
+            state.children = this.children.select(a => a.getState()).toArray();
+            return state;
         }
 
         /****************************************/
 
-        attachNode(node: TreeNodeViewModel<ITreeItem>) {
-            this.node = node;
-            this.node.isVisible.subscribe(value => this.series.foreach(a => a.updateGraphVisibility()));
+        addRegression(configOrState?: IStudioRegressionState | StudioSerieRegression, updateGraph = true): StudioSerieRegression {
+            return this.addChildrenWork(configOrState instanceof StudioSerieRegression ? configOrState : new StudioSerieRegression(configOrState), updateGraph);
+        }
+
+
+        /****************************************/
+
+        updateSerie() {
+            this.values = this._graphCtx.serieCalculator.getSerie(this.source);
+            this._graphCtx.updateTable(this.getGraphId("table"), this.values);
         }
 
         /****************************************/
 
-        attachGraph(ctx: GraphContext) {
-            this._graphCtx = ctx;
+        color = ko.observable<string>();
+        offsetX = ko.observable<number>(0);
+        source: ISerieSource;
+        values: IFunctionPoint<number>[];
+    }
 
-            this._graphCtx.calculator.observe("expressionAnalysis", () => {
-                let item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
-                this.time(item.evaluation.value);
-            });
+    /****************************************/
+    /* Project
+    /****************************************/
 
-            this.time.subscribe(value =>
-                this._graphCtx.updateVariable(this.getGraphId("time"), this._varsMap["time"], this.time()));
+    interface IStudioProjectConfig extends IItemConfig {
+    }
+
+    interface IStudioProjectState extends IStudioProjectConfig, IItemState {
+        children?: IStudioSerieState[];
+        time?: number;
+    }
+
+    /****************************************/
+
+    class StudioProject extends BaseItem<IStudioProjectState, any, StudioSerie> {
+
+        constructor(config?: IStudioProjectConfig) {
+
+            super();
+
+            this.itemType = "project";
+            this.icon = "folder";
+            this.optionsTemplateName = "ProjectOptionsTemplate";
+
+            this._varsMap = {
+                "time": null
+            };
+
+            if (config)
+                this.setState(config);
         }
 
         /****************************************/
 
-        updateGraph(recursive = false) {
-
-            if (!this._graphCtx)
-                return;
+        protected getExpressions(): Desmos.Expression[] {
 
             this._graphCtx.generateVars(this._varsMap);
 
-            this._graphCtx.setExpressions([
+            const values: Desmos.Expression[] = [
                 {
                     type: "folder",
                     id: this.getGraphId("public"),
@@ -970,59 +919,68 @@
                         step: "1"
                     }
                 }
-            ]);
+            ];
 
-            if (recursive)
-                this.series.foreach(a => a.updateGraph(recursive));
+            return values;
+        }
+
+        /****************************************/
+
+        protected setStateWork(state: IStudioProjectState) {
+            if (state.time != undefined)
+                this.time(state.time);
+        }
+
+        /****************************************/
+
+        protected setChildrenStateWork(state: IStudioProjectState) {
+            if (state.children != undefined) {
+
+                this.children.foreach(a => a.remove());
+
+                state.children.forEach(a => {
+                    const item = this.addSerie(null, false);
+                    item.setState(a);
+                });
+            }
+        }
+
+        /****************************************/
+
+        getState(): IStudioProjectState {
+            const state = super.getState();
+            state.time = this.time();
+            state.children = this.children.select(a => a.getState()).toArray();
+            return state;
+        }
+
+        /****************************************/
+
+        protected onGraphChanged() {
+            let item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
+            this.time(item.evaluation.value);
+        }
+
+        /****************************************/
+
+        attachGraph(ctx: GraphContext) {
+            super.attachGraph(ctx);
+
+            this.time.subscribe(value =>
+                this._graphCtx.updateVariable(this.getGraphId("time"), this._varsMap["time"], this.time()));
         }
 
         /****************************************/
 
         addSerie(configOrSerie?: IStudioSerieConfig | StudioSerie, updateGraph = true): StudioSerie {
 
-            var serie = configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie);
-
-            const node = new TreeNodeViewModel(serie);
-
-            this.node.addNode(node);
-
-            serie.attachNode(node);
-
-            serie.attachGraph(this._graphCtx);
-
-            if (updateGraph)
-                serie.updateGraph();
-
-            return serie;
+            return this.addChildrenWork(configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie));
         }
 
         /****************************************/
 
-        get series(): Linq<StudioSerie> {
-
-            function* items() {
-                for (var node of this.node.nodes())
-                    yield (<StudioSerie>node.value());
-            }
-
-            return linq(items.apply(this));
-        }
-
-        /****************************************/
-
-        name = ko.observable<string>();
-
-        folderId: string;
-        node: TreeNodeViewModel<ITreeItem>;
-        host: StudioPage;
         time = ko.observable(0);
-
-        readonly itemType = "project";
-        readonly icon = "folder";
-        readonly optionsTemplateName = "ProjectOptionsTemplate";
-        readonly actions: ActionViewModel[] = [];
     }
-
 
     /****************************************/
     /* TreeViewModel
@@ -1245,10 +1203,15 @@
             if (!this.items.selectedNode())
                 return;
             const value = this.items.selectedNode().value();
+
             if (value.itemType == "project")
                 return <StudioProject>value;
+
             if (value.itemType == "serie")
-                return (<StudioSerie>value).project;
+                return (<StudioSerie>value).parent;
+
+            if (value.itemType == "regression")
+                return (<StudioSerieRegression>value).parent.parent;
         }
 
         /****************************************/
