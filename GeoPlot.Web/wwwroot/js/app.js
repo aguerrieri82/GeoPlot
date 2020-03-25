@@ -2019,6 +2019,7 @@ var WebApp;
         /****************************************/
         GraphContext.prototype.setItemVisibile = function (id, value) {
             this.calculator.controller._setItemHidden(id, !value);
+            this.calculator.updateSettings({});
         };
         /****************************************/
         GraphContext.prototype.generateVars = function (map) {
@@ -2030,59 +2031,239 @@ var WebApp;
         /****************************************/
         GraphContext.prototype.generateVar = function (prefix) {
             if (prefix === void 0) { prefix = "a"; }
-            if (!this.vars[prefix])
-                this.vars[prefix] = 0;
-            this.vars[prefix]++;
-            return prefix[0] + "_{" + this.vars[prefix] + "}";
+            if (!this.vars[prefix[0]])
+                this.vars[prefix[0]] = 0;
+            this.vars[prefix[0]]++;
+            return prefix[0] + "_{" + this.vars[prefix[0]] + "}";
         };
         return GraphContext;
     }());
     /****************************************/
+    var RegressionFunctionViewModel = /** @class */ (function () {
+        function RegressionFunctionViewModel() {
+            this.vars = ko.observable();
+        }
+        RegressionFunctionViewModel.prototype.select = function () {
+        };
+        return RegressionFunctionViewModel;
+    }());
+    /****************************************/
+    var RegressionFunctionVarViewModel = /** @class */ (function () {
+        function RegressionFunctionVarViewModel() {
+        }
+        return RegressionFunctionVarViewModel;
+    }());
+    /****************************************/
     var StudioSerieRegression = /** @class */ (function () {
+        /****************************************/
         function StudioSerieRegression(config) {
+            var _this = this;
             this._varsMap = {
-                "x": null,
-                "y": null,
-                "ofs": null,
-                "xofs": null,
+                "fun": null,
+                "sum": null,
+                "n1": null,
+                "n2": null,
+                "value": null,
+                "time": null
             };
+            this.selectedFunction = ko.observable();
             this.name = ko.observable();
+            this.time = ko.observable(0);
             this.itemType = "regression";
             this.icon = "show_chart";
             this.optionsTemplateName = "RegressionOptionsTemplate";
             this.actions = [];
+            this.functions = [];
+            this.addFunction({
+                name: "Normale",
+                type: "normal",
+                value: "$y\\ \\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
+                vars: [{
+                        name: "a",
+                        label: "Scostamento",
+                        autoCompute: true
+                    },
+                    {
+                        name: "c",
+                        label: "Totale",
+                        autoCompute: true
+                    },
+                    {
+                        name: "o",
+                        label: "Incremento",
+                        autoCompute: true
+                    },
+                    {
+                        name: "u",
+                        label: "Picco",
+                        autoCompute: true
+                    }]
+            });
+            this.selectedFunction.subscribe(function (a) {
+                if (!_this.name() && a)
+                    return _this.name(a.value.name);
+            });
+            this.selectedFunction(this.functions[0]);
             if (config)
                 this.setState(config);
         }
+        /****************************************/
+        StudioSerieRegression.prototype.addFunction = function (value) {
+            var model = new RegressionFunctionViewModel();
+            model.value = value;
+            model.select = function () {
+            };
+            this.functions.push(model);
+            return model;
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.getGraphId = function (section) {
+            return this.folderId + "/" + section;
+        };
         /****************************************/
         StudioSerieRegression.prototype.setState = function (state) {
             if (state.name)
                 this.name(state.name);
             if (state.visible != undefined)
                 this.node.isVisible(state.visible);
+            if (state.folderId)
+                this.folderId = state.folderId;
+            this.updateGraph();
         };
         /****************************************/
         StudioSerieRegression.prototype.getState = function () {
             return {
                 name: this.name(),
-                visible: this.node.isVisible()
+                visible: this.node.isVisible(),
+                folderId: this.folderId
             };
         };
         /****************************************/
         StudioSerieRegression.prototype.remove = function () {
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
+            this.node.remove();
         };
         /****************************************/
         StudioSerieRegression.prototype.attachNode = function (node) {
+            var _this = this;
             this.node = node;
+            this.node.isVisible.subscribe(function (value) { return _this.updateGraphVisibility(); });
         };
         /****************************************/
         StudioSerieRegression.prototype.attachGraph = function (ctx) {
             this._graphCtx = ctx;
         };
         /****************************************/
+        StudioSerieRegression.prototype.updateGraphVisibility = function () {
+            var isVisible = this.node.isVisible() && this.serie.node.isVisible() && this.serie.project.node.isVisible();
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+        };
+        /****************************************/
         StudioSerieRegression.prototype.updateGraph = function () {
+            var e_12, _a;
             if (!this._graphCtx)
                 return;
+            if (!this.folderId)
+                this.folderId = WebApp.StringUtils.uuidv4();
+            var values = [];
+            values.push({
+                type: "folder",
+                id: this.getGraphId("public"),
+                title: this.serie.name() + " - " + this.name(),
+            });
+            values.push({
+                type: "folder",
+                id: this.getGraphId("private"),
+                secret: true,
+                title: this.serie.name() + " - " + this.name(),
+            });
+            var func = this.selectedFunction().value;
+            this._varsMap["x"] = this.serie.getVar("xofs");
+            this._varsMap["y"] = this.serie.getVar("y");
+            this._varsMap["time"] = this.serie.project.getVar("time");
+            try {
+                for (var _b = __values(func.vars), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var item = _c.value;
+                    if (!this._varsMap[item.name])
+                        this._varsMap[item.name] = null;
+                }
+            }
+            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_12) throw e_12.error; }
+            }
+            this._graphCtx.generateVars(this._varsMap);
+            values.push({
+                type: "expression",
+                id: this.getGraphId("main"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars(func.value),
+                hidden: true
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("main-func"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars(func.value.replace("$y\\ \\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
+                color: this.serie.color(),
+                lineStyle: Desmos.Styles.DASHED
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-func"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("$sum\\left(x\\right)=\\sum_{$n1=1}^{x}\\operatorname{round}\\left($fun\\left($n1\\right)\\right)"),
+                hidden: true
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-x-time"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("$n2=\\left[1,...,$time\\right]"),
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-serie"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("\\left($n2,\\ $sum\\left($n2\\right)\\right)"),
+                color: this.serie.color(),
+                lines: true,
+                points: false,
+                lineStyle: Desmos.Styles.POINT
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-value"),
+                folderId: this.getGraphId("public"),
+                latex: this.replaceVars("$value=$sum\\left($time\\right)"),
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-point"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("\\left($time,$value\\right)"),
+                color: this.serie.color(),
+                label: this.serie.name(),
+                dragMode: "XY",
+                showLabel: true
+            });
+            this._graphCtx.setExpressions(values);
+            this.updateGraphVisibility();
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.replaceVars = function (value) {
+            for (var item in this._varsMap) {
+                var reg = new RegExp("\\$" + item, "g");
+                value = value.replace(reg, this._varsMap[item]);
+            }
+            return value;
         };
         Object.defineProperty(StudioSerieRegression.prototype, "serie", {
             /****************************************/
@@ -2152,6 +2333,10 @@ var WebApp;
             }
         };
         /****************************************/
+        StudioSerie.prototype.getVar = function (name) {
+            return this._varsMap[name];
+        };
+        /****************************************/
         StudioSerie.prototype.addRegression = function (configOrValue, updateGraph) {
             if (updateGraph === void 0) { updateGraph = true; }
             var reg = configOrValue instanceof StudioSerieRegression ? configOrValue : new StudioSerieRegression(configOrValue);
@@ -2178,6 +2363,8 @@ var WebApp;
                 this.values = state.values;
             if (state.folderId != undefined)
                 this.folderId = state.folderId;
+            if (state.opened != undefined)
+                this.node.isExpanded(state.opened);
             /*
             if (state.varsMap) {
                 for (var key in state.varsMap)
@@ -2185,6 +2372,7 @@ var WebApp;
             }*/
             if (state.visible != undefined)
                 this.node.isVisible(state.visible);
+            this.updateGraph();
             if (state.regressions != undefined) {
                 this.regressions.foreach(function (a) { return a.remove(); });
                 state.regressions.forEach(function (a) {
@@ -2192,7 +2380,6 @@ var WebApp;
                     reg.setState(a);
                 });
             }
-            this.updateGraph();
         };
         /****************************************/
         StudioSerie.prototype.getState = function () {
@@ -2205,6 +2392,7 @@ var WebApp;
                 folderId: this.folderId,
                 varsMap: this._varsMap,
                 visible: this.node.isVisible(),
+                opened: this.node.isExpanded(),
                 regressions: this.regressions.select(function (a) { return a.getState(); }).toArray(),
             };
         };
@@ -2252,10 +2440,13 @@ var WebApp;
             return this.folderId + "/" + section;
         };
         /****************************************/
-        StudioSerie.prototype.updateGraphVisibility = function () {
+        StudioSerie.prototype.updateGraphVisibility = function (recusrive) {
+            if (recusrive === void 0) { recusrive = true; }
             var isVisible = this.node.isVisible() && this.project.node.isVisible();
             this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
             this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+            if (recusrive)
+                this.regressions.foreach(function (a) { return a.updateGraphVisibility(); });
         };
         /****************************************/
         StudioSerie.prototype.updateGraph = function (recursive) {
@@ -2276,7 +2467,7 @@ var WebApp;
                     type: "folder",
                     id: this.getGraphId("private"),
                     title: this.project.name() + " - " + this.name(),
-                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
+                    secret: true
                 }, {
                     type: "expression",
                     id: this.getGraphId("offset"),
@@ -2327,138 +2518,6 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_12_1;
-                    var e_12, _c;
-                    return __generator(this, function (_d) {
-                        switch (_d.label) {
-                            case 0:
-                                _d.trys.push([0, 5, 6, 7]);
-                                _a = __values(this.node.nodes()), _b = _a.next();
-                                _d.label = 1;
-                            case 1:
-                                if (!!_b.done) return [3 /*break*/, 4];
-                                node = _b.value;
-                                return [4 /*yield*/, node.value()];
-                            case 2:
-                                _d.sent();
-                                _d.label = 3;
-                            case 3:
-                                _b = _a.next();
-                                return [3 /*break*/, 1];
-                            case 4: return [3 /*break*/, 7];
-                            case 5:
-                                e_12_1 = _d.sent();
-                                e_12 = { error: e_12_1 };
-                                return [3 /*break*/, 7];
-                            case 6:
-                                try {
-                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
-                                }
-                                finally { if (e_12) throw e_12.error; }
-                                return [7 /*endfinally*/];
-                            case 7: return [2 /*return*/];
-                        }
-                    });
-                }
-                return WebApp.linq(items.apply(this));
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(StudioSerie.prototype, "project", {
-            /****************************************/
-            get: function () {
-                return this.node.parentNode.value();
-            },
-            enumerable: true,
-            configurable: true
-        });
-        return StudioSerie;
-    }());
-    /****************************************/
-    var StudioProject = /** @class */ (function () {
-        function StudioProject(config) {
-            var _this = this;
-            /****************************************/
-            this.name = ko.observable();
-            this.itemType = "project";
-            this.icon = "folder";
-            this.optionsTemplateName = "ProjectOptionsTemplate";
-            this.actions = [];
-            if (config)
-                this.setState(config);
-            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                action.text = "Elimina";
-                action.icon = "delete";
-                action.execute = function () { return _this.remove(); };
-            }));
-        }
-        /****************************************/
-        StudioProject.prototype.setState = function (state) {
-            var _this = this;
-            if (state.name)
-                this.name(state.name);
-            if (state.visible != undefined)
-                this.node.isVisible(state.visible);
-            if (state.opened != undefined)
-                this.node.isExpanded(state.opened);
-            if (state.series != undefined) {
-                this.series.foreach(function (a) { return a.remove(); });
-                state.series.forEach(function (a) {
-                    var serie = _this.addSerie(null, false);
-                    serie.setState(a);
-                    //serie.updateGraph();
-                });
-            }
-        };
-        /****************************************/
-        StudioProject.prototype.getState = function () {
-            return {
-                name: this.name(),
-                series: this.series.select(function (a) { return a.getState(); }).toArray(),
-                visible: this.node.isVisible(),
-                opened: this.node.isExpanded()
-            };
-        };
-        /****************************************/
-        StudioProject.prototype.remove = function () {
-            this.series.foreach(function (a) { return a.remove(); });
-            this.node.remove();
-        };
-        /****************************************/
-        StudioProject.prototype.attachNode = function (node) {
-            var _this = this;
-            this.node = node;
-            this.node.isVisible.subscribe(function (value) { return _this.series.foreach(function (a) { return a.updateGraphVisibility(); }); });
-        };
-        /****************************************/
-        StudioProject.prototype.attachGraph = function (ctx) {
-            this._graphCtx = ctx;
-        };
-        /****************************************/
-        StudioProject.prototype.updateGraph = function (recursive) {
-            if (recursive === void 0) { recursive = false; }
-            if (!this._graphCtx)
-                return;
-            if (recursive)
-                this.series.foreach(function (a) { return a.updateGraph(recursive); });
-        };
-        /****************************************/
-        StudioProject.prototype.addSerie = function (configOrSerie, updateGraph) {
-            if (updateGraph === void 0) { updateGraph = true; }
-            var serie = configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie);
-            var node = new TreeNodeViewModel(serie);
-            this.node.addNode(node);
-            serie.attachNode(node);
-            serie.attachGraph(this._graphCtx);
-            if (updateGraph)
-                serie.updateGraph();
-            return serie;
-        };
-        Object.defineProperty(StudioProject.prototype, "series", {
-            /****************************************/
-            get: function () {
-                function items() {
                     var _a, _b, node, e_13_1;
                     var e_13, _c;
                     return __generator(this, function (_d) {
@@ -2487,6 +2546,184 @@ var WebApp;
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
                                 finally { if (e_13) throw e_13.error; }
+                                return [7 /*endfinally*/];
+                            case 7: return [2 /*return*/];
+                        }
+                    });
+                }
+                return WebApp.linq(items.apply(this));
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(StudioSerie.prototype, "project", {
+            /****************************************/
+            get: function () {
+                return this.node.parentNode.value();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return StudioSerie;
+    }());
+    /****************************************/
+    var StudioProject = /** @class */ (function () {
+        function StudioProject(config) {
+            var _this = this;
+            this._varsMap = {
+                "time": null
+            };
+            /****************************************/
+            this.name = ko.observable();
+            this.time = ko.observable(0);
+            this.itemType = "project";
+            this.icon = "folder";
+            this.optionsTemplateName = "ProjectOptionsTemplate";
+            this.actions = [];
+            if (config)
+                this.setState(config);
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = function () { return _this.remove(); };
+            }));
+        }
+        /****************************************/
+        StudioProject.prototype.getVar = function (name) {
+            return this._varsMap[name];
+        };
+        /****************************************/
+        StudioProject.prototype.getGraphId = function (section) {
+            return this.folderId + "/" + section;
+        };
+        /****************************************/
+        StudioProject.prototype.setState = function (state) {
+            var _this = this;
+            if (state.name)
+                this.name(state.name);
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+            if (state.opened != undefined)
+                this.node.isExpanded(state.opened);
+            if (state.time != undefined)
+                this.time(state.time);
+            this.updateGraph(false);
+            if (state.series != undefined) {
+                this.series.foreach(function (a) { return a.remove(); });
+                state.series.forEach(function (a) {
+                    var serie = _this.addSerie(null, false);
+                    serie.setState(a);
+                });
+            }
+        };
+        /****************************************/
+        StudioProject.prototype.getState = function () {
+            return {
+                name: this.name(),
+                series: this.series.select(function (a) { return a.getState(); }).toArray(),
+                visible: this.node.isVisible(),
+                opened: this.node.isExpanded(),
+                time: this.time()
+            };
+        };
+        /****************************************/
+        StudioProject.prototype.remove = function () {
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
+            this.series.foreach(function (a) { return a.remove(); });
+            this.node.remove();
+        };
+        /****************************************/
+        StudioProject.prototype.attachNode = function (node) {
+            var _this = this;
+            this.node = node;
+            this.node.isVisible.subscribe(function (value) { return _this.series.foreach(function (a) { return a.updateGraphVisibility(); }); });
+        };
+        /****************************************/
+        StudioProject.prototype.attachGraph = function (ctx) {
+            var _this = this;
+            this._graphCtx = ctx;
+            this._graphCtx.calculator.observe("expressionAnalysis", function () {
+                var item = _this._graphCtx.calculator.expressionAnalysis[_this.getGraphId("time")];
+                _this.time(item.evaluation.value);
+            });
+            this.time.subscribe(function (value) {
+                return _this._graphCtx.updateVariable(_this.getGraphId("time"), _this._varsMap["time"], _this.time());
+            });
+        };
+        /****************************************/
+        StudioProject.prototype.updateGraph = function (recursive) {
+            if (recursive === void 0) { recursive = false; }
+            if (!this._graphCtx)
+                return;
+            this._graphCtx.generateVars(this._varsMap);
+            this._graphCtx.setExpressions([
+                {
+                    type: "folder",
+                    id: this.getGraphId("public"),
+                    title: this.name(),
+                }, {
+                    type: "expression",
+                    folderId: this.getGraphId("public"),
+                    id: this.getGraphId("time"),
+                    latex: this._varsMap["time"] + "=" + this.time(),
+                    slider: {
+                        hardMin: true,
+                        hardMax: true,
+                        min: "0",
+                        max: "100",
+                        step: "1"
+                    }
+                }
+            ]);
+            if (recursive)
+                this.series.foreach(function (a) { return a.updateGraph(recursive); });
+        };
+        /****************************************/
+        StudioProject.prototype.addSerie = function (configOrSerie, updateGraph) {
+            if (updateGraph === void 0) { updateGraph = true; }
+            var serie = configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie);
+            var node = new TreeNodeViewModel(serie);
+            this.node.addNode(node);
+            serie.attachNode(node);
+            serie.attachGraph(this._graphCtx);
+            if (updateGraph)
+                serie.updateGraph();
+            return serie;
+        };
+        Object.defineProperty(StudioProject.prototype, "series", {
+            /****************************************/
+            get: function () {
+                function items() {
+                    var _a, _b, node, e_14_1;
+                    var e_14, _c;
+                    return __generator(this, function (_d) {
+                        switch (_d.label) {
+                            case 0:
+                                _d.trys.push([0, 5, 6, 7]);
+                                _a = __values(this.node.nodes()), _b = _a.next();
+                                _d.label = 1;
+                            case 1:
+                                if (!!_b.done) return [3 /*break*/, 4];
+                                node = _b.value;
+                                return [4 /*yield*/, node.value()];
+                            case 2:
+                                _d.sent();
+                                _d.label = 3;
+                            case 3:
+                                _b = _a.next();
+                                return [3 /*break*/, 1];
+                            case 4: return [3 /*break*/, 7];
+                            case 5:
+                                e_14_1 = _d.sent();
+                                e_14 = { error: e_14_1 };
+                                return [3 /*break*/, 7];
+                            case 6:
+                                try {
+                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                }
+                                finally { if (e_14) throw e_14.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }
@@ -2538,7 +2775,7 @@ var WebApp;
         };
         /****************************************/
         TreeNodeViewModel.prototype.attach = function (treeView, parent) {
-            var e_14, _a;
+            var e_15, _a;
             this._treeView = treeView;
             this._parentNode = parent;
             try {
@@ -2547,12 +2784,12 @@ var WebApp;
                     childNode.attach(treeView);
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_15) throw e_15.error; }
             }
         };
         Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
@@ -2620,7 +2857,7 @@ var WebApp;
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
-                administerSecretFolders: true,
+                //administerSecretFolders: true,
                 authorIDE: true,
                 advancedStyling: true
             });
@@ -2747,8 +2984,8 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_15_1;
-                    var e_15, _c;
+                    var _a, _b, node, e_16_1;
+                    var e_16, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -2767,14 +3004,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_15_1 = _d.sent();
-                                e_15 = { error: e_15_1 };
+                                e_16_1 = _d.sent();
+                                e_16 = { error: e_16_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_15) throw e_15.error; }
+                                finally { if (e_16) throw e_16.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }

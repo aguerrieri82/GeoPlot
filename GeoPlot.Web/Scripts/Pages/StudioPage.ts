@@ -28,7 +28,7 @@
                 }
             }
 
-            const groups = linq(state.expressions.list).where(a=> a.type != "folder").groupBy(a => a.folderId ? a.folderId : "").toDictionary(a => a.key, a => a.values.toArray());
+            const groups = linq(state.expressions.list).where(a => a.type != "folder").groupBy(a => a.folderId ? a.folderId : "").toDictionary(a => a.key, a => a.values.toArray());
 
             const newList = [];
 
@@ -44,7 +44,7 @@
             if (items)
                 for (let item of items)
                     newList.push(item);
-                
+
             state.expressions.list = newList;
 
             this.calculator.setState(state);
@@ -56,7 +56,7 @@
             }*/
         }
 
-    /****************************************/
+        /****************************************/
 
         setColor(id: string, color: string) {
             this.calculator.controller.dispatch({ type: "set-item-color", id: id, color: color });
@@ -100,6 +100,7 @@
 
         setItemVisibile(id: string, value: boolean) {
             this.calculator.controller._setItemHidden(id, !value);
+            this.calculator.updateSettings({});
         }
 
         /****************************************/
@@ -115,10 +116,10 @@
         /****************************************/
 
         generateVar(prefix = "a"): string {
-            if (!this.vars[prefix])
-                this.vars[prefix] = 0;
-            this.vars[prefix]++;
-            return prefix[0] + "_{" + this.vars[prefix] + "}";
+            if (!this.vars[prefix[0]])
+                this.vars[prefix[0]] = 0;
+            this.vars[prefix[0]]++;
+            return prefix[0] + "_{" + this.vars[prefix[0]] + "}";
         }
 
         /****************************************/
@@ -149,6 +150,14 @@
         function?: IRegressionFunction;
     }
 
+    /****************************************/
+
+    interface IStudioRegressionState extends IStudioRegressionConfig {
+        folderId?: string;
+    }
+
+
+    /****************************************/
     interface IRegressionFunctionVar {
         name: string;
         label?: string;
@@ -159,23 +168,39 @@
         value?: number;
     }
 
+
+    /****************************************/
     interface IRegressionFunction {
         type: RegressionFunctionType
         name: string;
+        value: string;
         vars: IRegressionFunctionVar[];
     }
 
-    interface IStudioRegressionState extends IStudioRegressionConfig {
-    }
 
+    /****************************************/
 
-    interface IRegressionFunctionViewModel {
-        select();
+    class RegressionFunctionViewModel {
 
-        name: string;
+        select() {
+
+        }
+
+        /****************************************/
+
         icon: string;
         value: IRegressionFunction;
+        vars = ko.observable<RegressionFunctionVarViewModel[]>();
     }
+
+
+    /****************************************/
+
+    class RegressionFunctionVarViewModel {
+
+        value: IRegressionFunctionVar;
+    }
+
 
     /****************************************/
 
@@ -184,15 +209,74 @@
         protected _graphCtx: GraphContext;
 
         protected _varsMap: IDictionary<string> = {
-            "x": null,
-            "y": null,
-            "ofs": null,
-            "xofs": null,
+            "fun": null,
+            "sum": null,
+            "n1": null,
+            "n2": null,
+            "value": null,
+            "time": null
         };
 
+        /****************************************/
+
         constructor(config?: IStudioRegressionConfig) {
+
+            this.functions = [];
+
+            this.addFunction({
+                name: "Normale",
+                type: "normal",
+                value: "$y\\ \\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
+                vars: [{
+                    name: "a",
+                    label: "Scostamento",
+                    autoCompute: true
+                },
+                {
+                    name: "c",
+                    label: "Totale",
+                    autoCompute: true
+                },
+                {
+                    name: "o",
+                    label: "Incremento",
+                    autoCompute: true
+                },
+                {
+                    name: "u",
+                    label: "Picco",
+                    autoCompute: true
+                }]
+            });
+
+            this.selectedFunction.subscribe(a => {
+                if (!this.name() && a)
+                    return this.name(a.value.name);
+            });
+
+            this.selectedFunction(this.functions[0]);
+
             if (config)
                 this.setState(config);
+
+        }
+
+        /****************************************/
+
+        protected addFunction(value: IRegressionFunction): RegressionFunctionViewModel {
+            var model = new RegressionFunctionViewModel();
+            model.value = value;
+            model.select = () => {
+
+            };
+            this.functions.push(model);
+            return model;
+        }
+
+        /****************************************/
+
+        protected getGraphId(section: string) {
+            return this.folderId + "/" + section;
         }
 
         /****************************************/
@@ -203,6 +287,11 @@
 
             if (state.visible != undefined)
                 this.node.isVisible(state.visible);
+
+            if (state.folderId)
+                this.folderId = state.folderId;
+
+            this.updateGraph();
         }
 
         /****************************************/
@@ -211,7 +300,8 @@
 
             return {
                 name: this.name(),
-                visible: this.node.isVisible()
+                visible: this.node.isVisible(),
+                folderId: this.folderId
             }
         }
 
@@ -219,12 +309,18 @@
 
         remove() {
 
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
+            this.node.remove();
         }
 
         /****************************************/
 
         attachNode(node: TreeNodeViewModel<ITreeItem>) {
             this.node = node;
+            this.node.isVisible.subscribe(value => this.updateGraphVisibility());
         }
 
         /****************************************/
@@ -235,9 +331,123 @@
 
         /****************************************/
 
+        updateGraphVisibility() {
+            const isVisible = this.node.isVisible() && this.serie.node.isVisible() && this.serie.project.node.isVisible();
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+        }
+
+        /****************************************/
+
         updateGraph() {
             if (!this._graphCtx)
                 return;
+
+            if (!this.folderId)
+                this.folderId = StringUtils.uuidv4();
+
+            let values: Desmos.Expression[] = [];
+            values.push({
+                type: "folder",
+                id: this.getGraphId("public"),
+                title: this.serie.name() + " - " + this.name(),
+            });
+            values.push({
+                type: "folder",
+                id: this.getGraphId("private"),
+                secret: true,
+                title: this.serie.name() + " - " + this.name(),
+            });
+
+            const func = this.selectedFunction().value;
+
+            this._varsMap["x"] = this.serie.getVar("xofs");
+            this._varsMap["y"] = this.serie.getVar("y");
+            this._varsMap["time"] = this.serie.project.getVar("time");
+
+            for (var item of func.vars) {
+                if (!this._varsMap[item.name])
+                    this._varsMap[item.name] = null;
+            }
+
+            this._graphCtx.generateVars(this._varsMap);
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("main"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars(func.value),
+                hidden: true                
+            });
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("main-func"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars(func.value.replace("$y\\ \\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
+                color: this.serie.color(),
+                lineStyle: Desmos.Styles.DASHED
+            }); 
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-func"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("$sum\\left(x\\right)=\\sum_{$n1=1}^{x}\\operatorname{round}\\left($fun\\left($n1\\right)\\right)"),
+                hidden: true
+            }); 
+
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-x-time"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("$n2=\\left[1,...,$time\\right]"),
+            }); 
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-serie"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("\\left($n2,\\ $sum\\left($n2\\right)\\right)"),
+                color: this.serie.color(),
+                lines: true,
+                points: false,
+                lineStyle: Desmos.Styles.POINT
+            }); 
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-value"),
+                folderId: this.getGraphId("public"),
+                latex: this.replaceVars("$value=$sum\\left($time\\right)"),
+            });
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("sum-point"),
+                folderId: this.getGraphId("private"),
+                latex: this.replaceVars("\\left($time,$value\\right)"),
+                color: this.serie.color(),
+                label: this.serie.name(),
+                dragMode: "XY",
+                showLabel: true
+            }); 
+          
+
+            this._graphCtx.setExpressions(values);
+
+            this.updateGraphVisibility();
+        }
+
+        /****************************************/
+
+        protected replaceVars(value: string): string {
+            for (let item in this._varsMap) {
+                var reg = new RegExp("\\$" + item , "g");
+                value = value.replace(reg, this._varsMap[item]);
+            }
+            return value;
         }
 
         /****************************************/
@@ -249,14 +459,18 @@
         /****************************************/
 
         folderId: string;
-        functions: IRegressionFunctionViewModel[];
+
+        functions: RegressionFunctionViewModel[];
+        selectedFunction = ko.observable<RegressionFunctionViewModel>();
         node: TreeNodeViewModel<ITreeItem>;
         name = ko.observable<string>();
+        time = ko.observable(0);
         readonly itemType = "regression";
         readonly icon = "show_chart";
         readonly optionsTemplateName = "RegressionOptionsTemplate";
         readonly actions: ActionViewModel[] = [];
     }
+
     /****************************************/
     /* Serie
     /****************************************/
@@ -288,6 +502,7 @@
         folderId?: string;
         varsMap?: IDictionary<string>;
         visible?: boolean;
+        opened?: boolean;
     }
 
     /****************************************/
@@ -351,7 +566,14 @@
 
         /****************************************/
 
-        addRegression(configOrValue?: IStudioRegressionConfig | StudioSerieRegression, updateGraph = true): StudioSerieRegression{
+        getVar(name: string): string {
+
+            return this._varsMap[name];
+        }
+
+        /****************************************/
+
+        addRegression(configOrValue?: IStudioRegressionConfig | StudioSerieRegression, updateGraph = true): StudioSerieRegression {
 
             var reg = configOrValue instanceof StudioSerieRegression ? configOrValue : new StudioSerieRegression(configOrValue);
 
@@ -385,6 +607,8 @@
                 this.values = state.values;
             if (state.folderId != undefined)
                 this.folderId = state.folderId;
+            if (state.opened != undefined)
+                this.node.isExpanded(state.opened);
 
             /*
             if (state.varsMap) {
@@ -395,6 +619,8 @@
             if (state.visible != undefined)
                 this.node.isVisible(state.visible);
 
+            this.updateGraph();
+
             if (state.regressions != undefined) {
 
                 this.regressions.foreach(a => a.remove());
@@ -404,8 +630,6 @@
                     reg.setState(a);
                 });
             }
-
-            this.updateGraph();
         }
 
         /****************************************/
@@ -420,6 +644,7 @@
                 folderId: this.folderId,
                 varsMap: this._varsMap,
                 visible: this.node.isVisible(),
+                opened: this.node.isExpanded(),
                 regressions: this.regressions.select(a => a.getState()).toArray(),
             }
         }
@@ -481,10 +706,12 @@
 
         /****************************************/
 
-        updateGraphVisibility() {
+        updateGraphVisibility(recusrive= true) {
             const isVisible = this.node.isVisible() && this.project.node.isVisible();
             this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
             this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+            if (recusrive)
+                this.regressions.foreach(a => a.updateGraphVisibility());
         }
 
         /****************************************/
@@ -511,7 +738,7 @@
                     type: "folder",
                     id: this.getGraphId("private"),
                     title: this.project.name() + " - " + this.name(),
-                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
+                    secret: true                    
                 }, {
                     type: "expression",
                     id: this.getGraphId("offset"),
@@ -607,6 +834,7 @@
         series?: IStudioSerieState[];
         visible?: boolean;
         opened?: boolean;
+        time?: number;
     }
 
     /****************************************/
@@ -614,6 +842,9 @@
     class StudioProject implements ITreeItem, IGraphItem {
 
         protected _graphCtx: GraphContext;
+        protected _varsMap: IDictionary<string> = {
+            "time": null
+        };
 
         constructor(config?: IStudioProjectConfig) {
             if (config)
@@ -628,6 +859,20 @@
 
         /****************************************/
 
+        getVar(name: string): string {
+
+            return this._varsMap[name];
+        }
+
+
+        /****************************************/
+
+        protected getGraphId(section: string) {
+            return this.folderId + "/" + section;
+        }
+
+        /****************************************/
+
         setState(state: IStudioProjectState) {
             if (state.name)
                 this.name(state.name);
@@ -638,6 +883,11 @@
             if (state.opened != undefined)
                 this.node.isExpanded(state.opened);
 
+            if (state.time != undefined)
+                this.time(state.time);
+
+            this.updateGraph(false);
+
             if (state.series != undefined) {
 
                 this.series.foreach(a => a.remove());
@@ -645,7 +895,6 @@
                 state.series.forEach(a => {
                     const serie = this.addSerie(null, false);
                     serie.setState(a);
-                    //serie.updateGraph();
                 });
             }
         }
@@ -658,13 +907,17 @@
                 name: this.name(),
                 series: this.series.select(a => a.getState()).toArray(),
                 visible: this.node.isVisible(),
-                opened: this.node.isExpanded()
+                opened: this.node.isExpanded(),
+                time: this.time()
             }
         }
 
         /****************************************/
 
         remove() {
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
             this.series.foreach(a => a.remove());
             this.node.remove();
         }
@@ -680,6 +933,14 @@
 
         attachGraph(ctx: GraphContext) {
             this._graphCtx = ctx;
+
+            this._graphCtx.calculator.observe("expressionAnalysis", () => {
+                let item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
+                this.time(item.evaluation.value);
+            });
+
+            this.time.subscribe(value =>
+                this._graphCtx.updateVariable(this.getGraphId("time"), this._varsMap["time"], this.time()));
         }
 
         /****************************************/
@@ -688,6 +949,28 @@
 
             if (!this._graphCtx)
                 return;
+
+            this._graphCtx.generateVars(this._varsMap);
+
+            this._graphCtx.setExpressions([
+                {
+                    type: "folder",
+                    id: this.getGraphId("public"),
+                    title: this.name(),
+                }, {
+                    type: "expression",
+                    folderId: this.getGraphId("public"),
+                    id: this.getGraphId("time"),
+                    latex: this._varsMap["time"] + "=" + this.time(),
+                    slider: {
+                        hardMin: true,
+                        hardMax: true,
+                        min: "0",
+                        max: "100",
+                        step: "1"
+                    }
+                }
+            ]);
 
             if (recursive)
                 this.series.foreach(a => a.updateGraph(recursive));
@@ -732,6 +1015,7 @@
         folderId: string;
         node: TreeNodeViewModel<ITreeItem>;
         host: StudioPage;
+        time = ko.observable(0);
 
         readonly itemType = "project";
         readonly icon = "folder";
@@ -925,7 +1209,7 @@
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
-                administerSecretFolders: true,
+                //administerSecretFolders: true,
                 authorIDE: true,
                 advancedStyling: true
             });
@@ -1057,7 +1341,7 @@
         /****************************************/
 
         protected onKeyDown(ev: KeyboardEvent) {
-            if (ev.keyCode == 46 && (<HTMLElement> ev.target).tagName != "INPUT") {
+            if (ev.keyCode == 46 && (<HTMLElement>ev.target).tagName != "INPUT") {
                 ev.preventDefault();
                 this.removeSelected();
             }
@@ -1109,3 +1393,4 @@
         items = new TreeViewModel<ITreeItem>();
     }
 }
+
