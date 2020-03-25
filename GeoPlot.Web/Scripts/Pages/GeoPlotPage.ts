@@ -892,6 +892,7 @@
             let obj: IStudioData = {
                 type: "serie",
                 version: 1,
+                color: this.selectedIndicator().colorLight,
                 serie: {
                     areaId: this.selectedArea.id,
                     indicatorId: this.selectedIndicator().id,

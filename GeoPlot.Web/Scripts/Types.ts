@@ -97,6 +97,7 @@
         serie: ISerieSource;
         title: string;
         values?: IFunctionPoint<number>[];
+        color?: string;
     }
 
     /****************************************/

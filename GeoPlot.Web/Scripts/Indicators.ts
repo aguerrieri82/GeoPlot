@@ -212,7 +212,7 @@
                     count--;
                     if (count == 0) {
                         const item: IFunctionPoint<TX> = {
-                            x: source.xAxis == "date" ? new Date(this._data.days[i].date) : i,
+                            x: <any>(source.xAxis == "date" ? new Date(this._data.days[i].date) : i),
                             y: this.getFactorValue({ 
                                 dayNumberOrGroup: group,
                                 areaOrId: source.areaId,

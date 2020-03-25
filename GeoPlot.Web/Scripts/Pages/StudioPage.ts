@@ -56,6 +56,23 @@
             }*/
         }
 
+    /****************************************/
+
+        setColor(id: string, color: string) {
+            this.calculator.controller.dispatch({ type: "set-item-color", id: id, color: color });
+        }
+
+        /****************************************/
+
+        updateTable(id: string, values: IFunctionPoint<number>[]) {
+            let exp = <Desmos.ITableExpression>linq(this.calculator.getExpressions()).where(a => a.id == id).first();
+            if (exp) {
+                exp.columns[0].values = linq(values).select(a => a.x.toString()).toArray();
+                exp.columns[1].values = linq(values).select(a => a.y.toString()).toArray();
+                this.calculator.setExpression(exp);
+            }
+        }
+
         /****************************************/
 
         updateExpression(value: Desmos.Expression) {
@@ -106,6 +123,7 @@
 
         /****************************************/
 
+        serieCalculator: IndicatorCalculator<TData>;
         calculator: Desmos.IGraphingCalculator;
         vars: IDictionary<number> = {};
     }
@@ -123,12 +141,78 @@
     /* Regression
     /****************************************/
 
+    type RegressionFunctionType = "linear" | "exponential" | "normal" | "log-normal";
+
+    interface IStudioRegressionConfig {
+        name?: string;
+        visible?: boolean;
+        function?: IRegressionFunction;
+    }
+
+    interface IRegressionFunctionVar {
+        name: string;
+        label?: string;
+        autoCompute: boolean;
+        minValue?: number;
+        maxValue?: number;
+        step?: number;
+        value?: number;
+    }
+
+    interface IRegressionFunction {
+        type: RegressionFunctionType
+        name: string;
+        vars: IRegressionFunctionVar[];
+    }
+
+    interface IStudioRegressionState extends IStudioRegressionConfig {
+    }
+
+
+    interface IRegressionFunctionViewModel {
+        select();
+
+        name: string;
+        icon: string;
+        value: IRegressionFunction;
+    }
+
+    /****************************************/
+
     class StudioSerieRegression implements ITreeItem, IGraphItem {
 
         protected _graphCtx: GraphContext;
 
-        constructor() {
+        protected _varsMap: IDictionary<string> = {
+            "x": null,
+            "y": null,
+            "ofs": null,
+            "xofs": null,
+        };
 
+        constructor(config?: IStudioRegressionConfig) {
+            if (config)
+                this.setState(config);
+        }
+
+        /****************************************/
+
+        setState(state: IStudioRegressionState) {
+            if (state.name)
+                this.name(state.name);
+
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+        }
+
+        /****************************************/
+
+        getState(): IStudioRegressionState {
+
+            return {
+                name: this.name(),
+                visible: this.node.isVisible()
+            }
         }
 
         /****************************************/
@@ -145,6 +229,12 @@
 
         /****************************************/
 
+        attachGraph(ctx: GraphContext) {
+            this._graphCtx = ctx;
+        }
+
+        /****************************************/
+
         updateGraph() {
             if (!this._graphCtx)
                 return;
@@ -152,26 +242,358 @@
 
         /****************************************/
 
-        attachGraph(ctx: GraphContext) {
-            this._graphCtx = ctx;
-        }
-
-        /****************************************/
-
-        get label(): string {
-            return "";
+        get serie(): StudioSerie {
+            return <StudioSerie>this.node.parentNode.value();
         }
 
         /****************************************/
 
         folderId: string;
-
+        functions: IRegressionFunctionViewModel[];
         node: TreeNodeViewModel<ITreeItem>;
+        name = ko.observable<string>();
         readonly itemType = "regression";
         readonly icon = "show_chart";
         readonly optionsTemplateName = "RegressionOptionsTemplate";
         readonly actions: ActionViewModel[] = [];
     }
+    /****************************************/
+    /* Serie
+    /****************************************/
+
+    interface IFunction {
+
+    }
+
+    /****************************************/
+
+    interface IDiscreteFunction extends IFunction {
+        readonly values: IFunctionPoint<number>[];
+    }
+
+    /****************************************/
+
+    interface IStudioSerieConfig {
+        name?: string;
+        source?: ISerieSource;
+        values?: IFunctionPoint<number>[];
+        color?: string;
+        offsetX?: number;
+        regressions?: IStudioRegressionConfig[];
+    }
+
+    /****************************************/
+
+    interface IStudioSerieState extends IStudioSerieConfig {
+        folderId?: string;
+        varsMap?: IDictionary<string>;
+        visible?: boolean;
+    }
+
+    /****************************************/
+
+    class StudioSerie implements ITreeItem, IDiscreteFunction, IGraphItem {
+
+        protected _graphCtx: GraphContext;
+
+        protected _varsMap: IDictionary<string> = {
+            "x": null,
+            "y": null,
+            "ofs": null,
+            "xofs": null,
+        };
+
+        /****************************************/
+
+        constructor(config?: IStudioSerieConfig) {
+
+            if (config) {
+                this.setState(config);
+            }
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = () => this.remove();
+            }));
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Aggiorna";
+                action.icon = "autorenew";
+                action.execute = () => this.updateSerie();
+            }));
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Regressione";
+                action.icon = "add_box";
+                action.execute = () => {
+                    let reg = this.addRegression();
+                    this.node.isExpanded(true);
+                    reg.node.isSelected(true);
+                }
+
+            }));
+        }
+
+        /****************************************/
+
+        static fromText(text: string): StudioSerie {
+            try {
+                let obj = <IStudioData>JSON.parse(text);
+                if (obj && obj.type == "serie")
+                    return new StudioSerie({
+                        name: obj.title,
+                        values: obj.values,
+                        source: obj.serie,
+                        color: obj.color
+                    });
+            }
+            catch{
+            }
+        }
+
+        /****************************************/
+
+        addRegression(configOrValue?: IStudioRegressionConfig | StudioSerieRegression, updateGraph = true): StudioSerieRegression{
+
+            var reg = configOrValue instanceof StudioSerieRegression ? configOrValue : new StudioSerieRegression(configOrValue);
+
+            const node = new TreeNodeViewModel(reg);
+
+            this.node.addNode(node);
+
+            reg.attachNode(node);
+
+            reg.attachGraph(this._graphCtx);
+
+            if (updateGraph)
+                reg.updateGraph();
+
+            return reg;
+        }
+
+        /****************************************/
+
+        setState(state: IStudioSerieState) {
+
+            if (state.name)
+                this.name(state.name);
+            if (state.color)
+                this.color(state.color);
+            if (state.offsetX != undefined)
+                this.offsetX(state.offsetX);
+            if (state.source)
+                this.source = state.source;
+            if (state.values != undefined)
+                this.values = state.values;
+            if (state.folderId != undefined)
+                this.folderId = state.folderId;
+
+            /*
+            if (state.varsMap) {
+                for (var key in state.varsMap)
+                    this._varsMap[key] = state.varsMap[key];
+            }*/
+
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+
+            if (state.regressions != undefined) {
+
+                this.regressions.foreach(a => a.remove());
+
+                state.regressions.forEach(a => {
+                    const reg = this.addRegression(null, false);
+                    reg.setState(a);
+                });
+            }
+
+            this.updateGraph();
+        }
+
+        /****************************************/
+
+        getState(): IStudioSerieState {
+            return {
+                color: this.color(),
+                name: this.name(),
+                offsetX: this.offsetX(),
+                source: this.source,
+                values: this.values,
+                folderId: this.folderId,
+                varsMap: this._varsMap,
+                visible: this.node.isVisible(),
+                regressions: this.regressions.select(a => a.getState()).toArray(),
+            }
+        }
+
+        /****************************************/
+
+        updateSerie() {
+            this.values = this._graphCtx.serieCalculator.getSerie(this.source);
+            this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+        }
+
+        /****************************************/
+
+        remove() {
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
+            this.node.remove();
+        }
+
+        /****************************************/
+
+        attachNode(node: TreeNodeViewModel<ITreeItem>) {
+            this.node = node;
+            this.node.isVisible.subscribe(value => this.updateGraphVisibility());
+            this.node.isSelected.subscribe(value => {
+                if (value)
+                    this.onSelected();
+            })
+        }
+
+        /****************************************/
+
+        attachGraph(ctx: GraphContext) {
+            this._graphCtx = ctx;
+            this._graphCtx.calculator.observe("expressionAnalysis", () => {
+                let anal = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+                this.offsetX(anal.evaluation.value);
+            });
+
+            this.color.subscribe(value => {
+                this._graphCtx.setColor(this.getGraphId("offset-x-serie"), value);
+            });
+
+        }
+
+        /****************************************/
+
+        protected onSelected() {
+            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
+        }
+
+        /****************************************/
+
+        protected getGraphId(section: string) {
+            return this.folderId + "/" + section;
+        }
+
+        /****************************************/
+
+        updateGraphVisibility() {
+            const isVisible = this.node.isVisible() && this.project.node.isVisible();
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+        }
+
+        /****************************************/
+
+        updateGraph(recursive = false) {
+
+            if (!this._graphCtx)
+                return;
+
+            if (!this.folderId)
+                this.folderId = StringUtils.uuidv4();
+
+            if (!this.color())
+                this.color("#0000ff");
+
+            this._graphCtx.generateVars(this._varsMap);
+
+            this._graphCtx.setExpressions([
+                {
+                    type: "folder",
+                    id: this.getGraphId("public"),
+                    title: this.project.name() + " - " + this.name(),
+                }, {
+                    type: "folder",
+                    id: this.getGraphId("private"),
+                    title: this.project.name() + " - " + this.name(),
+                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset"),
+                    latex: this._varsMap["ofs"] + "=" + this.offsetX(),
+                    folderId: this.getGraphId("public"),
+                    label: "Scostamento",
+                    slider: {
+                        min: (-this.values.length).toString(),
+                        max: (this.values.length).toString(),
+                        hardMax: true,
+                        hardMin: true,
+                        step: "1"
+                    }
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x"),
+                    latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
+                    folderId: this.getGraphId("private"),
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x-serie"),
+                    latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
+                    folderId: this.getGraphId("private"),
+                    points: true,
+                    lines: true,
+                    color: this.color()
+                }, {
+                    type: "table",
+                    id: this.getGraphId("table"),
+                    folderId: this.getGraphId("private"),
+                    columns: [
+                        {
+                            id: this.getGraphId("table/x"),
+                            latex: this._varsMap["x"],
+                        },
+                        {
+                            id: this.getGraphId("table/y"),
+                            latex: this._varsMap["y"],
+                            hidden: true
+                        }
+                    ]
+                }]);
+
+            this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+
+            this.updateGraphVisibility();
+        }
+
+        /****************************************/
+
+        get regressions(): Linq<StudioSerieRegression> {
+
+            function* items() {
+                for (var node of this.node.nodes())
+                    yield (<StudioSerieRegression>node.value());
+            }
+
+            return linq(items.apply(this));
+        }
+
+        /****************************************/
+
+        get project(): StudioProject {
+            return <StudioProject>this.node.parentNode.value();
+        }
+
+        /****************************************/
+
+        name = ko.observable<string>();
+        color = ko.observable<string>();
+        offsetX = ko.observable<number>(0);
+        source: ISerieSource;
+        values: IFunctionPoint<number>[];
+        folderId: string;
+        node: TreeNodeViewModel<ITreeItem>;
+        readonly itemType = "serie";
+        readonly icon = "insert_chart";
+        readonly optionsTemplateName = "StudioOptionsTemplate";
+        readonly actions: ActionViewModel[] = [];
+    }
+
+
 
     /****************************************/
     /* Project
@@ -202,8 +624,6 @@
                 action.icon = "delete";
                 action.execute = () => this.remove();
             }));
-
-         
         }
 
         /****************************************/
@@ -295,12 +715,6 @@
 
         /****************************************/
 
-        get label(): string {
-            return this.name();
-        }
-
-        /****************************************/
-
         get series(): Linq<StudioSerie> {
 
             function* items() {
@@ -325,295 +739,6 @@
         readonly actions: ActionViewModel[] = [];
     }
 
-    /****************************************/
-    /* Serie
-    /****************************************/
-
-    interface IFunction {
-
-    }
-
-    /****************************************/
-
-    interface IDiscreteFunction extends IFunction {
-        readonly values: IFunctionPoint<number>[];
-    }
-
-    /****************************************/
-
-    interface IStudioSerieConfig {
-        name?: string;
-        source?: ISerieSource;
-        values?: IFunctionPoint<number>[];
-        color?: string;
-        offsetX?: number;
-    }
-
-    /****************************************/
-
-    interface IStudioSerieState extends IStudioSerieConfig {
-        folderId?: string;
-        varsMap?: IDictionary<string>;
-        visible?: boolean;
-    }
-
-    /****************************************/
-
-    class StudioSerie implements ITreeItem, IDiscreteFunction, IGraphItem {
-
-        protected _graphCtx: GraphContext;
-
-        protected _varsMap: IDictionary<string> = {
-            "x": null,
-            "y": null,
-            "ofs": null,
-            "xofs": null,
-        };
-
-        /****************************************/
-
-        constructor(config?: IStudioSerieConfig) {
-
-            if (config) {
-                this.setState(config);
-            }
-            this.actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Elimina";
-                action.icon = "delete";
-                action.execute = () => this.remove();
-            }));
-            this.actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Regressione";
-                action.icon = "add_box";
-                action.execute = () => this.addRegression();
-            }));
-
-                
-        }
-
-        /****************************************/
-
-        static fromText(text: string): StudioSerie {
-            try {
-                let obj = <IStudioData>JSON.parse(text);
-                if (obj && obj.type == "serie")
-                    return new StudioSerie({
-                        name: obj.title,
-                        values: obj.values,
-                        source: obj.serie
-                    });
-            }
-            catch{
-            }
-        }
-
-        /****************************************/
-
-        addRegression() {
-
-        }
-
-        /****************************************/
-
-        setState(state: IStudioSerieState) {
-
-            if (state.name)
-                this.name(state.name);
-            if (state.color)
-                this.color(state.color);
-            if (state.offsetX != undefined)
-                this.offsetX(state.offsetX);
-            if (state.source)
-                this.source = state.source;
-            if (state.values != undefined)
-                this.values = state.values;
-            if (state.folderId != undefined)
-                this.folderId = state.folderId;
-            /*
-            if (state.varsMap) {
-                for (var key in state.varsMap)
-                    this._varsMap[key] = state.varsMap[key];
-            }*/
-            if (state.visible != undefined)
-                this.node.isVisible(state.visible);
-
-            this.updateGraph();
-        }
-
-        /****************************************/
-
-        getState(): IStudioSerieState {
-            return {
-                color: this.color(),
-                name: this.name(),
-                offsetX: this.offsetX(),
-                source: this.source,
-                values: this.values,
-                folderId: this.folderId,
-                varsMap: this._varsMap,
-                visible: this.node.isVisible()
-            }
-        }
-
-        /****************************************/
-
-        remove() {
-            if (this._graphCtx) {
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
-            }
-            this.node.remove();
-        }
-
-        /****************************************/
-
-        attachNode(node: TreeNodeViewModel<ITreeItem>) {
-            this.node = node;
-            this.node.isVisible.subscribe(value => this.updateGraphVisibility());
-            this.node.isSelected.subscribe(value => {
-                if (value)
-                    this.onSelected();
-            })
-        }
-
-        /****************************************/
-
-        attachGraph(ctx: GraphContext) {
-            this._graphCtx = ctx;
-            this._graphCtx.calculator.observe("expressionAnalysis", () => {
-                let anal = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
-                this.offsetX(anal.evaluation.value);
-            });
-
-            this.color.subscribe(value => {
-                this._graphCtx.updateExpression({ type: "expression", id: this.getGraphId("offset-x-serie"), color: value });
-            });
-
-        }
-
-        /****************************************/
-
-        protected onSelected() {
-            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
-        }
-
-        /****************************************/
-
-        protected getGraphId(section: string) {
-            return this.folderId + "/" + section;
-        }
-
-        /****************************************/
-
-        updateGraphVisibility() {
-            const isVisible = this.node.isVisible() && this.project.node.isVisible();
-            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
-            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
-        }
-
-        /****************************************/
-
-        updateGraph(recursive = false) {
-
-            if (!this._graphCtx)
-                return;
-
-            if (!this.folderId)
-                this.folderId = StringUtils.uuidv4();
-
-            if (!this.color())
-                this.color("#0000ff");
-
-            this._graphCtx.generateVars(this._varsMap);
-
-            this._graphCtx.setExpressions([
-                {
-                    type: "folder",
-                    id: this.getGraphId("public"),
-                    title: this.project.name() + " - " + this.name(),
-                }, {
-                    type: "folder",
-                    id: this.getGraphId("private"),
-                    title: this.project.name() + " - " + this.name(),
-                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
-                }, {
-                    type: "expression",
-                    id: this.getGraphId("offset"),
-                    latex: this._varsMap["ofs"] + "=" + this.offsetX(),
-                    folderId: this.getGraphId("public"),
-                    label: "Scostamento",
-                    slider: {
-                        min: (-this.values.length).toString(),
-                        max: (this.values.length).toString(),
-                        hardMax: true,
-                        hardMin: true,
-                        step: "1"
-                    }
-                }, {
-                    type: "expression",
-                    id: this.getGraphId("offset-x"),
-                    latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
-                    folderId: this.getGraphId("private"),
-                }, {
-                    type: "expression",
-                    id: this.getGraphId("offset-x-serie"),
-                    latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
-                    folderId: this.getGraphId("private"),
-                    points: true,
-                    lines: true,
-                    color: this.color()
-                }, {
-                    type: "table",
-                    id: this.getGraphId("table"),
-                    folderId: this.getGraphId("private"),
-                    columns: [
-                        {
-                            id: this.getGraphId("table/x"),
-                            latex: this._varsMap["x"],
-                            hidden: true,
-                            values: linq(this.values).select(a => a.x.toString()).toArray()
-                        },
-                        {
-                            id: this.getGraphId("table/y"),
-                            latex: this._varsMap["y"],
-                            values: linq(this.values).select(a => a.y.toString()).toArray(),
-                            hidden: true
-                        }
-                    ]
-                }]);
-
-            this._graphCtx.updateVariable(this.getGraphId("offset"), this._varsMap["ofs"], 17);
-
-
-            this.updateGraphVisibility();
-        }
-
-        /****************************************/
-
-        get label(): string {
-            return this.name();
-        }
-
-        /****************************************/
-
-        get project(): StudioProject {
-            return <StudioProject>this.node.parentNode.value();
-        }
-
-        /****************************************/
-
-        name = ko.observable<string>();
-        color = ko.observable<string>();
-        offsetX = ko.observable<number>(0);
-        source: ISerieSource;
-        values: IFunctionPoint<number>[];
-        folderId: string;
-        node: TreeNodeViewModel<ITreeItem>;
-        readonly itemType = "serie";
-        readonly icon = "insert_chart";
-        readonly optionsTemplateName = "StudioOptionsTemplate";
-        readonly actions: ActionViewModel[] = [];
-    }
 
     /****************************************/
     /* TreeViewModel
@@ -624,8 +749,9 @@
         attachNode(node: TreeNodeViewModel<ITreeItem>);
         remove(): void;
 
+        name: KnockoutObservable<string>;
+        color?: KnockoutObservable<string>;
         readonly itemType: string;
-        readonly label: string;
         readonly icon: string;
         readonly node: TreeNodeViewModel<ITreeItem>;
     }
@@ -783,26 +909,24 @@
         private readonly _data: IDayAreaDataSet<TData>;
         private readonly _dataSet = InfectionDataSet;
         private readonly _geo: IGeoAreaSet;
-        private readonly _serieCalculator: IndicatorCalculator<TData>;
         private _graphCtx: GraphContext;
 
         constructor(model: IStudioViewModel) {
 
             this._data = model.data;
             this._geo = model.geo;
-            this._serieCalculator = new IndicatorCalculator(this._data, this._dataSet, this._geo);
-
 
             this._graphCtx = new GraphContext();
+            this._graphCtx.serieCalculator = new IndicatorCalculator(this._data, this._dataSet, this._geo);
             this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                 //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                 pasteGraphLink: false,
                 pasteTableData: false,
                 //lockViewport: false,
-                //restrictedFunctions: true,
+                restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
                 administerSecretFolders: true,
-                //authorIDE: true,
+                authorIDE: true,
                 advancedStyling: true
             });
 
@@ -883,13 +1007,13 @@
                 return;
 
             if (value.graphState) {
-                console.log(JSON.stringify(value.graphState, null, "  "));
+                //console.log(JSON.stringify(value.graphState, null, "  "));
                 value.graphState.expressions.list = [];
                 this._graphCtx.calculator.setState(value.graphState);
             }
-
+            /*
             if (value.vars)
-                this._graphCtx.vars = value.vars;
+                this._graphCtx.vars = value.vars;*/
 
             if (value.projects != undefined) {
                 this.projects.toArray().forEach(a => a.remove());

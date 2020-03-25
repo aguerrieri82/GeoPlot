@@ -223,11 +223,11 @@
                     <div class="row no-margin row-indicator">
                         <div class="col s6 input-field filter-indicator">
                             <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
-                            <label>Indicatore</label>
+                            <label class="active">Indicatore</label>
                         </div>
                         <div class="col s6 input-field filter-factor">
                             <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
-                            <label>In rapporto a</label>
+                            <label class="active">In rapporto a</label>
                         </div>
                     </div>
                     <div class="row no-margin row-factor">
@@ -246,7 +246,7 @@
                         </div>
                         <div class="input-field col s6 max-factor">
                             <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
-                            <label for="limit">Soglia fattore</label>
+                            <label class="active" for="limit">Soglia fattore</label>
                         </div>
                     </div>
                     <div class="row no-margin row-factor">

@@ -64,7 +64,13 @@ declare namespace Desmos {
     type DispatchEvent = {
         type: "expression-zoom-fit",
         id: string
+    } | {
+        type: "set-item-color",
+        id: string,
+        color: string;
     };
+
+
 
     interface IGraphingController {
         _setItemHidden(id: string, isHidden: boolean);

@@ -397,7 +397,7 @@ var WebApp;
                     count--;
                     if (count == 0) {
                         var item = {
-                            x: source.xAxis == "date" ? new Date(this._data.days[i].date) : i,
+                            x: (source.xAxis == "date" ? new Date(this._data.days[i].date) : i),
                             y: this.getFactorValue({
                                 dayNumberOrGroup: group,
                                 areaOrId: source.areaId,
@@ -1356,6 +1356,7 @@ var WebApp;
                     obj = {
                         type: "serie",
                         version: 1,
+                        color: this.selectedIndicator().colorLight,
                         serie: {
                             areaId: this.selectedArea.id,
                             indicatorId: this.selectedIndicator().id,
@@ -1974,6 +1975,19 @@ var WebApp;
             }*/
         };
         /****************************************/
+        GraphContext.prototype.setColor = function (id, color) {
+            this.calculator.controller.dispatch({ type: "set-item-color", id: id, color: color });
+        };
+        /****************************************/
+        GraphContext.prototype.updateTable = function (id, values) {
+            var exp = WebApp.linq(this.calculator.getExpressions()).where(function (a) { return a.id == id; }).first();
+            if (exp) {
+                exp.columns[0].values = WebApp.linq(values).select(function (a) { return a.x.toString(); }).toArray();
+                exp.columns[1].values = WebApp.linq(values).select(function (a) { return a.y.toString(); }).toArray();
+                this.calculator.setExpression(exp);
+            }
+        };
+        /****************************************/
         GraphContext.prototype.updateExpression = function (value) {
             var e_11, _a;
             var exp = WebApp.linq(this.calculator.getExpressions()).where(function (a) { return a.id == value.id; }).first();
@@ -2024,15 +2038,36 @@ var WebApp;
         return GraphContext;
     }());
     /****************************************/
-    /* Regression
-    /****************************************/
     var StudioSerieRegression = /** @class */ (function () {
-        function StudioSerieRegression() {
+        function StudioSerieRegression(config) {
+            this._varsMap = {
+                "x": null,
+                "y": null,
+                "ofs": null,
+                "xofs": null,
+            };
+            this.name = ko.observable();
             this.itemType = "regression";
             this.icon = "show_chart";
             this.optionsTemplateName = "RegressionOptionsTemplate";
             this.actions = [];
+            if (config)
+                this.setState(config);
         }
+        /****************************************/
+        StudioSerieRegression.prototype.setState = function (state) {
+            if (state.name)
+                this.name(state.name);
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.getState = function () {
+            return {
+                name: this.name(),
+                visible: this.node.isVisible()
+            };
+        };
         /****************************************/
         StudioSerieRegression.prototype.remove = function () {
         };
@@ -2041,23 +2076,304 @@ var WebApp;
             this.node = node;
         };
         /****************************************/
+        StudioSerieRegression.prototype.attachGraph = function (ctx) {
+            this._graphCtx = ctx;
+        };
+        /****************************************/
         StudioSerieRegression.prototype.updateGraph = function () {
             if (!this._graphCtx)
                 return;
         };
-        /****************************************/
-        StudioSerieRegression.prototype.attachGraph = function (ctx) {
-            this._graphCtx = ctx;
-        };
-        Object.defineProperty(StudioSerieRegression.prototype, "label", {
+        Object.defineProperty(StudioSerieRegression.prototype, "serie", {
             /****************************************/
             get: function () {
-                return "";
+                return this.node.parentNode.value();
             },
             enumerable: true,
             configurable: true
         });
         return StudioSerieRegression;
+    }());
+    /****************************************/
+    var StudioSerie = /** @class */ (function () {
+        /****************************************/
+        function StudioSerie(config) {
+            var _this = this;
+            this._varsMap = {
+                "x": null,
+                "y": null,
+                "ofs": null,
+                "xofs": null,
+            };
+            /****************************************/
+            this.name = ko.observable();
+            this.color = ko.observable();
+            this.offsetX = ko.observable(0);
+            this.itemType = "serie";
+            this.icon = "insert_chart";
+            this.optionsTemplateName = "StudioOptionsTemplate";
+            this.actions = [];
+            if (config) {
+                this.setState(config);
+            }
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = function () { return _this.remove(); };
+            }));
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Aggiorna";
+                action.icon = "autorenew";
+                action.execute = function () { return _this.updateSerie(); };
+            }));
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Regressione";
+                action.icon = "add_box";
+                action.execute = function () {
+                    var reg = _this.addRegression();
+                    _this.node.isExpanded(true);
+                    reg.node.isSelected(true);
+                };
+            }));
+        }
+        /****************************************/
+        StudioSerie.fromText = function (text) {
+            try {
+                var obj = JSON.parse(text);
+                if (obj && obj.type == "serie")
+                    return new StudioSerie({
+                        name: obj.title,
+                        values: obj.values,
+                        source: obj.serie,
+                        color: obj.color
+                    });
+            }
+            catch (_a) {
+            }
+        };
+        /****************************************/
+        StudioSerie.prototype.addRegression = function (configOrValue, updateGraph) {
+            if (updateGraph === void 0) { updateGraph = true; }
+            var reg = configOrValue instanceof StudioSerieRegression ? configOrValue : new StudioSerieRegression(configOrValue);
+            var node = new TreeNodeViewModel(reg);
+            this.node.addNode(node);
+            reg.attachNode(node);
+            reg.attachGraph(this._graphCtx);
+            if (updateGraph)
+                reg.updateGraph();
+            return reg;
+        };
+        /****************************************/
+        StudioSerie.prototype.setState = function (state) {
+            var _this = this;
+            if (state.name)
+                this.name(state.name);
+            if (state.color)
+                this.color(state.color);
+            if (state.offsetX != undefined)
+                this.offsetX(state.offsetX);
+            if (state.source)
+                this.source = state.source;
+            if (state.values != undefined)
+                this.values = state.values;
+            if (state.folderId != undefined)
+                this.folderId = state.folderId;
+            /*
+            if (state.varsMap) {
+                for (var key in state.varsMap)
+                    this._varsMap[key] = state.varsMap[key];
+            }*/
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+            if (state.regressions != undefined) {
+                this.regressions.foreach(function (a) { return a.remove(); });
+                state.regressions.forEach(function (a) {
+                    var reg = _this.addRegression(null, false);
+                    reg.setState(a);
+                });
+            }
+            this.updateGraph();
+        };
+        /****************************************/
+        StudioSerie.prototype.getState = function () {
+            return {
+                color: this.color(),
+                name: this.name(),
+                offsetX: this.offsetX(),
+                source: this.source,
+                values: this.values,
+                folderId: this.folderId,
+                varsMap: this._varsMap,
+                visible: this.node.isVisible(),
+                regressions: this.regressions.select(function (a) { return a.getState(); }).toArray(),
+            };
+        };
+        /****************************************/
+        StudioSerie.prototype.updateSerie = function () {
+            this.values = this._graphCtx.serieCalculator.getSerie(this.source);
+            this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+        };
+        /****************************************/
+        StudioSerie.prototype.remove = function () {
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
+            this.node.remove();
+        };
+        /****************************************/
+        StudioSerie.prototype.attachNode = function (node) {
+            var _this = this;
+            this.node = node;
+            this.node.isVisible.subscribe(function (value) { return _this.updateGraphVisibility(); });
+            this.node.isSelected.subscribe(function (value) {
+                if (value)
+                    _this.onSelected();
+            });
+        };
+        /****************************************/
+        StudioSerie.prototype.attachGraph = function (ctx) {
+            var _this = this;
+            this._graphCtx = ctx;
+            this._graphCtx.calculator.observe("expressionAnalysis", function () {
+                var anal = _this._graphCtx.calculator.expressionAnalysis[_this.getGraphId("offset")];
+                _this.offsetX(anal.evaluation.value);
+            });
+            this.color.subscribe(function (value) {
+                _this._graphCtx.setColor(_this.getGraphId("offset-x-serie"), value);
+            });
+        };
+        /****************************************/
+        StudioSerie.prototype.onSelected = function () {
+            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
+        };
+        /****************************************/
+        StudioSerie.prototype.getGraphId = function (section) {
+            return this.folderId + "/" + section;
+        };
+        /****************************************/
+        StudioSerie.prototype.updateGraphVisibility = function () {
+            var isVisible = this.node.isVisible() && this.project.node.isVisible();
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+        };
+        /****************************************/
+        StudioSerie.prototype.updateGraph = function (recursive) {
+            if (recursive === void 0) { recursive = false; }
+            if (!this._graphCtx)
+                return;
+            if (!this.folderId)
+                this.folderId = WebApp.StringUtils.uuidv4();
+            if (!this.color())
+                this.color("#0000ff");
+            this._graphCtx.generateVars(this._varsMap);
+            this._graphCtx.setExpressions([
+                {
+                    type: "folder",
+                    id: this.getGraphId("public"),
+                    title: this.project.name() + " - " + this.name(),
+                }, {
+                    type: "folder",
+                    id: this.getGraphId("private"),
+                    title: this.project.name() + " - " + this.name(),
+                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset"),
+                    latex: this._varsMap["ofs"] + "=" + this.offsetX(),
+                    folderId: this.getGraphId("public"),
+                    label: "Scostamento",
+                    slider: {
+                        min: (-this.values.length).toString(),
+                        max: (this.values.length).toString(),
+                        hardMax: true,
+                        hardMin: true,
+                        step: "1"
+                    }
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x"),
+                    latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
+                    folderId: this.getGraphId("private"),
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x-serie"),
+                    latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
+                    folderId: this.getGraphId("private"),
+                    points: true,
+                    lines: true,
+                    color: this.color()
+                }, {
+                    type: "table",
+                    id: this.getGraphId("table"),
+                    folderId: this.getGraphId("private"),
+                    columns: [
+                        {
+                            id: this.getGraphId("table/x"),
+                            latex: this._varsMap["x"],
+                        },
+                        {
+                            id: this.getGraphId("table/y"),
+                            latex: this._varsMap["y"],
+                            hidden: true
+                        }
+                    ]
+                }
+            ]);
+            this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+            this.updateGraphVisibility();
+        };
+        Object.defineProperty(StudioSerie.prototype, "regressions", {
+            /****************************************/
+            get: function () {
+                function items() {
+                    var _a, _b, node, e_12_1;
+                    var e_12, _c;
+                    return __generator(this, function (_d) {
+                        switch (_d.label) {
+                            case 0:
+                                _d.trys.push([0, 5, 6, 7]);
+                                _a = __values(this.node.nodes()), _b = _a.next();
+                                _d.label = 1;
+                            case 1:
+                                if (!!_b.done) return [3 /*break*/, 4];
+                                node = _b.value;
+                                return [4 /*yield*/, node.value()];
+                            case 2:
+                                _d.sent();
+                                _d.label = 3;
+                            case 3:
+                                _b = _a.next();
+                                return [3 /*break*/, 1];
+                            case 4: return [3 /*break*/, 7];
+                            case 5:
+                                e_12_1 = _d.sent();
+                                e_12 = { error: e_12_1 };
+                                return [3 /*break*/, 7];
+                            case 6:
+                                try {
+                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                }
+                                finally { if (e_12) throw e_12.error; }
+                                return [7 /*endfinally*/];
+                            case 7: return [2 /*return*/];
+                        }
+                    });
+                }
+                return WebApp.linq(items.apply(this));
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(StudioSerie.prototype, "project", {
+            /****************************************/
+            get: function () {
+                return this.node.parentNode.value();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        return StudioSerie;
     }());
     /****************************************/
     var StudioProject = /** @class */ (function () {
@@ -2139,20 +2455,12 @@ var WebApp;
                 serie.updateGraph();
             return serie;
         };
-        Object.defineProperty(StudioProject.prototype, "label", {
-            /****************************************/
-            get: function () {
-                return this.name();
-            },
-            enumerable: true,
-            configurable: true
-        });
         Object.defineProperty(StudioProject.prototype, "series", {
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_12_1;
-                    var e_12, _c;
+                    var _a, _b, node, e_13_1;
+                    var e_13, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -2171,14 +2479,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_12_1 = _d.sent();
-                                e_12 = { error: e_12_1 };
+                                e_13_1 = _d.sent();
+                                e_13 = { error: e_13_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_12) throw e_12.error; }
+                                finally { if (e_13) throw e_13.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }
@@ -2190,223 +2498,6 @@ var WebApp;
             configurable: true
         });
         return StudioProject;
-    }());
-    /****************************************/
-    var StudioSerie = /** @class */ (function () {
-        /****************************************/
-        function StudioSerie(config) {
-            var _this = this;
-            this._varsMap = {
-                "x": null,
-                "y": null,
-                "ofs": null,
-                "xofs": null,
-            };
-            /****************************************/
-            this.name = ko.observable();
-            this.color = ko.observable();
-            this.offsetX = ko.observable(0);
-            this.itemType = "serie";
-            this.icon = "insert_chart";
-            this.optionsTemplateName = "StudioOptionsTemplate";
-            this.actions = [];
-            if (config) {
-                this.setState(config);
-            }
-            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                action.text = "Elimina";
-                action.icon = "delete";
-                action.execute = function () { return _this.remove(); };
-            }));
-            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                action.text = "Regressione";
-                action.icon = "add_box";
-                action.execute = function () { return _this.addRegression(); };
-            }));
-        }
-        /****************************************/
-        StudioSerie.fromText = function (text) {
-            try {
-                var obj = JSON.parse(text);
-                if (obj && obj.type == "serie")
-                    return new StudioSerie({
-                        name: obj.title,
-                        values: obj.values,
-                        source: obj.serie
-                    });
-            }
-            catch (_a) {
-            }
-        };
-        /****************************************/
-        StudioSerie.prototype.addRegression = function () {
-        };
-        /****************************************/
-        StudioSerie.prototype.setState = function (state) {
-            if (state.name)
-                this.name(state.name);
-            if (state.color)
-                this.color(state.color);
-            if (state.offsetX != undefined)
-                this.offsetX(state.offsetX);
-            if (state.source)
-                this.source = state.source;
-            if (state.values != undefined)
-                this.values = state.values;
-            if (state.folderId != undefined)
-                this.folderId = state.folderId;
-            /*
-            if (state.varsMap) {
-                for (var key in state.varsMap)
-                    this._varsMap[key] = state.varsMap[key];
-            }*/
-            if (state.visible != undefined)
-                this.node.isVisible(state.visible);
-            this.updateGraph();
-        };
-        /****************************************/
-        StudioSerie.prototype.getState = function () {
-            return {
-                color: this.color(),
-                name: this.name(),
-                offsetX: this.offsetX(),
-                source: this.source,
-                values: this.values,
-                folderId: this.folderId,
-                varsMap: this._varsMap,
-                visible: this.node.isVisible()
-            };
-        };
-        /****************************************/
-        StudioSerie.prototype.remove = function () {
-            if (this._graphCtx) {
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
-                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
-            }
-            this.node.remove();
-        };
-        /****************************************/
-        StudioSerie.prototype.attachNode = function (node) {
-            var _this = this;
-            this.node = node;
-            this.node.isVisible.subscribe(function (value) { return _this.updateGraphVisibility(); });
-            this.node.isSelected.subscribe(function (value) {
-                if (value)
-                    _this.onSelected();
-            });
-        };
-        /****************************************/
-        StudioSerie.prototype.attachGraph = function (ctx) {
-            var _this = this;
-            this._graphCtx = ctx;
-            this._graphCtx.calculator.observe("expressionAnalysis", function () {
-                var anal = _this._graphCtx.calculator.expressionAnalysis[_this.getGraphId("offset")];
-                _this.offsetX(anal.evaluation.value);
-            });
-            this.color.subscribe(function (value) {
-                _this._graphCtx.updateExpression({ type: "expression", id: _this.getGraphId("offset-x-serie"), color: value });
-            });
-        };
-        /****************************************/
-        StudioSerie.prototype.onSelected = function () {
-            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
-        };
-        /****************************************/
-        StudioSerie.prototype.getGraphId = function (section) {
-            return this.folderId + "/" + section;
-        };
-        /****************************************/
-        StudioSerie.prototype.updateGraphVisibility = function () {
-            var isVisible = this.node.isVisible() && this.project.node.isVisible();
-            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
-            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
-        };
-        /****************************************/
-        StudioSerie.prototype.updateGraph = function (recursive) {
-            if (recursive === void 0) { recursive = false; }
-            if (!this._graphCtx)
-                return;
-            if (!this.folderId)
-                this.folderId = WebApp.StringUtils.uuidv4();
-            if (!this.color())
-                this.color("#0000ff");
-            this._graphCtx.generateVars(this._varsMap);
-            this._graphCtx.setExpressions([
-                {
-                    type: "folder",
-                    id: this.getGraphId("public"),
-                    title: this.project.name() + " - " + this.name(),
-                }, {
-                    type: "folder",
-                    id: this.getGraphId("private"),
-                    title: this.project.name() + " - " + this.name(),
-                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
-                }, {
-                    type: "expression",
-                    id: this.getGraphId("offset"),
-                    latex: this._varsMap["ofs"] + "=" + this.offsetX(),
-                    folderId: this.getGraphId("public"),
-                    label: "Scostamento",
-                    slider: {
-                        min: (-this.values.length).toString(),
-                        max: (this.values.length).toString(),
-                        hardMax: true,
-                        hardMin: true,
-                        step: "1"
-                    }
-                }, {
-                    type: "expression",
-                    id: this.getGraphId("offset-x"),
-                    latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
-                    folderId: this.getGraphId("private"),
-                }, {
-                    type: "expression",
-                    id: this.getGraphId("offset-x-serie"),
-                    latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
-                    folderId: this.getGraphId("private"),
-                    points: true,
-                    lines: true,
-                    color: this.color()
-                }, {
-                    type: "table",
-                    id: this.getGraphId("table"),
-                    folderId: this.getGraphId("private"),
-                    columns: [
-                        {
-                            id: this.getGraphId("table/x"),
-                            latex: this._varsMap["x"],
-                            hidden: true,
-                            values: WebApp.linq(this.values).select(function (a) { return a.x.toString(); }).toArray()
-                        },
-                        {
-                            id: this.getGraphId("table/y"),
-                            latex: this._varsMap["y"],
-                            values: WebApp.linq(this.values).select(function (a) { return a.y.toString(); }).toArray(),
-                            hidden: true
-                        }
-                    ]
-                }
-            ]);
-            this._graphCtx.updateVariable(this.getGraphId("offset"), this._varsMap["ofs"], 17);
-            this.updateGraphVisibility();
-        };
-        Object.defineProperty(StudioSerie.prototype, "label", {
-            /****************************************/
-            get: function () {
-                return this.name();
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(StudioSerie.prototype, "project", {
-            /****************************************/
-            get: function () {
-                return this.node.parentNode.value();
-            },
-            enumerable: true,
-            configurable: true
-        });
-        return StudioSerie;
     }());
     /****************************************/
     var ActionViewModel = /** @class */ (function () {
@@ -2447,7 +2538,7 @@ var WebApp;
         };
         /****************************************/
         TreeNodeViewModel.prototype.attach = function (treeView, parent) {
-            var e_13, _a;
+            var e_14, _a;
             this._treeView = treeView;
             this._parentNode = parent;
             try {
@@ -2456,12 +2547,12 @@ var WebApp;
                     childNode.attach(treeView);
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_14) throw e_14.error; }
             }
         };
         Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
@@ -2520,17 +2611,17 @@ var WebApp;
             this.items = new TreeViewModel();
             this._data = model.data;
             this._geo = model.geo;
-            this._serieCalculator = new WebApp.IndicatorCalculator(this._data, this._dataSet, this._geo);
             this._graphCtx = new GraphContext();
+            this._graphCtx.serieCalculator = new WebApp.IndicatorCalculator(this._data, this._dataSet, this._geo);
             this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                 //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                 pasteGraphLink: false,
                 pasteTableData: false,
                 //lockViewport: false,
-                //restrictedFunctions: true,
+                restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
                 administerSecretFolders: true,
-                //authorIDE: true,
+                authorIDE: true,
                 advancedStyling: true
             });
             this.items.setRoot(new TreeNodeViewModel());
@@ -2593,12 +2684,13 @@ var WebApp;
             if (!value)
                 return;
             if (value.graphState) {
-                console.log(JSON.stringify(value.graphState, null, "  "));
+                //console.log(JSON.stringify(value.graphState, null, "  "));
                 value.graphState.expressions.list = [];
                 this._graphCtx.calculator.setState(value.graphState);
             }
+            /*
             if (value.vars)
-                this._graphCtx.vars = value.vars;
+                this._graphCtx.vars = value.vars;*/
             if (value.projects != undefined) {
                 this.projects.toArray().forEach(function (a) { return a.remove(); });
                 value.projects.forEach(function (a) {
@@ -2655,8 +2747,8 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_14_1;
-                    var e_14, _c;
+                    var _a, _b, node, e_15_1;
+                    var e_15, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -2675,14 +2767,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_14_1 = _d.sent();
-                                e_14 = { error: e_14_1 };
+                                e_15_1 = _d.sent();
+                                e_15 = { error: e_15_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_14) throw e_14.error; }
+                                finally { if (e_15) throw e_15.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }
