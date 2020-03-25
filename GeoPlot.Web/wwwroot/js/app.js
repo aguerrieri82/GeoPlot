@@ -1876,29 +1876,153 @@ var WebApp;
 })(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
-    function setExpression(calc, value) {
-        var e_6, _a;
-        var state = calc.getState();
-        var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
-        if (!curExp)
-            state.expressions.list.push(value);
-        else {
+    /****************************************/
+    /* Regression
+    /****************************************/
+    var GraphContext = /** @class */ (function () {
+        function GraphContext() {
+            this.vars = {};
+        }
+        GraphContext.prototype.setExpressions = function (values) {
+            var e_6, _a, e_7, _b, e_8, _c, e_9, _d, e_10, _e;
+            var state = this.calculator.getState();
             try {
-                for (var _b = __values(Object.getOwnPropertyNames(value)), _c = _b.next(); !_c.done; _c = _b.next()) {
-                    var prop = _c.value;
-                    curExp[prop] = value[prop];
+                for (var values_1 = __values(values), values_1_1 = values_1.next(); !values_1_1.done; values_1_1 = values_1.next()) {
+                    var value = values_1_1.value;
+                    /*
+                    if (value.type != "folder")
+                        continue;*/
+                    var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
+                    if (!curExp)
+                        state.expressions.list.push(value);
+                    else {
+                        try {
+                            for (var _f = (e_7 = void 0, __values(Object.getOwnPropertyNames(value))), _g = _f.next(); !_g.done; _g = _f.next()) {
+                                var prop = _g.value;
+                                curExp[prop] = value[prop];
+                            }
+                        }
+                        catch (e_7_1) { e_7 = { error: e_7_1 }; }
+                        finally {
+                            try {
+                                if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
+                            }
+                            finally { if (e_7) throw e_7.error; }
+                        }
+                    }
                 }
             }
             catch (e_6_1) { e_6 = { error: e_6_1 }; }
             finally {
                 try {
-                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    if (values_1_1 && !values_1_1.done && (_a = values_1.return)) _a.call(values_1);
                 }
                 finally { if (e_6) throw e_6.error; }
             }
-        }
-        calc.setState(state);
-    }
+            var groups = WebApp.linq(state.expressions.list).where(function (a) { return a.type != "folder"; }).groupBy(function (a) { return a.folderId ? a.folderId : ""; }).toDictionary(function (a) { return a.key; }, function (a) { return a.values.toArray(); });
+            var newList = [];
+            try {
+                for (var _h = __values(WebApp.linq(state.expressions.list).where(function (a) { return a.type == "folder"; })), _j = _h.next(); !_j.done; _j = _h.next()) {
+                    var folder = _j.value;
+                    newList.push(folder);
+                    var items_3 = groups[folder.id];
+                    if (items_3)
+                        try {
+                            for (var items_1 = (e_9 = void 0, __values(items_3)), items_1_1 = items_1.next(); !items_1_1.done; items_1_1 = items_1.next()) {
+                                var item = items_1_1.value;
+                                newList.push(item);
+                            }
+                        }
+                        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                        finally {
+                            try {
+                                if (items_1_1 && !items_1_1.done && (_d = items_1.return)) _d.call(items_1);
+                            }
+                            finally { if (e_9) throw e_9.error; }
+                        }
+                }
+            }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
+            finally {
+                try {
+                    if (_j && !_j.done && (_c = _h.return)) _c.call(_h);
+                }
+                finally { if (e_8) throw e_8.error; }
+            }
+            var items = groups[""];
+            if (items)
+                try {
+                    for (var items_2 = __values(items), items_2_1 = items_2.next(); !items_2_1.done; items_2_1 = items_2.next()) {
+                        var item = items_2_1.value;
+                        newList.push(item);
+                    }
+                }
+                catch (e_10_1) { e_10 = { error: e_10_1 }; }
+                finally {
+                    try {
+                        if (items_2_1 && !items_2_1.done && (_e = items_2.return)) _e.call(items_2);
+                    }
+                    finally { if (e_10) throw e_10.error; }
+                }
+            state.expressions.list = newList;
+            this.calculator.setState(state);
+            /*
+            for (var value of values) {
+                if (value.type == "folder")
+                    continue;
+                this.calculator.setExpression(value);
+            }*/
+        };
+        /****************************************/
+        GraphContext.prototype.updateExpression = function (value) {
+            var e_11, _a;
+            var exp = WebApp.linq(this.calculator.getExpressions()).where(function (a) { return a.id == value.id; }).first();
+            if (exp) {
+                try {
+                    for (var _b = __values(Object.getOwnPropertyNames(value)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var prop = _c.value;
+                        exp[prop] = value[prop];
+                    }
+                }
+                catch (e_11_1) { e_11 = { error: e_11_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_11) throw e_11.error; }
+                }
+                this.calculator.setExpression(exp);
+            }
+        };
+        /****************************************/
+        GraphContext.prototype.updateVariable = function (id, varName, value) {
+            this.updateExpression({ id: id, latex: varName + "=" + value.toString() });
+        };
+        /****************************************/
+        GraphContext.prototype.expressionZoomFit = function (id) {
+            this.calculator.controller.dispatch({ type: "expression-zoom-fit", id: id });
+        };
+        /****************************************/
+        GraphContext.prototype.setItemVisibile = function (id, value) {
+            this.calculator.controller._setItemHidden(id, !value);
+        };
+        /****************************************/
+        GraphContext.prototype.generateVars = function (map) {
+            for (var key in map) {
+                if (!map[key])
+                    map[key] = this.generateVar(key);
+            }
+        };
+        /****************************************/
+        GraphContext.prototype.generateVar = function (prefix) {
+            if (prefix === void 0) { prefix = "a"; }
+            if (!this.vars[prefix])
+                this.vars[prefix] = 0;
+            this.vars[prefix]++;
+            return prefix[0] + "_{" + this.vars[prefix] + "}";
+        };
+        return GraphContext;
+    }());
     /****************************************/
     /* Regression
     /****************************************/
@@ -1906,6 +2030,8 @@ var WebApp;
         function StudioSerieRegression() {
             this.itemType = "regression";
             this.icon = "show_chart";
+            this.optionsTemplateName = "RegressionOptionsTemplate";
+            this.actions = [];
         }
         /****************************************/
         StudioSerieRegression.prototype.remove = function () {
@@ -1915,7 +2041,13 @@ var WebApp;
             this.node = node;
         };
         /****************************************/
-        StudioSerieRegression.prototype.updateGraph = function (options) {
+        StudioSerieRegression.prototype.updateGraph = function () {
+            if (!this._graphCtx)
+                return;
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.attachGraph = function (ctx) {
+            this._graphCtx = ctx;
         };
         Object.defineProperty(StudioSerieRegression.prototype, "label", {
             /****************************************/
@@ -1930,24 +2062,36 @@ var WebApp;
     /****************************************/
     var StudioProject = /** @class */ (function () {
         function StudioProject(config) {
+            var _this = this;
             /****************************************/
             this.name = ko.observable();
             this.itemType = "project";
             this.icon = "folder";
+            this.optionsTemplateName = "ProjectOptionsTemplate";
+            this.actions = [];
             if (config)
                 this.setState(config);
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = function () { return _this.remove(); };
+            }));
         }
         /****************************************/
         StudioProject.prototype.setState = function (state) {
             var _this = this;
             if (state.name)
                 this.name(state.name);
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+            if (state.opened != undefined)
+                this.node.isExpanded(state.opened);
             if (state.series != undefined) {
                 this.series.foreach(function (a) { return a.remove(); });
                 state.series.forEach(function (a) {
                     var serie = _this.addSerie(null, false);
                     serie.setState(a);
-                    serie.updateGraph({ calculator: _this._calculator });
+                    //serie.updateGraph();
                 });
             }
         };
@@ -1955,7 +2099,9 @@ var WebApp;
         StudioProject.prototype.getState = function () {
             return {
                 name: this.name(),
-                series: this.series.select(function (a) { return a.getState(); }).toArray()
+                series: this.series.select(function (a) { return a.getState(); }).toArray(),
+                visible: this.node.isVisible(),
+                opened: this.node.isExpanded()
             };
         };
         /****************************************/
@@ -1967,15 +2113,19 @@ var WebApp;
         StudioProject.prototype.attachNode = function (node) {
             var _this = this;
             this.node = node;
-            this.node.isVisible.subscribe(function (value) { return _this.updateGraph({ calculator: _this._calculator, recursive: true }); });
+            this.node.isVisible.subscribe(function (value) { return _this.series.foreach(function (a) { return a.updateGraphVisibility(); }); });
         };
         /****************************************/
-        StudioProject.prototype.updateGraph = function (ctx) {
-            if (!ctx.calculator)
+        StudioProject.prototype.attachGraph = function (ctx) {
+            this._graphCtx = ctx;
+        };
+        /****************************************/
+        StudioProject.prototype.updateGraph = function (recursive) {
+            if (recursive === void 0) { recursive = false; }
+            if (!this._graphCtx)
                 return;
-            this._calculator = ctx.calculator;
-            if (ctx.recursive)
-                this.series.foreach(function (a) { return a.updateGraph(ctx); });
+            if (recursive)
+                this.series.foreach(function (a) { return a.updateGraph(recursive); });
         };
         /****************************************/
         StudioProject.prototype.addSerie = function (configOrSerie, updateGraph) {
@@ -1984,8 +2134,9 @@ var WebApp;
             var node = new TreeNodeViewModel(serie);
             this.node.addNode(node);
             serie.attachNode(node);
+            serie.attachGraph(this._graphCtx);
             if (updateGraph)
-                serie.updateGraph({ calculator: this._calculator });
+                serie.updateGraph();
             return serie;
         };
         Object.defineProperty(StudioProject.prototype, "label", {
@@ -2000,8 +2151,8 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_7_1;
-                    var e_7, _c;
+                    var _a, _b, node, e_12_1;
+                    var e_12, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -2020,14 +2171,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_7_1 = _d.sent();
-                                e_7 = { error: e_7_1 };
+                                e_12_1 = _d.sent();
+                                e_12 = { error: e_12_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_7) throw e_7.error; }
+                                finally { if (e_12) throw e_12.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }
@@ -2042,16 +2193,36 @@ var WebApp;
     }());
     /****************************************/
     var StudioSerie = /** @class */ (function () {
+        /****************************************/
         function StudioSerie(config) {
+            var _this = this;
+            this._varsMap = {
+                "x": null,
+                "y": null,
+                "ofs": null,
+                "xofs": null,
+            };
             /****************************************/
             this.name = ko.observable();
             this.color = ko.observable();
             this.offsetX = ko.observable(0);
             this.itemType = "serie";
             this.icon = "insert_chart";
+            this.optionsTemplateName = "StudioOptionsTemplate";
+            this.actions = [];
             if (config) {
                 this.setState(config);
             }
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = function () { return _this.remove(); };
+            }));
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Regressione";
+                action.icon = "add_box";
+                action.execute = function () { return _this.addRegression(); };
+            }));
         }
         /****************************************/
         StudioSerie.fromText = function (text) {
@@ -2068,6 +2239,9 @@ var WebApp;
             }
         };
         /****************************************/
+        StudioSerie.prototype.addRegression = function () {
+        };
+        /****************************************/
         StudioSerie.prototype.setState = function (state) {
             if (state.name)
                 this.name(state.name);
@@ -2081,7 +2255,14 @@ var WebApp;
                 this.values = state.values;
             if (state.folderId != undefined)
                 this.folderId = state.folderId;
-            this.updateGraph({ calculator: this._calculator });
+            /*
+            if (state.varsMap) {
+                for (var key in state.varsMap)
+                    this._varsMap[key] = state.varsMap[key];
+            }*/
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+            this.updateGraph();
         };
         /****************************************/
         StudioSerie.prototype.getState = function () {
@@ -2091,29 +2272,123 @@ var WebApp;
                 offsetX: this.offsetX(),
                 source: this.source,
                 values: this.values,
-                folderId: this.folderId
+                folderId: this.folderId,
+                varsMap: this._varsMap,
+                visible: this.node.isVisible()
             };
         };
         /****************************************/
         StudioSerie.prototype.remove = function () {
-            if (this._calculator)
-                this._calculator.removeExpression({ id: this.folderId });
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
             this.node.remove();
         };
         /****************************************/
         StudioSerie.prototype.attachNode = function (node) {
             var _this = this;
             this.node = node;
-            this.node.isVisible.subscribe(function (value) { return _this.updateGraph({ calculator: _this._calculator, recursive: true }); });
+            this.node.isVisible.subscribe(function (value) { return _this.updateGraphVisibility(); });
+            this.node.isSelected.subscribe(function (value) {
+                if (value)
+                    _this.onSelected();
+            });
         };
         /****************************************/
-        StudioSerie.prototype.updateGraph = function (ctx) {
-            if (!ctx.calculator)
+        StudioSerie.prototype.attachGraph = function (ctx) {
+            var _this = this;
+            this._graphCtx = ctx;
+            this._graphCtx.calculator.observe("expressionAnalysis", function () {
+                var anal = _this._graphCtx.calculator.expressionAnalysis[_this.getGraphId("offset")];
+                _this.offsetX(anal.evaluation.value);
+            });
+            this.color.subscribe(function (value) {
+                _this._graphCtx.updateExpression({ type: "expression", id: _this.getGraphId("offset-x-serie"), color: value });
+            });
+        };
+        /****************************************/
+        StudioSerie.prototype.onSelected = function () {
+            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
+        };
+        /****************************************/
+        StudioSerie.prototype.getGraphId = function (section) {
+            return this.folderId + "/" + section;
+        };
+        /****************************************/
+        StudioSerie.prototype.updateGraphVisibility = function () {
+            var isVisible = this.node.isVisible() && this.project.node.isVisible();
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+        };
+        /****************************************/
+        StudioSerie.prototype.updateGraph = function (recursive) {
+            if (recursive === void 0) { recursive = false; }
+            if (!this._graphCtx)
                 return;
-            this._calculator = ctx.calculator;
             if (!this.folderId)
                 this.folderId = WebApp.StringUtils.uuidv4();
-            setExpression(ctx.calculator, { type: "folder", id: this.folderId, hidden: !this.node.isVisible() || !this.project.node.isVisible(), title: this.project.name() + " - " + this.name() });
+            if (!this.color())
+                this.color("#0000ff");
+            this._graphCtx.generateVars(this._varsMap);
+            this._graphCtx.setExpressions([
+                {
+                    type: "folder",
+                    id: this.getGraphId("public"),
+                    title: this.project.name() + " - " + this.name(),
+                }, {
+                    type: "folder",
+                    id: this.getGraphId("private"),
+                    title: this.project.name() + " - " + this.name(),
+                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset"),
+                    latex: this._varsMap["ofs"] + "=" + this.offsetX(),
+                    folderId: this.getGraphId("public"),
+                    label: "Scostamento",
+                    slider: {
+                        min: (-this.values.length).toString(),
+                        max: (this.values.length).toString(),
+                        hardMax: true,
+                        hardMin: true,
+                        step: "1"
+                    }
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x"),
+                    latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
+                    folderId: this.getGraphId("private"),
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x-serie"),
+                    latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
+                    folderId: this.getGraphId("private"),
+                    points: true,
+                    lines: true,
+                    color: this.color()
+                }, {
+                    type: "table",
+                    id: this.getGraphId("table"),
+                    folderId: this.getGraphId("private"),
+                    columns: [
+                        {
+                            id: this.getGraphId("table/x"),
+                            latex: this._varsMap["x"],
+                            hidden: true,
+                            values: WebApp.linq(this.values).select(function (a) { return a.x.toString(); }).toArray()
+                        },
+                        {
+                            id: this.getGraphId("table/y"),
+                            latex: this._varsMap["y"],
+                            values: WebApp.linq(this.values).select(function (a) { return a.y.toString(); }).toArray(),
+                            hidden: true
+                        }
+                    ]
+                }
+            ]);
+            this._graphCtx.updateVariable(this.getGraphId("offset"), this._varsMap["ofs"], 17);
+            this.updateGraphVisibility();
         };
         Object.defineProperty(StudioSerie.prototype, "label", {
             /****************************************/
@@ -2126,7 +2401,7 @@ var WebApp;
         Object.defineProperty(StudioSerie.prototype, "project", {
             /****************************************/
             get: function () {
-                return this.node.value();
+                return this.node.parentNode.value();
             },
             enumerable: true,
             configurable: true
@@ -2162,7 +2437,7 @@ var WebApp;
         TreeNodeViewModel.prototype.remove = function () {
             if (this._parentNode)
                 this._parentNode.nodes.remove(this);
-            if (this._treeView.selectedNode == this)
+            if (this._treeView.selectedNode() == this)
                 this._treeView.select(null);
         };
         /****************************************/
@@ -2172,7 +2447,7 @@ var WebApp;
         };
         /****************************************/
         TreeNodeViewModel.prototype.attach = function (treeView, parent) {
-            var e_8, _a;
+            var e_13, _a;
             this._treeView = treeView;
             this._parentNode = parent;
             try {
@@ -2181,12 +2456,12 @@ var WebApp;
                     childNode.attach(treeView);
                 }
             }
-            catch (e_8_1) { e_8 = { error: e_8_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_8) throw e_8.error; }
+                finally { if (e_13) throw e_13.error; }
             }
         };
         Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
@@ -2216,24 +2491,18 @@ var WebApp;
         function TreeViewModel() {
             /****************************************/
             this.root = ko.observable();
+            this.selectedNode = ko.observable();
         }
         /****************************************/
         TreeViewModel.prototype.select = function (node) {
-            if (this._selectedNode == node)
+            if (this.selectedNode() == node)
                 return;
-            if (this._selectedNode)
-                this._selectedNode.isSelected(false);
-            this._selectedNode = node;
-            if (this._selectedNode)
-                this._selectedNode.isSelected(true);
+            if (this.selectedNode())
+                this.selectedNode().isSelected(false);
+            this.selectedNode(node);
+            if (this.selectedNode())
+                this.selectedNode().isSelected(true);
         };
-        Object.defineProperty(TreeViewModel.prototype, "selectedNode", {
-            get: function () {
-                return this._selectedNode;
-            },
-            enumerable: true,
-            configurable: true
-        });
         /****************************************/
         TreeViewModel.prototype.setRoot = function (node) {
             node.attach(this);
@@ -2252,13 +2521,16 @@ var WebApp;
             this._data = model.data;
             this._geo = model.geo;
             this._serieCalculator = new WebApp.IndicatorCalculator(this._data, this._dataSet, this._geo);
-            this._calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
-                xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
-                pasteGraphLink: true,
-                restrictedFunctions: true,
-                restrictGridToFirstQuadrant: true,
+            this._graphCtx = new GraphContext();
+            this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
+                //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
+                pasteGraphLink: false,
+                pasteTableData: false,
+                //lockViewport: false,
+                //restrictedFunctions: true,
+                //restrictGridToFirstQuadrant: true,
                 administerSecretFolders: true,
-                authorIDE: true,
+                //authorIDE: true,
                 advancedStyling: true
             });
             this.items.setRoot(new TreeNodeViewModel());
@@ -2274,16 +2546,16 @@ var WebApp;
         }
         /****************************************/
         StudioPage.prototype.removeSelected = function () {
-            if (!this.items.selectedNode)
+            if (!this.items.selectedNode())
                 return;
-            var value = this.items.selectedNode.value();
+            var value = this.items.selectedNode().value();
             value.remove();
         };
         /****************************************/
         StudioPage.prototype.getSelectedProject = function () {
-            if (!this.items.selectedNode)
+            if (!this.items.selectedNode())
                 return;
-            var value = this.items.selectedNode.value();
+            var value = this.items.selectedNode().value();
             if (value.itemType == "project")
                 return value;
             if (value.itemType == "serie")
@@ -2296,18 +2568,22 @@ var WebApp;
             return proj;
         };
         /****************************************/
-        StudioPage.prototype.addProject = function (config) {
+        StudioPage.prototype.addProject = function (config, updateGraph) {
+            if (updateGraph === void 0) { updateGraph = true; }
             var project = new StudioProject(config);
             var node = new TreeNodeViewModel(project);
             this.items.root().addNode(node);
             project.attachNode(node);
-            project.updateGraph({ calculator: this._calculator });
+            project.attachGraph(this._graphCtx);
+            if (updateGraph)
+                project.updateGraph();
             return project;
         };
         /****************************************/
         StudioPage.prototype.getState = function () {
             var result = { version: 2 };
-            result.graphState = this._calculator.getState();
+            result.graphState = this._graphCtx.calculator.getState();
+            result.vars = this._graphCtx.vars;
             result.projects = this.projects.select(function (a) { return a.getState(); }).toArray();
             return result;
         };
@@ -2316,8 +2592,13 @@ var WebApp;
             var _this = this;
             if (!value)
                 return;
-            if (value.graphState)
-                this._calculator.setState(value.graphState);
+            if (value.graphState) {
+                console.log(JSON.stringify(value.graphState, null, "  "));
+                value.graphState.expressions.list = [];
+                this._graphCtx.calculator.setState(value.graphState);
+            }
+            if (value.vars)
+                this._graphCtx.vars = value.vars;
             if (value.projects != undefined) {
                 this.projects.toArray().forEach(function (a) { return a.remove(); });
                 value.projects.forEach(function (a) {
@@ -2348,7 +2629,7 @@ var WebApp;
         };
         /****************************************/
         StudioPage.prototype.onKeyDown = function (ev) {
-            if (ev.keyCode == 46) {
+            if (ev.keyCode == 46 && ev.target.tagName != "INPUT") {
                 ev.preventDefault();
                 this.removeSelected();
             }
@@ -2374,8 +2655,8 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_9_1;
-                    var e_9, _c;
+                    var _a, _b, node, e_14_1;
+                    var e_14, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -2394,14 +2675,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_9_1 = _d.sent();
-                                e_9 = { error: e_9_1 };
+                                e_14_1 = _d.sent();
+                                e_14 = { error: e_14_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_9) throw e_9.error; }
+                                finally { if (e_14) throw e_14.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }

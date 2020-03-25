@@ -5,9 +5,9 @@ declare namespace Desmos {
     /* TYPES
     /****************************************/
 
-    type Expression = IMathExpression | IFolderExpression | ITableExpression;
+    type Expression = IMathExpression | IFolderExpression | ITableExpression | ITextExpression;
 
-    type LatexString = string | number;
+    type LatexString = string;
 
     type HexColor = string;
 
@@ -61,6 +61,20 @@ declare namespace Desmos {
         readonly settings: IObservable<IGraphingCalculatorOptions>;
     }
 
+    type DispatchEvent = {
+        type: "expression-zoom-fit",
+        id: string
+    };
+
+    interface IGraphingController {
+        _setItemHidden(id: string, isHidden: boolean);
+        dispatch(event: DispatchEvent);
+    }
+
+    interface IGraphingCalculator {
+        controller: IGraphingController;
+    }
+
     interface IObservable<T> {
         observe(property: keyof T, handler: () => void): void;
         unobserve(property: keyof T): void;
@@ -104,6 +118,7 @@ declare namespace Desmos {
 
     interface IBaseExpressionProperties {
 
+        id?: string;
         latex?: string;
         color?: HexColor;
         hidden?: boolean;
@@ -119,7 +134,7 @@ declare namespace Desmos {
         fillOpacity?: number;
         fill?: boolean;
         secret?: boolean;
-        sliderBounds?: ISliderBounds;
+        slider?: ISliderBounds;
         parametricDomain?: IDomain;
         polarDomain?: IDomain;
         label?: string;
@@ -164,6 +179,7 @@ declare namespace Desmos {
         xAxisLabel?: string;
         yAxisLabel?: string;
         randomSeed?: string;
+        squareAxes?: boolean;
     }
 
     interface IGraphViewport {
@@ -214,12 +230,14 @@ declare namespace Desmos {
 
 
     interface IDomain {
-        min?: number;
-        max?: number;
+        min?: string;
+        max?: string;
     }
 
     interface ISliderBounds extends IDomain {
-        step?: number;
+        step?: string;
+        hardMax: boolean;
+        hardMin: boolean;
     }
 
     /****************************************/

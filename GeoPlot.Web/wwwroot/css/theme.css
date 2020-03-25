@@ -415,8 +415,6 @@ svg.map.experimental {
     height: 100%; }
     .studio-page .tree-view .visible > header.project .visibility {
       color: #ffc107; }
-    .studio-page .tree-view .visible > header.serie .visibility {
-      color: #1565c0; }
     .studio-page .tree-view .visible > header.regression .visibility {
       color: #4caf50; }
   .studio-page .side-bar {
@@ -430,7 +428,7 @@ svg.map.experimental {
       flex-grow: 1;
       flex-shrink: 1; }
     .studio-page .side-bar .options {
-      max-height: 20vh; }
+      max-height: 50%; }
   .studio-page .content {
     flex-grow: 1; }
   .studio-page #calculator {
@@ -468,6 +466,20 @@ svg.map.experimental {
     border-bottom: none; }
   .panel.scroll > .content {
     overflow: scroll; }
+  .panel.scroll-v > .content {
+    overflow-y: scroll; }
+
+.color-edit {
+  display: flex;
+  align-items: center; }
+  .color-edit .input-field {
+    flex-grow: 1; }
+  .color-edit .color-box {
+    width: 24px;
+    height: 24px;
+    border: solid 1px #ccc;
+    margin-left: 8px;
+    display: block; }
 
 /****************************************/
 .tree-view ul {

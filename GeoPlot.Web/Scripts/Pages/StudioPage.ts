@@ -2,35 +2,120 @@
 
     type TData = IInfectionData;
 
-    function setExpression(calc: Desmos.IGraphingCalculator, value: Desmos.Expression) {
-
-        var state = calc.getState();
-        var curExp = <Desmos.IFolderExpression>linq(state.expressions.list).first(a => a.id == value.id);
-        if (!curExp)
-            state.expressions.list.push(value);
-        else {
-
-            for (var prop of Object.getOwnPropertyNames(value))
-                curExp[prop] = value[prop];
-        }
-        calc.setState(state);
-    }
-
+    type GraphVarMap = IDictionary<string>;
 
 
     /****************************************/
     /* Regression
     /****************************************/
 
-    interface IUpdateGraphContext {
+    class GraphContext {
+
+        setExpressions(values: Desmos.Expression[]) {
+
+            let state = this.calculator.getState();
+
+            for (var value of values) {
+                /*
+                if (value.type != "folder")
+                    continue;*/
+                const curExp = <Desmos.IFolderExpression>linq(state.expressions.list).first(a => a.id == value.id);
+                if (!curExp)
+                    state.expressions.list.push(value);
+                else {
+                    for (var prop of Object.getOwnPropertyNames(value))
+                        curExp[prop] = value[prop];
+                }
+            }
+
+            const groups = linq(state.expressions.list).where(a=> a.type != "folder").groupBy(a => a.folderId ? a.folderId : "").toDictionary(a => a.key, a => a.values.toArray());
+
+            const newList = [];
+
+            for (let folder of linq(state.expressions.list).where(a => a.type == "folder")) {
+                newList.push(folder);
+                let items = groups[folder.id];
+                if (items)
+                    for (let item of items)
+                        newList.push(item);
+            }
+
+            let items = groups[""];
+            if (items)
+                for (let item of items)
+                    newList.push(item);
+                
+            state.expressions.list = newList;
+
+            this.calculator.setState(state);
+            /*
+            for (var value of values) {
+                if (value.type == "folder")
+                    continue;
+                this.calculator.setExpression(value);
+            }*/
+        }
+
+        /****************************************/
+
+        updateExpression(value: Desmos.Expression) {
+            let exp = <Desmos.IMathExpression>linq(this.calculator.getExpressions()).where(a => a.id == value.id).first();
+            if (exp) {
+                for (var prop of Object.getOwnPropertyNames(value))
+                    exp[prop] = value[prop];
+                this.calculator.setExpression(exp);
+            }
+        }
+
+        /****************************************/
+
+        updateVariable(id: string, varName, value: number) {
+            this.updateExpression(<Desmos.IMathExpression>{ id: id, latex: varName + "=" + value.toString() });
+        }
+
+        /****************************************/
+
+        expressionZoomFit(id: string) {
+            this.calculator.controller.dispatch({ type: "expression-zoom-fit", id: id });
+        }
+
+        /****************************************/
+
+        setItemVisibile(id: string, value: boolean) {
+            this.calculator.controller._setItemHidden(id, !value);
+        }
+
+        /****************************************/
+
+        generateVars(map: GraphVarMap) {
+
+            for (var key in map) {
+                if (!map[key])
+                    map[key] = this.generateVar(key);
+            }
+        }
+
+        /****************************************/
+
+        generateVar(prefix = "a"): string {
+            if (!this.vars[prefix])
+                this.vars[prefix] = 0;
+            this.vars[prefix]++;
+            return prefix[0] + "_{" + this.vars[prefix] + "}";
+        }
+
+        /****************************************/
+
         calculator: Desmos.IGraphingCalculator;
-        recursive?: boolean;
-        collector?: string[];
+        vars: IDictionary<number> = {};
     }
+
+    /****************************************/
 
     interface IGraphItem {
 
-        updateGraph(ctx: IUpdateGraphContext);
+        attachGraph(ctx: GraphContext);
+        updateGraph(recursive?: boolean);
         folderId: string;
     }
 
@@ -39,6 +124,8 @@
     /****************************************/
 
     class StudioSerieRegression implements ITreeItem, IGraphItem {
+
+        protected _graphCtx: GraphContext;
 
         constructor() {
 
@@ -58,8 +145,15 @@
 
         /****************************************/
 
-        updateGraph(options: IUpdateGraphContext) {
+        updateGraph() {
+            if (!this._graphCtx)
+                return;
+        }
 
+        /****************************************/
+
+        attachGraph(ctx: GraphContext) {
+            this._graphCtx = ctx;
         }
 
         /****************************************/
@@ -75,6 +169,8 @@
         node: TreeNodeViewModel<ITreeItem>;
         readonly itemType = "regression";
         readonly icon = "show_chart";
+        readonly optionsTemplateName = "RegressionOptionsTemplate";
+        readonly actions: ActionViewModel[] = [];
     }
 
     /****************************************/
@@ -87,17 +183,27 @@
 
     interface IStudioProjectState extends IStudioProjectConfig {
         series?: IStudioSerieState[];
+        visible?: boolean;
+        opened?: boolean;
     }
 
     /****************************************/
 
     class StudioProject implements ITreeItem, IGraphItem {
 
-        protected _calculator: Desmos.IGraphingCalculator;
+        protected _graphCtx: GraphContext;
 
         constructor(config?: IStudioProjectConfig) {
             if (config)
                 this.setState(config);
+
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = () => this.remove();
+            }));
+
+         
         }
 
         /****************************************/
@@ -106,6 +212,12 @@
             if (state.name)
                 this.name(state.name);
 
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
+
+            if (state.opened != undefined)
+                this.node.isExpanded(state.opened);
+
             if (state.series != undefined) {
 
                 this.series.foreach(a => a.remove());
@@ -113,7 +225,7 @@
                 state.series.forEach(a => {
                     const serie = this.addSerie(null, false);
                     serie.setState(a);
-                    serie.updateGraph({ calculator: this._calculator });
+                    //serie.updateGraph();
                 });
             }
         }
@@ -124,7 +236,9 @@
 
             return {
                 name: this.name(),
-                series: this.series.select(a => a.getState()).toArray()
+                series: this.series.select(a => a.getState()).toArray(),
+                visible: this.node.isVisible(),
+                opened: this.node.isExpanded()
             }
         }
 
@@ -139,19 +253,24 @@
 
         attachNode(node: TreeNodeViewModel<ITreeItem>) {
             this.node = node;
-            this.node.isVisible.subscribe(value => this.updateGraph({ calculator: this._calculator, recursive: true }));
+            this.node.isVisible.subscribe(value => this.series.foreach(a => a.updateGraphVisibility()));
         }
 
         /****************************************/
 
-        updateGraph(ctx: IUpdateGraphContext) {
+        attachGraph(ctx: GraphContext) {
+            this._graphCtx = ctx;
+        }
 
-            if (!ctx.calculator)
+        /****************************************/
+
+        updateGraph(recursive = false) {
+
+            if (!this._graphCtx)
                 return;
-            
-            this._calculator = ctx.calculator;
-            if (ctx.recursive)
-                this.series.foreach(a => a.updateGraph(ctx));
+
+            if (recursive)
+                this.series.foreach(a => a.updateGraph(recursive));
         }
 
         /****************************************/
@@ -166,8 +285,10 @@
 
             serie.attachNode(node);
 
+            serie.attachGraph(this._graphCtx);
+
             if (updateGraph)
-                serie.updateGraph({ calculator: this._calculator });
+                serie.updateGraph();
 
             return serie;
         }
@@ -200,6 +321,8 @@
 
         readonly itemType = "project";
         readonly icon = "folder";
+        readonly optionsTemplateName = "ProjectOptionsTemplate";
+        readonly actions: ActionViewModel[] = [];
     }
 
     /****************************************/
@@ -230,18 +353,42 @@
 
     interface IStudioSerieState extends IStudioSerieConfig {
         folderId?: string;
+        varsMap?: IDictionary<string>;
+        visible?: boolean;
     }
 
     /****************************************/
 
     class StudioSerie implements ITreeItem, IDiscreteFunction, IGraphItem {
 
-        protected _calculator: Desmos.IGraphingCalculator;
+        protected _graphCtx: GraphContext;
+
+        protected _varsMap: IDictionary<string> = {
+            "x": null,
+            "y": null,
+            "ofs": null,
+            "xofs": null,
+        };
+
+        /****************************************/
 
         constructor(config?: IStudioSerieConfig) {
+
             if (config) {
                 this.setState(config);
             }
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Elimina";
+                action.icon = "delete";
+                action.execute = () => this.remove();
+            }));
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Regressione";
+                action.icon = "add_box";
+                action.execute = () => this.addRegression();
+            }));
+
+                
         }
 
         /****************************************/
@@ -262,7 +409,14 @@
 
         /****************************************/
 
+        addRegression() {
+
+        }
+
+        /****************************************/
+
         setState(state: IStudioSerieState) {
+
             if (state.name)
                 this.name(state.name);
             if (state.color)
@@ -275,8 +429,15 @@
                 this.values = state.values;
             if (state.folderId != undefined)
                 this.folderId = state.folderId;
+            /*
+            if (state.varsMap) {
+                for (var key in state.varsMap)
+                    this._varsMap[key] = state.varsMap[key];
+            }*/
+            if (state.visible != undefined)
+                this.node.isVisible(state.visible);
 
-            this.updateGraph({ calculator: this._calculator });
+            this.updateGraph();
         }
 
         /****************************************/
@@ -288,15 +449,19 @@
                 offsetX: this.offsetX(),
                 source: this.source,
                 values: this.values,
-                folderId: this.folderId
+                folderId: this.folderId,
+                varsMap: this._varsMap,
+                visible: this.node.isVisible()
             }
         }
 
         /****************************************/
 
         remove() {
-            if (this._calculator)
-                this._calculator.removeExpression({ id: this.folderId });
+            if (this._graphCtx) {
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+            }
             this.node.remove();
         }
 
@@ -304,22 +469,123 @@
 
         attachNode(node: TreeNodeViewModel<ITreeItem>) {
             this.node = node;
-            this.node.isVisible.subscribe(value => this.updateGraph({ calculator: this._calculator, recursive: true }));
+            this.node.isVisible.subscribe(value => this.updateGraphVisibility());
+            this.node.isSelected.subscribe(value => {
+                if (value)
+                    this.onSelected();
+            })
         }
 
         /****************************************/
 
-        updateGraph(ctx: IUpdateGraphContext) {
+        attachGraph(ctx: GraphContext) {
+            this._graphCtx = ctx;
+            this._graphCtx.calculator.observe("expressionAnalysis", () => {
+                let anal = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+                this.offsetX(anal.evaluation.value);
+            });
 
-            if (!ctx.calculator)
+            this.color.subscribe(value => {
+                this._graphCtx.updateExpression({ type: "expression", id: this.getGraphId("offset-x-serie"), color: value });
+            });
+
+        }
+
+        /****************************************/
+
+        protected onSelected() {
+            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
+        }
+
+        /****************************************/
+
+        protected getGraphId(section: string) {
+            return this.folderId + "/" + section;
+        }
+
+        /****************************************/
+
+        updateGraphVisibility() {
+            const isVisible = this.node.isVisible() && this.project.node.isVisible();
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+        }
+
+        /****************************************/
+
+        updateGraph(recursive = false) {
+
+            if (!this._graphCtx)
                 return;
-
-            this._calculator = ctx.calculator;
 
             if (!this.folderId)
                 this.folderId = StringUtils.uuidv4();
 
-            setExpression(ctx.calculator, { type: "folder", id: this.folderId, hidden: !this.node.isVisible() || !this.project.node.isVisible(), title: this.project.name() + " - " + this.name() });
+            if (!this.color())
+                this.color("#0000ff");
+
+            this._graphCtx.generateVars(this._varsMap);
+
+            this._graphCtx.setExpressions([
+                {
+                    type: "folder",
+                    id: this.getGraphId("public"),
+                    title: this.project.name() + " - " + this.name(),
+                }, {
+                    type: "folder",
+                    id: this.getGraphId("private"),
+                    title: this.project.name() + " - " + this.name(),
+                    secret: true, hidden: !this.node.isVisible() || !this.project.node.isVisible()
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset"),
+                    latex: this._varsMap["ofs"] + "=" + this.offsetX(),
+                    folderId: this.getGraphId("public"),
+                    label: "Scostamento",
+                    slider: {
+                        min: (-this.values.length).toString(),
+                        max: (this.values.length).toString(),
+                        hardMax: true,
+                        hardMin: true,
+                        step: "1"
+                    }
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x"),
+                    latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
+                    folderId: this.getGraphId("private"),
+                }, {
+                    type: "expression",
+                    id: this.getGraphId("offset-x-serie"),
+                    latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
+                    folderId: this.getGraphId("private"),
+                    points: true,
+                    lines: true,
+                    color: this.color()
+                }, {
+                    type: "table",
+                    id: this.getGraphId("table"),
+                    folderId: this.getGraphId("private"),
+                    columns: [
+                        {
+                            id: this.getGraphId("table/x"),
+                            latex: this._varsMap["x"],
+                            hidden: true,
+                            values: linq(this.values).select(a => a.x.toString()).toArray()
+                        },
+                        {
+                            id: this.getGraphId("table/y"),
+                            latex: this._varsMap["y"],
+                            values: linq(this.values).select(a => a.y.toString()).toArray(),
+                            hidden: true
+                        }
+                    ]
+                }]);
+
+            this._graphCtx.updateVariable(this.getGraphId("offset"), this._varsMap["ofs"], 17);
+
+
+            this.updateGraphVisibility();
         }
 
         /****************************************/
@@ -331,7 +597,7 @@
         /****************************************/
 
         get project(): StudioProject {
-            return <StudioProject>this.node.value();
+            return <StudioProject>this.node.parentNode.value();
         }
 
         /****************************************/
@@ -345,6 +611,8 @@
         node: TreeNodeViewModel<ITreeItem>;
         readonly itemType = "serie";
         readonly icon = "insert_chart";
+        readonly optionsTemplateName = "StudioOptionsTemplate";
+        readonly actions: ActionViewModel[] = [];
     }
 
     /****************************************/
@@ -400,7 +668,7 @@
             if (this._parentNode)
                 this._parentNode.nodes.remove(this);
 
-            if (this._treeView.selectedNode == this)
+            if (this._treeView.selectedNode() == this)
                 this._treeView.select(null);
         }
 
@@ -464,20 +732,16 @@
 
         select(node: TreeNodeViewModel<T>) {
 
-            if (this._selectedNode == node)
+            if (this.selectedNode() == node)
                 return;
 
-            if (this._selectedNode)
-                this._selectedNode.isSelected(false);
+            if (this.selectedNode())
+                this.selectedNode().isSelected(false);
 
-            this._selectedNode = node;
+            this.selectedNode(node);
 
-            if (this._selectedNode)
-                this._selectedNode.isSelected(true);
-        }
-
-        get selectedNode(): TreeNodeViewModel<T> {
-            return this._selectedNode;
+            if (this.selectedNode())
+                this.selectedNode().isSelected(true);
         }
 
         /****************************************/
@@ -490,6 +754,7 @@
         /****************************************/
 
         root = ko.observable<TreeNodeViewModel<T>>();
+        selectedNode = ko.observable<TreeNodeViewModel<T>>();
     }
 
     /****************************************/
@@ -500,6 +765,7 @@
         version: number;
         graphState?: Desmos.IGraphState;
         projects?: IStudioProjectState[];
+        vars?: IDictionary<number>;
     }
 
     /****************************************/
@@ -514,11 +780,11 @@
 
     export class StudioPage {
 
-        private readonly _calculator: Desmos.IGraphingCalculator;
         private readonly _data: IDayAreaDataSet<TData>;
         private readonly _dataSet = InfectionDataSet;
         private readonly _geo: IGeoAreaSet;
         private readonly _serieCalculator: IndicatorCalculator<TData>;
+        private _graphCtx: GraphContext;
 
         constructor(model: IStudioViewModel) {
 
@@ -526,13 +792,17 @@
             this._geo = model.geo;
             this._serieCalculator = new IndicatorCalculator(this._data, this._dataSet, this._geo);
 
-            this._calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
-                xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
-                pasteGraphLink: true,
-                restrictedFunctions: true,
-                restrictGridToFirstQuadrant: true,
+
+            this._graphCtx = new GraphContext();
+            this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
+                //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
+                pasteGraphLink: false,
+                pasteTableData: false,
+                //lockViewport: false,
+                //restrictedFunctions: true,
+                //restrictGridToFirstQuadrant: true,
                 administerSecretFolders: true,
-                authorIDE: true,
+                //authorIDE: true,
                 advancedStyling: true
             });
 
@@ -555,18 +825,18 @@
 
         removeSelected() {
 
-            if (!this.items.selectedNode)
+            if (!this.items.selectedNode())
                 return;
-            const value = this.items.selectedNode.value();
+            const value = this.items.selectedNode().value();
             value.remove();
         }
 
         /****************************************/
 
         getSelectedProject(): StudioProject {
-            if (!this.items.selectedNode)
+            if (!this.items.selectedNode())
                 return;
-            const value = this.items.selectedNode.value();
+            const value = this.items.selectedNode().value();
             if (value.itemType == "project")
                 return <StudioProject>value;
             if (value.itemType == "serie")
@@ -583,12 +853,14 @@
 
         /****************************************/
 
-        addProject(config?: IStudioProjectConfig): StudioProject {
+        addProject(config?: IStudioProjectConfig, updateGraph = true): StudioProject {
             const project = new StudioProject(config);
             const node = new TreeNodeViewModel(project);
             this.items.root().addNode(node);
             project.attachNode(node);
-            project.updateGraph({ calculator: this._calculator });
+            project.attachGraph(this._graphCtx);
+            if (updateGraph)
+                project.updateGraph();
             return project;
         }
 
@@ -597,7 +869,8 @@
         getState(): IPageState {
 
             let result: IPageState = { version: 2 };
-            result.graphState = this._calculator.getState();
+            result.graphState = this._graphCtx.calculator.getState();
+            result.vars = this._graphCtx.vars;
             result.projects = this.projects.select(a => a.getState()).toArray();
             return result;
         }
@@ -609,8 +882,14 @@
             if (!value)
                 return;
 
-            if (value.graphState)
-                this._calculator.setState(value.graphState);
+            if (value.graphState) {
+                console.log(JSON.stringify(value.graphState, null, "  "));
+                value.graphState.expressions.list = [];
+                this._graphCtx.calculator.setState(value.graphState);
+            }
+
+            if (value.vars)
+                this._graphCtx.vars = value.vars;
 
             if (value.projects != undefined) {
                 this.projects.toArray().forEach(a => a.remove());
@@ -654,7 +933,7 @@
         /****************************************/
 
         protected onKeyDown(ev: KeyboardEvent) {
-            if (ev.keyCode == 46) {
+            if (ev.keyCode == 46 && (<HTMLElement> ev.target).tagName != "INPUT") {
                 ev.preventDefault();
                 this.removeSelected();
             }

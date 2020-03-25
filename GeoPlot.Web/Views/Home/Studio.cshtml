@@ -26,13 +26,26 @@
                     </div>
                 </div>
             </section>
-            <section class="panel options">
+            <!--ko if: items.selectedNode()-->
+            <section class="panel options scroll-v">
                 <header>
                     <h6>Opzioni</h6>
+                    <div class="actions" data-bind="foreach: items.selectedNode().value().actions">
+                        <a href="#!" data-bind="attr:{title: text}, click: execute">
+                            <i class="material-icons" data-bind="text: icon"></i>
+                        </a>
+                    </div>
                 </header>
-                <div class="content">
+                <div class="content" data-bind="with: items.selectedNode().value()">
+                    <div class="input-field">
+                        <label class="active">Nome</label>
+                        <input type="text" data-bind="value: name" />
+                    </div>
+                    <!--ko template: {name: optionsTemplateName} -->
+                    <!--/ko-->
                 </div>
             </section>
+            <!--/ko-->
         </div>
         <section class="content main">
             <div id="calculator"></div>
@@ -40,14 +53,36 @@
     </div>
 </div>
 
+<script type="text/html" id="ProjectOptionsTemplate">
+
+
+</script>
+
+<script type="text/html" id="StudioOptionsTemplate">
+    <div class="color-edit">
+        <div class="input-field">
+            <label class="active">Colore</label>
+            <input type="text" data-bind="value: color" />
+        </div>
+        <span class="color-box" data-bind="style: {'background-color': color}"></span>
+    </div>
+</script>
+
+
+<script type="text/html" id="RegressionOptionsTemplate">
+</script>
+
+
 <script type="text/html" id="TreeItemTemplate">
     <li data-bind="css: {selected: isSelected, visible: isVisible, expanded: isExpanded}">
         <header data-bind="css: value().itemType">
             <a class="expand-collapse" href="#!" data-bind="click: expandCollapse"><i class="material-icons">arrow_drop_down</i></a>
-            <a class="visibility" href="#!" data-bind="click: toggleVisible"><i class="material-icons" data-bind="text: value().icon"></i></a>
+            <a class="visibility" href="#!" data-bind="click: toggleVisible"><i class="material-icons" data-bind="text: value().icon, style: {color: value()['color'] && value().color() && isVisible() ? value().color() : 'unset'}"></i></a>
             <a href="#!" data-bind="click: toggleSelection"><span class="label" data-bind="text: value().label"></span></a>
             <div class="actions" data-bind="foreach: actions">
-                <a data-bind="text: text, css: {icon}, click: execute"></a>
+                <a href="#!" data-bind="attr:{title: text}, click: execute">
+                    <i class="material-icons" data-bind="text: icon"></i>
+                </a>
             </div>
         </header>
         <!--ko if: nodes().length > 0-->
@@ -62,7 +97,7 @@
 }
 
 @section Scripts {
-    <script src="https://www.desmos.com/api/v1.4/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    <script src="~/lib/desmos.js"></script>
     <script>
         WebApp.app.baseUrl = '@Url.Content("~/")';
         WebApp.app.initServices();

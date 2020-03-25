@@ -34,12 +34,6 @@
                 }
             }
 
-            &.serie {
-                .visibility {
-                    color: #1565c0;
-                }
-            }
-
             &.regression {
                 .visibility {
                     color: #4caf50;
@@ -62,7 +56,7 @@
         }
 
         .options {
-            max-height: 20vh;
+            max-height: 50%;
         }
     }
 
@@ -128,10 +122,30 @@
             overflow: scroll;
         }
     }
+
+    &.scroll-v {
+        > .content {
+            overflow-y: scroll;
+        }
+    }
 }
 
-/****************************************/
+.color-edit{
+    display: flex;
+    align-items: center;
 
+    .input-field{
+        flex-grow:1;
+    }
+    .color-box{
+        width: 24px;
+        height: 24px;
+        border: solid 1px #ccc;
+        margin-left: 8px;
+        display: block;
+    }
+}
+/****************************************/
 .tree-view {
     ul {
         list-style: none;
