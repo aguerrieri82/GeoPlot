@@ -44,7 +44,7 @@
 
         }
 
-    /****************************************/
+        /****************************************/
 
         remove() {
 
@@ -85,6 +85,10 @@
         name?: string;
     }
 
+    interface IStudioProjectState extends IStudioProjectConfig {
+        series?: IStudioSerieState[];
+    }
+
     /****************************************/
 
     class StudioProject implements ITreeItem, IGraphItem {
@@ -92,9 +96,35 @@
         protected _calculator: Desmos.IGraphingCalculator;
 
         constructor(config?: IStudioProjectConfig) {
-            if (config) {
-                if (config.name)
-                    this.name(config.name);
+            if (config)
+                this.setState(config);
+        }
+
+        /****************************************/
+
+        setState(state: IStudioProjectState) {
+            if (state.name)
+                this.name(state.name);
+
+            if (state.series != undefined) {
+
+                this.series.foreach(a => a.remove());
+
+                state.series.forEach(a => {
+                    const serie = this.addSerie(null, false);
+                    serie.setState(a);
+                    serie.updateGraph({ calculator: this._calculator });
+                });
+            }
+        }
+
+        /****************************************/
+
+        getState(): IStudioProjectState {
+
+            return {
+                name: this.name(),
+                series: this.series.select(a => a.getState()).toArray()
             }
         }
 
@@ -116,6 +146,9 @@
 
         updateGraph(ctx: IUpdateGraphContext) {
 
+            if (!ctx.calculator)
+                return;
+            
             this._calculator = ctx.calculator;
             if (ctx.recursive)
                 this.series.foreach(a => a.updateGraph(ctx));
@@ -123,7 +156,7 @@
 
         /****************************************/
 
-        addSerie(configOrSerie?: IStudioSerieConfig | StudioSerie): StudioSerie{
+        addSerie(configOrSerie?: IStudioSerieConfig | StudioSerie, updateGraph = true): StudioSerie {
 
             var serie = configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie);
 
@@ -133,7 +166,7 @@
 
             serie.attachNode(node);
 
-            if (this._calculator)
+            if (updateGraph)
                 serie.updateGraph({ calculator: this._calculator });
 
             return serie;
@@ -141,26 +174,26 @@
 
         /****************************************/
 
-        get label() : string {
+        get label(): string {
             return this.name();
         }
 
         /****************************************/
 
-        get series(): Linq<StudioSerie>{
+        get series(): Linq<StudioSerie> {
 
             function* items() {
                 for (var node of this.node.nodes())
                     yield (<StudioSerie>node.value());
             }
 
-            return linq(items());    
+            return linq(items.apply(this));
         }
 
         /****************************************/
 
         name = ko.observable<string>();
-   
+
         folderId: string;
         node: TreeNodeViewModel<ITreeItem>;
         host: StudioPage;
@@ -196,7 +229,7 @@
     /****************************************/
 
     interface IStudioSerieState extends IStudioSerieConfig {
-
+        folderId?: string;
     }
 
     /****************************************/
@@ -207,8 +240,7 @@
 
         constructor(config?: IStudioSerieConfig) {
             if (config) {
-                if (config.name)
-                    this.name(config.name);
+                this.setState(config);
             }
         }
 
@@ -230,6 +262,38 @@
 
         /****************************************/
 
+        setState(state: IStudioSerieState) {
+            if (state.name)
+                this.name(state.name);
+            if (state.color)
+                this.color(state.color);
+            if (state.offsetX != undefined)
+                this.offsetX(state.offsetX);
+            if (state.source)
+                this.source = state.source;
+            if (state.values != undefined)
+                this.values = state.values;
+            if (state.folderId != undefined)
+                this.folderId = state.folderId;
+
+            this.updateGraph({ calculator: this._calculator });
+        }
+
+        /****************************************/
+
+        getState(): IStudioSerieState {
+            return {
+                color: this.color(),
+                name: this.name(),
+                offsetX: this.offsetX(),
+                source: this.source,
+                values: this.values,
+                folderId: this.folderId
+            }
+        }
+
+        /****************************************/
+
         remove() {
             if (this._calculator)
                 this._calculator.removeExpression({ id: this.folderId });
@@ -246,10 +310,14 @@
         /****************************************/
 
         updateGraph(ctx: IUpdateGraphContext) {
+
+            if (!ctx.calculator)
+                return;
+
             this._calculator = ctx.calculator;
 
             if (!this.folderId)
-                   this.folderId = StringUtils.uuidv4();
+                this.folderId = StringUtils.uuidv4();
 
             setExpression(ctx.calculator, { type: "folder", id: this.folderId, hidden: !this.node.isVisible() || !this.project.node.isVisible(), title: this.project.name() + " - " + this.name() });
         }
@@ -286,7 +354,7 @@
     interface ITreeItem {
 
         attachNode(node: TreeNodeViewModel<ITreeItem>);
-        remove() : void;
+        remove(): void;
 
         readonly itemType: string;
         readonly label: string;
@@ -392,7 +460,7 @@
 
         private _selectedNode: TreeNodeViewModel<T>;
 
-        /****************************************/  
+        /****************************************/
 
         select(node: TreeNodeViewModel<T>) {
 
@@ -431,7 +499,7 @@
     interface IPageState {
         version: number;
         graphState?: Desmos.IGraphState;
-        series?: IStudioSerieState[];
+        projects?: IStudioProjectState[];
     }
 
     /****************************************/
@@ -470,7 +538,8 @@
 
             this.items.setRoot(new TreeNodeViewModel());
 
-            window.addEventListener("beforeunload", () => this.saveState());
+            //window.addEventListener("beforeunload", () => this.saveState());
+
             document.body.addEventListener("paste", ev => {
                 ev.preventDefault();
                 this.onPaste(ev.clipboardData);
@@ -506,7 +575,7 @@
 
         /****************************************/
 
-        newProject() : StudioProject {
+        newProject(): StudioProject {
             let proj = this.addProject({ name: "Project " + (this.projects.count() + 1) });
             proj.node.isSelected(true);
             return proj;
@@ -521,29 +590,41 @@
             project.attachNode(node);
             project.updateGraph({ calculator: this._calculator });
             return project;
-        }     
+        }
 
         /****************************************/
 
         getState(): IPageState {
-            let result: IPageState = { version: 1 };
+
+            let result: IPageState = { version: 2 };
             result.graphState = this._calculator.getState();
+            result.projects = this.projects.select(a => a.getState()).toArray();
             return result;
         }
 
         /****************************************/
 
         setState(value: IPageState) {
+
             if (!value)
                 return;
+
             if (value.graphState)
                 this._calculator.setState(value.graphState);
+
+            if (value.projects != undefined) {
+                this.projects.toArray().forEach(a => a.remove());
+                value.projects.forEach(a => {
+                    const proj = this.addProject()
+                    proj.setState(a);
+                });
+            }
         }
 
 
         /****************************************/
 
-        protected loadState() {
+        loadState() {
             let json = localStorage.getItem("studio");
             if (json)
                 this.setState(JSON.parse(json));
@@ -552,8 +633,9 @@
 
         /****************************************/
 
-        protected saveState() {
+        saveState() {
             localStorage.setItem("studio", JSON.stringify(this.getState()));
+            M.toast({ html: "Studio salvato" });
         }
 
 
@@ -569,7 +651,7 @@
             });
         }
 
-    /****************************************/
+        /****************************************/
 
         protected onKeyDown(ev: KeyboardEvent) {
             if (ev.keyCode == 46) {
@@ -604,19 +686,19 @@
 
         get projects(): Linq<StudioProject> {
 
-            function* items() {
-                for (var node of this.node.nodes())
+            function* items(this: StudioPage) {
+                for (var node of this.items.root().nodes())
                     yield (<StudioProject>node.value());
             }
 
-            return linq(items());
+            return linq(items.apply(this));
         }
 
         /****************************************/
 
         protected init() {
-            //this.loadState();
-            this.demo();
+            this.loadState();
+            //this.demo();
         }
 
         /****************************************/

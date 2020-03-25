@@ -1934,11 +1934,30 @@ var WebApp;
             this.name = ko.observable();
             this.itemType = "project";
             this.icon = "folder";
-            if (config) {
-                if (config.name)
-                    this.name(config.name);
-            }
+            if (config)
+                this.setState(config);
         }
+        /****************************************/
+        StudioProject.prototype.setState = function (state) {
+            var _this = this;
+            if (state.name)
+                this.name(state.name);
+            if (state.series != undefined) {
+                this.series.foreach(function (a) { return a.remove(); });
+                state.series.forEach(function (a) {
+                    var serie = _this.addSerie(null, false);
+                    serie.setState(a);
+                    serie.updateGraph({ calculator: _this._calculator });
+                });
+            }
+        };
+        /****************************************/
+        StudioProject.prototype.getState = function () {
+            return {
+                name: this.name(),
+                series: this.series.select(function (a) { return a.getState(); }).toArray()
+            };
+        };
         /****************************************/
         StudioProject.prototype.remove = function () {
             this.series.foreach(function (a) { return a.remove(); });
@@ -1952,17 +1971,20 @@ var WebApp;
         };
         /****************************************/
         StudioProject.prototype.updateGraph = function (ctx) {
+            if (!ctx.calculator)
+                return;
             this._calculator = ctx.calculator;
             if (ctx.recursive)
                 this.series.foreach(function (a) { return a.updateGraph(ctx); });
         };
         /****************************************/
-        StudioProject.prototype.addSerie = function (configOrSerie) {
+        StudioProject.prototype.addSerie = function (configOrSerie, updateGraph) {
+            if (updateGraph === void 0) { updateGraph = true; }
             var serie = configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie);
             var node = new TreeNodeViewModel(serie);
             this.node.addNode(node);
             serie.attachNode(node);
-            if (this._calculator)
+            if (updateGraph)
                 serie.updateGraph({ calculator: this._calculator });
             return serie;
         };
@@ -2011,7 +2033,7 @@ var WebApp;
                         }
                     });
                 }
-                return WebApp.linq(items());
+                return WebApp.linq(items.apply(this));
             },
             enumerable: true,
             configurable: true
@@ -2028,8 +2050,7 @@ var WebApp;
             this.itemType = "serie";
             this.icon = "insert_chart";
             if (config) {
-                if (config.name)
-                    this.name(config.name);
+                this.setState(config);
             }
         }
         /****************************************/
@@ -2047,6 +2068,33 @@ var WebApp;
             }
         };
         /****************************************/
+        StudioSerie.prototype.setState = function (state) {
+            if (state.name)
+                this.name(state.name);
+            if (state.color)
+                this.color(state.color);
+            if (state.offsetX != undefined)
+                this.offsetX(state.offsetX);
+            if (state.source)
+                this.source = state.source;
+            if (state.values != undefined)
+                this.values = state.values;
+            if (state.folderId != undefined)
+                this.folderId = state.folderId;
+            this.updateGraph({ calculator: this._calculator });
+        };
+        /****************************************/
+        StudioSerie.prototype.getState = function () {
+            return {
+                color: this.color(),
+                name: this.name(),
+                offsetX: this.offsetX(),
+                source: this.source,
+                values: this.values,
+                folderId: this.folderId
+            };
+        };
+        /****************************************/
         StudioSerie.prototype.remove = function () {
             if (this._calculator)
                 this._calculator.removeExpression({ id: this.folderId });
@@ -2060,6 +2108,8 @@ var WebApp;
         };
         /****************************************/
         StudioSerie.prototype.updateGraph = function (ctx) {
+            if (!ctx.calculator)
+                return;
             this._calculator = ctx.calculator;
             if (!this.folderId)
                 this.folderId = WebApp.StringUtils.uuidv4();
@@ -2212,7 +2262,7 @@ var WebApp;
                 advancedStyling: true
             });
             this.items.setRoot(new TreeNodeViewModel());
-            window.addEventListener("beforeunload", function () { return _this.saveState(); });
+            //window.addEventListener("beforeunload", () => this.saveState());
             document.body.addEventListener("paste", function (ev) {
                 ev.preventDefault();
                 _this.onPaste(ev.clipboardData);
@@ -2256,16 +2306,25 @@ var WebApp;
         };
         /****************************************/
         StudioPage.prototype.getState = function () {
-            var result = { version: 1 };
+            var result = { version: 2 };
             result.graphState = this._calculator.getState();
+            result.projects = this.projects.select(function (a) { return a.getState(); }).toArray();
             return result;
         };
         /****************************************/
         StudioPage.prototype.setState = function (value) {
+            var _this = this;
             if (!value)
                 return;
             if (value.graphState)
                 this._calculator.setState(value.graphState);
+            if (value.projects != undefined) {
+                this.projects.toArray().forEach(function (a) { return a.remove(); });
+                value.projects.forEach(function (a) {
+                    var proj = _this.addProject();
+                    proj.setState(a);
+                });
+            }
         };
         /****************************************/
         StudioPage.prototype.loadState = function () {
@@ -2276,6 +2335,7 @@ var WebApp;
         /****************************************/
         StudioPage.prototype.saveState = function () {
             localStorage.setItem("studio", JSON.stringify(this.getState()));
+            M.toast({ html: "Studio salvato" });
         };
         /****************************************/
         StudioPage.prototype.demo = function () {
@@ -2320,7 +2380,7 @@ var WebApp;
                         switch (_d.label) {
                             case 0:
                                 _d.trys.push([0, 5, 6, 7]);
-                                _a = __values(this.node.nodes()), _b = _a.next();
+                                _a = __values(this.items.root().nodes()), _b = _a.next();
                                 _d.label = 1;
                             case 1:
                                 if (!!_b.done) return [3 /*break*/, 4];
@@ -2347,15 +2407,15 @@ var WebApp;
                         }
                     });
                 }
-                return WebApp.linq(items());
+                return WebApp.linq(items.apply(this));
             },
             enumerable: true,
             configurable: true
         });
         /****************************************/
         StudioPage.prototype.init = function () {
-            //this.loadState();
-            this.demo();
+            this.loadState();
+            //this.demo();
         };
         return StudioPage;
     }());
