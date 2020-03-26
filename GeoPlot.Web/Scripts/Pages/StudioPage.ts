@@ -1513,7 +1513,7 @@
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
-                administerSecretFolders: true,
+                //administerSecretFolders: true,
                 authorIDE: true,
                 advancedStyling: true
             });

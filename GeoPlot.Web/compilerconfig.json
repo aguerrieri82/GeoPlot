@@ -2,7 +2,9 @@
   {
     "outputFile": "wwwroot/css/theme.css",
     "inputFile": "Style/Theme.scss",
-    "minify": { "enabled": true }
- 
+    "minify": { "enabled": true },
+    "options": {
+      "relativeUrls": false
+    }
   }
 ]

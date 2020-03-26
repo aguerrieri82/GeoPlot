@@ -3092,7 +3092,7 @@ var WebApp;
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
-                administerSecretFolders: true,
+                //administerSecretFolders: true,
                 authorIDE: true,
                 advancedStyling: true
             });
@@ -3217,7 +3217,7 @@ var WebApp;
         /****************************************/
         StudioPage.prototype.saveState = function () {
             localStorage.setItem("studio", JSON.stringify(this.getState()));
-            M.toast({ html: "Studio salvato" });
+            M.toast({ html: "Studio salvato sul tuo dispositivo." });
         };
         /****************************************/
         StudioPage.prototype.demo = function () {
@@ -3299,7 +3299,7 @@ var WebApp;
         });
         /****************************************/
         StudioPage.prototype.init = function () {
-            //this.loadState();
+            this.loadState();
             //this.demo();
         };
         return StudioPage;

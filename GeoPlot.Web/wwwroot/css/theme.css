@@ -416,12 +416,15 @@ svg.map.experimental {
   justify-content: center; }
   .dev-message i {
     color: #ffc107; }
+  @media only screen and (min-width: 601px) {
+    .dev-message {
+      display: none; } }
 
 .studio-page {
   display: flex;
   flex-direction: row;
   border-bottom: solid 1px #ccc;
-  height: 70vh; }
+  height: calc(100vh - 80px); }
   .studio-page .tree-view {
     height: 100%; }
     .studio-page .tree-view .visible > header.project .visibility {
@@ -523,13 +526,13 @@ svg.map.experimental {
       content: ' ';
       height: 100%; }
   .function-selector .linear {
-    background-image: url("../../image/linear.png"); }
+    background-image: url("../image/linear.png"); }
   .function-selector .exponential {
-    background-image: url("../../image/exponential.png"); }
+    background-image: url("../image/exponential.png"); }
   .function-selector .normal {
-    background-image: url("../../image/normal.png"); }
+    background-image: url("../image/normal.png"); }
   .function-selector .log-normal {
-    background-image: url("../../image/log-normal.png"); }
+    background-image: url("../image/log-normal.png"); }
 
 /****************************************/
 .tree-view ul {

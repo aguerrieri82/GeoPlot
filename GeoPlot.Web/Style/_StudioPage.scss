@@ -16,13 +16,17 @@
     i {
         color: #ffc107;
     }
+
+    @media #{$medium-and-up} {
+        display: none;
+    }
 }
 
 .studio-page {
     display: flex;
     flex-direction: row;
     border-bottom: solid 1px #ccc;
-    height: 70vh;
+    height: calc(100vh - 80px);
 
     .tree-view {
         height: 100%;
