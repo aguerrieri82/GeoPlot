@@ -101,11 +101,12 @@
 
         updateExpression(value: Desmos.Expression) {
             const exp = <Desmos.IMathExpression>linq(this.calculator.getExpressions()).where(a => a.id == value.id).first();
-            if (exp) {
+            /*if (exp) {
                 for (let prop of Object.getOwnPropertyNames(value))
                     exp[prop] = value[prop];
                 this.calculator.setExpression(exp);
-            }
+            }*/
+            this.calculator.setExpression(value);
         }
 
         /****************************************/
@@ -123,8 +124,9 @@
         /****************************************/
 
         setItemVisibile(id: string, value: boolean) {
-            this.calculator.controller._setItemHidden(id, !value);
-            this.calculator.updateSettings({});
+            this.updateExpression(<any>{ id: id, hidden: !value });
+            //this.calculator.controller._setItemHidden(id, !value);
+            //this.calculator.updateSettings({});
         }
 
         /****************************************/
@@ -285,24 +287,30 @@
 
         /****************************************/
 
-        updateGraphVisibility(recorsive = true) {
-
+        isFullVisible(): boolean {
             let curNode = this.node;
-            let isVisible = true;
 
             while (curNode) {
-                if (!curNode.isVisible()) {
-                    isVisible = false;
-                    break;
-                }
+                if (!curNode.isVisible()) 
+                    return false;
                 curNode = curNode.parentNode;
             }
+            return true;
+        }
 
-            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
-            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+        /****************************************/
+
+        updateGraphVisibility(recorsive = true) : boolean {
+
+            const visible = this.isFullVisible();
+
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), visible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), visible);
 
             if (recorsive)
                 this.children.foreach(a => a.updateGraphVisibility());
+
+            return visible;
         }
 
         /****************************************/
@@ -448,11 +456,13 @@
 
     interface IStudioRegressionConfig extends IItemConfig {
         function?: IRegressionFunction;
+        showIntegration?: boolean;
     }
 
     /****************************************/
 
     interface IStudioRegressionState extends IStudioRegressionConfig, IItemState {
+        
     }
 
     /****************************************/
@@ -498,6 +508,9 @@
         value: IRegressionFunctionVar;
         curValue = ko.observable<number>();
         autoCompute = ko.observable<boolean>();
+        min = ko.observable<number>();
+        max = ko.observable<number>();
+        step = ko.observable<number>();
     }
 
     /****************************************/
@@ -528,9 +541,9 @@
             this.functions = [];
 
             this.addFunction({
-                name: "Normale",
-                type: "normal",
-                value: "$y\\ \\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
+                name: "Log-Normale",
+                type: "log-normal",
+                value: "$y\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
                 vars: [{
                     name: "a",
                     label: "Scostamento",
@@ -541,22 +554,89 @@
                     name: "c",
                     label: "Totale",
                     autoCompute: true,
-                    minValue: 0,
-                    maxValue: 30000,
                     precision: 0
                 },
                 {
                     name: "o",
-                    label: "Incremento",
+                    label: "Varianza",
                     autoCompute: true,
                     precision: 5
                 },
                 {
                     name: "u",
-                    label: "Picco",
+                    label: "Media",
                     autoCompute: true,
                     precision: 5
                 }]
+            });
+
+            this.addFunction({
+                name: "Normale",
+                type: "normal",
+                value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
+                vars: [
+                {
+                    name: "c",
+                    label: "Totale",
+                    autoCompute: true,
+                    precision: 0
+                },
+                {
+                    name: "o",
+                    label: "Varianza",
+                    autoCompute: true,
+                    precision: 5
+                },
+                {
+                    name: "u",
+                    label: "Media/Picco",
+                    autoCompute: true,
+                    precision: 0
+                }]
+            });
+
+            this.addFunction({
+                name: "Esponenziale",
+                type: "exponential",
+                value: "$y\\sim $a^{\\left($x-$b\\right)}",
+                vars: [
+                    {
+                        name: "a",
+                        label: "Base",
+                        autoCompute: true,
+                        precision: 5
+                    },
+                    {
+                        name: "b",
+                        label: "Offset",
+                        autoCompute: true,
+                        precision: 5
+                    }]
+            });
+
+            this.addFunction({
+                name: "Lineare",
+                type: "linear",
+                value: "$y\\sim $a+$m$x",
+                vars: [
+                    {
+                        name: "a",
+                        label: "Offset",
+                        autoCompute: true,
+                        precision: 5
+                    },
+                    {
+                        name: "m",
+                        label: "Slope",
+                        autoCompute: true,
+                        precision: 5
+                    }]
+            });
+
+            this.showIntegration.subscribe(() => {
+                this._graphCtx.setItemVisibile(this.getGraphId("sum-serie"), this.isFullVisible() && this.showIntegration());
+                this._graphCtx.setItemVisibile(this.getGraphId("sum-point"), this.isFullVisible() && this.showIntegration());
+
             });
 
             this.selectedFunction.subscribe(a => {
@@ -577,7 +657,9 @@
             const model = new RegressionFunctionViewModel();
             model.value = value;
             model.select = () => {
-
+                this.selectedFunction(model);
+                this.name(model.value.name);
+                this.updateGraph()
             };
 
             const vars: RegressionFunctionVarViewModel[] = [];
@@ -587,8 +669,19 @@
                 
                 vModel.curValue(item.value);
                 vModel.autoCompute(item.autoCompute);
+                vModel.min(item.minValue);
+                vModel.max(item.maxValue);
+                vModel.step(item.step);
+                 
+                vModel.min.subscribe(a => item.minValue = a);
+                vModel.max.subscribe(a => item.maxValue = a);
+                vModel.step.subscribe(a => item.step = a);
+                vModel.curValue.subscribe(a => item.value = a);
+                vModel.autoCompute.subscribe(a => {
+                    item.autoCompute = a;
+                    this.updateGraph();
+                });
 
-                vModel.autoCompute.subscribe(a => this.updateGraph());
                 vModel.curValue.subscribe(value => {
                     if (!vModel.autoCompute()) {
                         this._graphCtx.updateVariable(this.getGraphId(item.name + "-value"), this.getVar(item.name), value);
@@ -604,6 +697,7 @@
             return model;
         }
 
+
         /****************************************/
 
         protected onGraphChanged() {
@@ -614,7 +708,7 @@
 
         protected updateRegressionVars() {
             let model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
-            if (model.regressionParameters) {
+            if (model && model.regressionParameters) {
                 for (let item of this.selectedFunction().vars()) {
                     const varName = this.getVar(item.value.name).replace("{", "").replace("}", "");
                     let value = model.regressionParameters[varName];
@@ -636,8 +730,43 @@
         /****************************************/
 
         protected setStateWork(state: IStudioRegressionState) {
-
+            if (state.function) {
+                const func = linq(this.functions).first(a => a.value.type == state.function.type);
+                if (func) {
+                    for (let item of state.function.vars) {
+                        const funcVar = linq(func.vars()).first(a => a.value.name == item.name);
+                        if (funcVar) {
+                            funcVar.autoCompute(item.autoCompute);
+                            funcVar.max(item.maxValue);
+                            funcVar.min(item.minValue);
+                            funcVar.step(item.step);
+                            funcVar.curValue(item.value);
+                        }
+                    }
+                    this.selectedFunction(func);
+                }
+            }
+            if (state.showIntegration != undefined)
+                this.showIntegration(state.showIntegration);
         }
+
+        /****************************************/
+
+        getState(): IStudioRegressionState{
+            const state = super.getState();
+            state.function = this.selectedFunction().value;
+            state.showIntegration = this.showIntegration();
+
+            for (let item of this.selectedFunction().vars()) {
+                item.value.value = item.curValue();
+                item.value.maxValue = item.max();
+                item.value.minValue = item.min();
+                item.value.step = item.step();
+                item.value.autoCompute = item.autoCompute();
+            }
+            return state;
+        }
+
 
         /****************************************/
 
@@ -690,7 +819,7 @@
                 type: "expression",
                 id: this.getGraphId("main-func"),
                 folderId: this.getGraphId("private"),
-                latex: this.replaceVars(func.value.replace("$y\\ \\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
+                latex: this.replaceVars(func.value.replace("$y\\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
                 color: this.parent.color(),
                 lineStyle: Desmos.Styles.DASHED
             });
@@ -718,8 +847,10 @@
                 latex: this.replaceVars("\\left($n2,\\ $sum\\left($n2\\right)\\right)"),
                 color: this.parent.color(),
                 lines: true,
-                points: false,
-                lineStyle: Desmos.Styles.POINT
+                hidden: !this.showIntegration(),
+                lineStyle: Desmos.Styles.SOLID,
+                pointStyle: "NONE",
+                points: false
             });
 
             values.push({
@@ -733,6 +864,7 @@
                 type: "expression",
                 id: this.getGraphId("sum-point"),
                 folderId: this.getGraphId("private"),
+                hidden: !this.showIntegration(),
                 latex: this.replaceVars("\\left($time,$value\\right)"),
                 color: this.parent.color(),
                 label: this.parent.name(),
@@ -769,6 +901,7 @@
 
         functions: RegressionFunctionViewModel[];
         selectedFunction = ko.observable<RegressionFunctionViewModel>();
+        showIntegration = ko.observable<boolean>(true);
     }
 
     /****************************************/
@@ -1380,7 +1513,7 @@
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
-                //administerSecretFolders: true,
+                administerSecretFolders: true,
                 authorIDE: true,
                 advancedStyling: true
             });

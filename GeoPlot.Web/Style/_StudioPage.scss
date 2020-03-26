@@ -145,6 +145,48 @@
         display: block;
     }
 }
+
+.function-selector {
+    margin-bottom: 16px;
+    margin-top: 16px;
+
+    > * {
+        border: solid 1px #ccc;
+        padding: 8px;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        height: 32px;
+        width: 32px;
+
+        &.active {
+            background-color: #90caf9;
+        }
+
+        a {
+            display: block;
+            content: ' ';
+            height: 100%;
+        }
+    }
+
+    .linear {
+        background-image: url('../image/linear.png');
+    }
+
+    .exponential {
+        background-image: url('../image/exponential.png');
+    }
+
+    .normal {
+        background-image: url('../image/normal.png');
+    }
+
+    .log-normal {
+        background-image: url('../image/log-normal.png');
+    }
+}
+
 /****************************************/
 .tree-view {
     ul {

@@ -105,16 +105,37 @@
 
 
 <script type="text/html" id="RegressionOptionsTemplate">
+    <div>
+        <label>
+            <input class="filled-in" type="checkbox" data-bind="checked: showIntegration" />
+            <span>Mostra integrale</span>
+        </label>
+    </div>
+    <div class="function-selector flex-row" data-bind="foreach: functions">
+        <div data-bind="attr: {class: value.type}, css: {active: $parent.selectedFunction() == $data}">
+            <a href="#!" data-bind="click: select, attr: {title: value.name}"></a>
+        </div>
+    </div>
     <!--ko foreach: selectedFunction().vars -->
     <div class="function-var">
         <div>
-            <label> 
+            <label>
                 <input class="filled-in" type="checkbox" data-bind="checked: autoCompute" />
                 <span class="name" data-bind="text: value.label + ' (' + value.name + '): '"></span>
                 <span class="value" data-bind="text: curValue"></span>
             </label>
         </div>
-        <input type="range" data-bind="value: curValue, visible: !autoCompute(), attr: {max: value.maxValue, min: value.minValue, step: value.step}, valueUpdate: 'input'" />
+        <!--ko if: !autoCompute() -->
+        <input type="range" data-bind="attr: {max: max, min: min, step: step}, value: curValue, valueUpdate: 'input'" />
+        <div class="var-range flex-row">
+            <div>
+                <input type="number" data-bind="value: min" placeholder="minimo" />
+            </div>
+            <div>
+                <input type="number" data-bind="value: max" placeholder="massimo" />
+            </div>
+        </div>
+        <!--/ko-->
     </div>
     <!--/ko-->
 

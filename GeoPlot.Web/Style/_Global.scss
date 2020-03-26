@@ -343,6 +343,24 @@ ul.collapsible li {
     align-items: center;
 }
 
+
+.flex-row {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+
+    > * {
+        flex-grow: 1;
+        flex-basis: 0;
+        margin-right: 16px;
+
+        &:last-of-type {
+            margin-right: 0;
+        }
+    }
+}
+
+
 .item-margin-small {
     > * {
         margin-right: 8px;

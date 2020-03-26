@@ -223,6 +223,17 @@ ul.collapsible li.active .collapsible-header i {
   flex-direction: row;
   align-items: center; }
 
+.flex-row {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row; }
+  .flex-row > * {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 16px; }
+    .flex-row > *:last-of-type {
+      margin-right: 0; }
+
 .item-margin-small > * {
   margin-right: 8px; }
 
@@ -480,6 +491,32 @@ svg.map.experimental {
     border: solid 1px #ccc;
     margin-left: 8px;
     display: block; }
+
+.function-selector {
+  margin-bottom: 16px;
+  margin-top: 16px; }
+  .function-selector > * {
+    border: solid 1px #ccc;
+    padding: 8px;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    height: 32px;
+    width: 32px; }
+    .function-selector > *.active {
+      background-color: #90caf9; }
+    .function-selector > * a {
+      display: block;
+      content: ' ';
+      height: 100%; }
+  .function-selector .linear {
+    background-image: url("../../image/linear.png"); }
+  .function-selector .exponential {
+    background-image: url("../../image/exponential.png"); }
+  .function-selector .normal {
+    background-image: url("../../image/normal.png"); }
+  .function-selector .log-normal {
+    background-image: url("../../image/log-normal.png"); }
 
 /****************************************/
 .tree-view ul {

@@ -2014,24 +2014,13 @@ var WebApp;
         };
         /****************************************/
         GraphContext.prototype.updateExpression = function (value) {
-            var e_11, _a;
             var exp = WebApp.linq(this.calculator.getExpressions()).where(function (a) { return a.id == value.id; }).first();
-            if (exp) {
-                try {
-                    for (var _b = __values(Object.getOwnPropertyNames(value)), _c = _b.next(); !_c.done; _c = _b.next()) {
-                        var prop = _c.value;
-                        exp[prop] = value[prop];
-                    }
-                }
-                catch (e_11_1) { e_11 = { error: e_11_1 }; }
-                finally {
-                    try {
-                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
-                    }
-                    finally { if (e_11) throw e_11.error; }
-                }
+            /*if (exp) {
+                for (let prop of Object.getOwnPropertyNames(value))
+                    exp[prop] = value[prop];
                 this.calculator.setExpression(exp);
-            }
+            }*/
+            this.calculator.setExpression(value);
         };
         /****************************************/
         GraphContext.prototype.updateVariable = function (id, varName, value) {
@@ -2043,8 +2032,9 @@ var WebApp;
         };
         /****************************************/
         GraphContext.prototype.setItemVisibile = function (id, value) {
-            this.calculator.controller._setItemHidden(id, !value);
-            this.calculator.updateSettings({});
+            this.updateExpression({ id: id, hidden: !value });
+            //this.calculator.controller._setItemHidden(id, !value);
+            //this.calculator.updateSettings({});
         };
         /****************************************/
         GraphContext.prototype.generateVars = function (map) {
@@ -2142,21 +2132,24 @@ var WebApp;
             this.color.subscribe(function (value) { return _this.updateColor(); });
         };
         /****************************************/
-        BaseItem.prototype.updateGraphVisibility = function (recorsive) {
-            if (recorsive === void 0) { recorsive = true; }
+        BaseItem.prototype.isFullVisible = function () {
             var curNode = this.node;
-            var isVisible = true;
             while (curNode) {
-                if (!curNode.isVisible()) {
-                    isVisible = false;
-                    break;
-                }
+                if (!curNode.isVisible())
+                    return false;
                 curNode = curNode.parentNode;
             }
-            this._graphCtx.setItemVisibile(this.getGraphId("public"), isVisible);
-            this._graphCtx.setItemVisibile(this.getGraphId("private"), isVisible);
+            return true;
+        };
+        /****************************************/
+        BaseItem.prototype.updateGraphVisibility = function (recorsive) {
+            if (recorsive === void 0) { recorsive = true; }
+            var visible = this.isFullVisible();
+            this._graphCtx.setItemVisibile(this.getGraphId("public"), visible);
+            this._graphCtx.setItemVisibile(this.getGraphId("private"), visible);
             if (recorsive)
                 this.children.foreach(function (a) { return a.updateGraphVisibility(); });
+            return visible;
         };
         /****************************************/
         BaseItem.prototype.updateGraph = function (recursive) {
@@ -2256,6 +2249,9 @@ var WebApp;
         function RegressionFunctionVarViewModel() {
             this.curValue = ko.observable();
             this.autoCompute = ko.observable();
+            this.min = ko.observable();
+            this.max = ko.observable();
+            this.step = ko.observable();
         }
         return RegressionFunctionVarViewModel;
     }());
@@ -2267,6 +2263,7 @@ var WebApp;
             var _this = _super.call(this) || this;
             _this._varsMap = {};
             _this.selectedFunction = ko.observable();
+            _this.showIntegration = ko.observable(true);
             _this._varsMap = {
                 "fun": null,
                 "sum": null,
@@ -2280,9 +2277,9 @@ var WebApp;
             _this.optionsTemplateName = "RegressionOptionsTemplate";
             _this.functions = [];
             _this.addFunction({
-                name: "Normale",
-                type: "normal",
-                value: "$y\\ \\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
+                name: "Log-Normale",
+                type: "log-normal",
+                value: "$y\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
                 vars: [{
                         name: "a",
                         label: "Scostamento",
@@ -2293,22 +2290,87 @@ var WebApp;
                         name: "c",
                         label: "Totale",
                         autoCompute: true,
-                        minValue: 0,
-                        maxValue: 30000,
                         precision: 0
                     },
                     {
                         name: "o",
-                        label: "Incremento",
+                        label: "Varianza",
                         autoCompute: true,
                         precision: 5
                     },
                     {
                         name: "u",
-                        label: "Picco",
+                        label: "Media",
                         autoCompute: true,
                         precision: 5
                     }]
+            });
+            _this.addFunction({
+                name: "Normale",
+                type: "normal",
+                value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
+                vars: [
+                    {
+                        name: "c",
+                        label: "Totale",
+                        autoCompute: true,
+                        precision: 0
+                    },
+                    {
+                        name: "o",
+                        label: "Varianza",
+                        autoCompute: true,
+                        precision: 5
+                    },
+                    {
+                        name: "u",
+                        label: "Media/Picco",
+                        autoCompute: true,
+                        precision: 0
+                    }
+                ]
+            });
+            _this.addFunction({
+                name: "Esponenziale",
+                type: "exponential",
+                value: "$y\\sim $a^{\\left($x-$b\\right)}",
+                vars: [
+                    {
+                        name: "a",
+                        label: "Base",
+                        autoCompute: true,
+                        precision: 5
+                    },
+                    {
+                        name: "b",
+                        label: "Offset",
+                        autoCompute: true,
+                        precision: 5
+                    }
+                ]
+            });
+            _this.addFunction({
+                name: "Lineare",
+                type: "linear",
+                value: "$y\\sim $a+$m$x",
+                vars: [
+                    {
+                        name: "a",
+                        label: "Offset",
+                        autoCompute: true,
+                        precision: 5
+                    },
+                    {
+                        name: "m",
+                        label: "Slope",
+                        autoCompute: true,
+                        precision: 5
+                    }
+                ]
+            });
+            _this.showIntegration.subscribe(function () {
+                _this._graphCtx.setItemVisibile(_this.getGraphId("sum-serie"), _this.isFullVisible() && _this.showIntegration());
+                _this._graphCtx.setItemVisibile(_this.getGraphId("sum-point"), _this.isFullVisible() && _this.showIntegration());
             });
             _this.selectedFunction.subscribe(function (a) {
                 if (!_this.name() && a)
@@ -2321,11 +2383,14 @@ var WebApp;
         }
         /****************************************/
         StudioSerieRegression.prototype.addFunction = function (value) {
-            var e_12, _a;
+            var e_11, _a;
             var _this = this;
             var model = new RegressionFunctionViewModel();
             model.value = value;
             model.select = function () {
+                _this.selectedFunction(model);
+                _this.name(model.value.name);
+                _this.updateGraph();
             };
             var vars = [];
             var _loop_4 = function (item) {
@@ -2333,7 +2398,17 @@ var WebApp;
                 vModel.value = item;
                 vModel.curValue(item.value);
                 vModel.autoCompute(item.autoCompute);
-                vModel.autoCompute.subscribe(function (a) { return _this.updateGraph(); });
+                vModel.min(item.minValue);
+                vModel.max(item.maxValue);
+                vModel.step(item.step);
+                vModel.min.subscribe(function (a) { return item.minValue = a; });
+                vModel.max.subscribe(function (a) { return item.maxValue = a; });
+                vModel.step.subscribe(function (a) { return item.step = a; });
+                vModel.curValue.subscribe(function (a) { return item.value = a; });
+                vModel.autoCompute.subscribe(function (a) {
+                    item.autoCompute = a;
+                    _this.updateGraph();
+                });
                 vModel.curValue.subscribe(function (value) {
                     if (!vModel.autoCompute()) {
                         _this._graphCtx.updateVariable(_this.getGraphId(item.name + "-value"), _this.getVar(item.name), value);
@@ -2347,12 +2422,12 @@ var WebApp;
                     _loop_4(item);
                 }
             }
-            catch (e_12_1) { e_12 = { error: e_12_1 }; }
+            catch (e_11_1) { e_11 = { error: e_11_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_12) throw e_12.error; }
+                finally { if (e_11) throw e_11.error; }
             }
             model.vars(vars);
             this.functions.push(model);
@@ -2364,9 +2439,9 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.updateRegressionVars = function () {
-            var e_13, _a;
+            var e_12, _a;
             var model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
-            if (model.regressionParameters) {
+            if (model && model.regressionParameters) {
                 try {
                     for (var _b = __values(this.selectedFunction().vars()), _c = _b.next(); !_c.done; _c = _b.next()) {
                         var item = _c.value;
@@ -2379,12 +2454,12 @@ var WebApp;
                         }
                     }
                 }
-                catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                catch (e_12_1) { e_12 = { error: e_12_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_13) throw e_13.error; }
+                    finally { if (e_12) throw e_12.error; }
                 }
             }
         };
@@ -2394,6 +2469,63 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.setStateWork = function (state) {
+            var e_13, _a;
+            if (state.function) {
+                var func = WebApp.linq(this.functions).first(function (a) { return a.value.type == state.function.type; });
+                if (func) {
+                    var _loop_5 = function (item) {
+                        var funcVar = WebApp.linq(func.vars()).first(function (a) { return a.value.name == item.name; });
+                        if (funcVar) {
+                            funcVar.autoCompute(item.autoCompute);
+                            funcVar.max(item.maxValue);
+                            funcVar.min(item.minValue);
+                            funcVar.step(item.step);
+                            funcVar.curValue(item.value);
+                        }
+                    };
+                    try {
+                        for (var _b = __values(state.function.vars), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var item = _c.value;
+                            _loop_5(item);
+                        }
+                    }
+                    catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                    finally {
+                        try {
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                        }
+                        finally { if (e_13) throw e_13.error; }
+                    }
+                    this.selectedFunction(func);
+                }
+            }
+            if (state.showIntegration != undefined)
+                this.showIntegration(state.showIntegration);
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.getState = function () {
+            var e_14, _a;
+            var state = _super.prototype.getState.call(this);
+            state.function = this.selectedFunction().value;
+            state.showIntegration = this.showIntegration();
+            try {
+                for (var _b = __values(this.selectedFunction().vars()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var item = _c.value;
+                    item.value.value = item.curValue();
+                    item.value.maxValue = item.max();
+                    item.value.minValue = item.min();
+                    item.value.step = item.step();
+                    item.value.autoCompute = item.autoCompute();
+                }
+            }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_14) throw e_14.error; }
+            }
+            return state;
         };
         /****************************************/
         StudioSerieRegression.prototype.updateGraphWork = function () {
@@ -2401,7 +2533,7 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.getExpressions = function () {
-            var e_14, _a, e_15, _b;
+            var e_15, _a, e_16, _b;
             var values = [];
             values.push({
                 type: "folder",
@@ -2427,12 +2559,12 @@ var WebApp;
                         this._varsMap[item.name] = null;
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_15) throw e_15.error; }
             }
             this._graphCtx.generateVars(this._varsMap);
             values.push({
@@ -2446,7 +2578,7 @@ var WebApp;
                 type: "expression",
                 id: this.getGraphId("main-func"),
                 folderId: this.getGraphId("private"),
-                latex: this.replaceVars(func.value.replace("$y\\ \\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
+                latex: this.replaceVars(func.value.replace("$y\\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
                 color: this.parent.color(),
                 lineStyle: Desmos.Styles.DASHED
             });
@@ -2470,8 +2602,10 @@ var WebApp;
                 latex: this.replaceVars("\\left($n2,\\ $sum\\left($n2\\right)\\right)"),
                 color: this.parent.color(),
                 lines: true,
-                points: false,
-                lineStyle: Desmos.Styles.POINT
+                hidden: !this.showIntegration(),
+                lineStyle: Desmos.Styles.SOLID,
+                pointStyle: "NONE",
+                points: false
             });
             values.push({
                 type: "expression",
@@ -2483,6 +2617,7 @@ var WebApp;
                 type: "expression",
                 id: this.getGraphId("sum-point"),
                 folderId: this.getGraphId("private"),
+                hidden: !this.showIntegration(),
                 latex: this.replaceVars("\\left($time,$value\\right)"),
                 color: this.parent.color(),
                 label: this.parent.name(),
@@ -2512,12 +2647,12 @@ var WebApp;
                     }
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             return values;
         };
@@ -2872,7 +3007,7 @@ var WebApp;
         };
         /****************************************/
         TreeNodeViewModel.prototype.attach = function (treeView, parent) {
-            var e_16, _a;
+            var e_17, _a;
             this._treeView = treeView;
             this._parentNode = parent;
             try {
@@ -2881,12 +3016,12 @@ var WebApp;
                     childNode.attach(treeView);
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_17) throw e_17.error; }
             }
         };
         Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
@@ -2957,7 +3092,7 @@ var WebApp;
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
-                //administerSecretFolders: true,
+                administerSecretFolders: true,
                 authorIDE: true,
                 advancedStyling: true
             });
@@ -3121,8 +3256,8 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_17_1;
-                    var e_17, _c;
+                    var _a, _b, node, e_18_1;
+                    var e_18, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -3141,14 +3276,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_17_1 = _d.sent();
-                                e_17 = { error: e_17_1 };
+                                e_18_1 = _d.sent();
+                                e_18 = { error: e_18_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_17) throw e_17.error; }
+                                finally { if (e_18) throw e_18.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }
