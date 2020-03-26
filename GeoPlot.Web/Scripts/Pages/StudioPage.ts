@@ -1672,7 +1672,7 @@
 
         saveState() {
             localStorage.setItem("studio", JSON.stringify(this.getState()));
-            M.toast({ html: "Studio salvato" });
+            M.toast({ html: "Studio salvato sul tuo dispositivo." });
         }
 
         /****************************************/
@@ -1711,7 +1711,10 @@
                     if (serie) {
                         project.addSerie(serie);
                         project.node.isExpanded(true);
-                        serie.node.isSelected(true);
+                        serie.node.isExpanded(true);
+                        serie.zoom();
+                        const reg = serie.addRegression();
+                        reg.node.isSelected(true);
                     }
                 }
             }

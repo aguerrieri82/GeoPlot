@@ -3247,7 +3247,10 @@ var WebApp;
                     if (serie) {
                         project.addSerie(serie);
                         project.node.isExpanded(true);
-                        serie.node.isSelected(true);
+                        serie.node.isExpanded(true);
+                        serie.zoom();
+                        var reg = serie.addRegression();
+                        reg.node.isSelected(true);
                     }
                 }
             }
@@ -3296,7 +3299,7 @@ var WebApp;
         });
         /****************************************/
         StudioPage.prototype.init = function () {
-            this.loadState();
+            //this.loadState();
             //this.demo();
         };
         return StudioPage;

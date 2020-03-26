@@ -438,6 +438,19 @@ svg.map.experimental {
     .studio-page .side-bar .series {
       flex-grow: 1;
       flex-shrink: 1; }
+      .studio-page .side-bar .series .help {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        height: 100%;
+        padding: 16px;
+        flex-direction: column;
+        display: flex;
+        align-items: center;
+        justify-content: center; }
+        .studio-page .side-bar .series .help > * {
+          text-align: center; }
     .studio-page .side-bar .options {
       max-height: 50%; }
   .studio-page .content {
