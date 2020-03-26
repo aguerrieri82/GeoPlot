@@ -2054,10 +2054,16 @@ var WebApp;
     /****************************************/
     var BaseItem = /** @class */ (function () {
         function BaseItem() {
+            var _this = this;
             this.name = ko.observable();
             this.time = ko.observable(0);
             this.color = ko.observable();
             this.actions = [];
+            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Remove";
+                action.icon = "delete";
+                action.execute = function () { return _this.remove(); };
+            }));
         }
         /****************************************/
         BaseItem.prototype.setState = function (state) {
@@ -2080,7 +2086,9 @@ var WebApp;
             return {
                 name: this.name(),
                 visible: this.node.isVisible(),
-                folderId: this.folderId
+                folderId: this.folderId,
+                color: this.color(),
+                opened: this.node.isExpanded()
             };
         };
         /****************************************/
@@ -2088,12 +2096,15 @@ var WebApp;
             return this._varsMap[name];
         };
         /****************************************/
-        BaseItem.prototype.remove = function () {
+        BaseItem.prototype.remove = function (recursive) {
+            if (recursive === void 0) { recursive = true; }
             if (this._graphCtx) {
                 this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
                 this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
             }
             this.node.remove();
+            if (recursive)
+                this.children.foreach(function (a) { return a.remove(); });
         };
         /****************************************/
         BaseItem.prototype.attachNode = function (node) {
@@ -2230,11 +2241,6 @@ var WebApp;
                 "value": null,
                 "time": null
             };
-            _this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                action.text = "Elimina";
-                action.icon = "delete";
-                action.execute = function () { return _this.remove(); };
-            }));
             _this.itemType = "regression";
             _this.icon = "show_chart";
             _this.optionsTemplateName = "RegressionOptionsTemplate";
@@ -2494,8 +2500,9 @@ var WebApp;
         };
         /****************************************/
         StudioSerie.prototype.onGraphChanged = function () {
-            var anal = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
-            this.offsetX(anal.evaluation.value);
+            var item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+            if (item)
+                this.offsetX(item.evaluation.value);
         };
         /****************************************/
         StudioSerie.prototype.onSelected = function () {
@@ -2613,7 +2620,8 @@ var WebApp;
         /****************************************/
         StudioProject.prototype.onGraphChanged = function () {
             var item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
-            this.time(item.evaluation.value);
+            if (item)
+                this.time(item.evaluation.value);
         };
         /****************************************/
         StudioProject.prototype.attachGraph = function (ctx) {
@@ -2626,7 +2634,7 @@ var WebApp;
         /****************************************/
         StudioProject.prototype.addSerie = function (configOrSerie, updateGraph) {
             if (updateGraph === void 0) { updateGraph = true; }
-            return this.addChildrenWork(configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie));
+            return this.addChildrenWork(configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie), updateGraph);
         };
         return StudioProject;
     }(BaseItem));
@@ -2817,17 +2825,13 @@ var WebApp;
             if (!value)
                 return;
             if (value.graphState) {
-                //console.log(JSON.stringify(value.graphState, null, "  "));
                 value.graphState.expressions.list = [];
                 this._graphCtx.calculator.setState(value.graphState);
             }
-            /*
-            if (value.vars)
-                this._graphCtx.vars = value.vars;*/
             if (value.projects != undefined) {
                 this.projects.toArray().forEach(function (a) { return a.remove(); });
                 value.projects.forEach(function (a) {
-                    var proj = _this.addProject();
+                    var proj = _this.addProject(null, false);
                     proj.setState(a);
                 });
             }

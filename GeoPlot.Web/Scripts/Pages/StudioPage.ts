@@ -145,7 +145,6 @@
 
     interface IItemConfig {
         name?: string;
-        visible?: boolean;
         color?: string;
     }
 
@@ -165,6 +164,12 @@
         protected _varsMap: IDictionary<string>;
 
         constructor() {
+
+            this.actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Remove";
+                action.icon = "delete";
+                action.execute = () => this.remove();
+            }));
         }
 
         /****************************************/
@@ -199,7 +204,9 @@
             return <TState>{
                 name: this.name(),
                 visible: this.node.isVisible(),
-                folderId: this.folderId
+                folderId: this.folderId,
+                color: this.color(),
+                opened: this.node.isExpanded()
             };
         }
 
@@ -212,13 +219,16 @@
 
         /****************************************/
 
-        remove() {
+        remove(recursive = true) {
 
             if (this._graphCtx) {
                 this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
                 this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
             }
             this.node.remove();
+
+            if (recursive)
+                this.children.foreach(a => a.remove());
         }
 
         /****************************************/
@@ -457,12 +467,6 @@
                 "value": null,
                 "time": null
             };
-
-            this.actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Elimina";
-                action.icon = "delete";
-                action.execute = () => this.remove();
-            }));
 
             this.itemType = "regression";
             this.icon = "show_chart";
@@ -786,8 +790,9 @@
         /****************************************/
 
         protected onGraphChanged() {
-            let anal = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
-            this.offsetX(anal.evaluation.value);
+            let item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+            if (item)
+                this.offsetX(item.evaluation.value);
         }
 
         /****************************************/
@@ -958,7 +963,8 @@
 
         protected onGraphChanged() {
             let item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
-            this.time(item.evaluation.value);
+            if (item)
+                this.time(item.evaluation.value);
         }
 
         /****************************************/
@@ -974,7 +980,7 @@
 
         addSerie(configOrSerie?: IStudioSerieConfig | StudioSerie, updateGraph = true): StudioSerie {
 
-            return this.addChildrenWork(configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie));
+            return this.addChildrenWork(configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie), updateGraph);
         }
 
         /****************************************/
@@ -1202,6 +1208,7 @@
         getSelectedProject(): StudioProject {
             if (!this.items.selectedNode())
                 return;
+
             const value = this.items.selectedNode().value();
 
             if (value.itemType == "project")
@@ -1254,23 +1261,18 @@
                 return;
 
             if (value.graphState) {
-                //console.log(JSON.stringify(value.graphState, null, "  "));
                 value.graphState.expressions.list = [];
                 this._graphCtx.calculator.setState(value.graphState);
             }
-            /*
-            if (value.vars)
-                this._graphCtx.vars = value.vars;*/
 
             if (value.projects != undefined) {
                 this.projects.toArray().forEach(a => a.remove());
                 value.projects.forEach(a => {
-                    const proj = this.addProject()
+                    const proj = this.addProject(null, false);
                     proj.setState(a);
                 });
             }
         }
-
 
         /****************************************/
 
@@ -1280,14 +1282,12 @@
                 this.setState(JSON.parse(json));
         }
 
-
         /****************************************/
 
         saveState() {
             localStorage.setItem("studio", JSON.stringify(this.getState()));
             M.toast({ html: "Studio salvato" });
         }
-
 
         /****************************************/
 
@@ -1329,7 +1329,6 @@
                     }
                 }
             }
-
         }
 
         /****************************************/
