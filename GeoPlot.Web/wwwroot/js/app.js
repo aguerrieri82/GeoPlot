@@ -328,7 +328,7 @@ var WebApp;
         }
         /****************************************/
         IndicatorCalculator.prototype.getFactorValue = function (options) {
-            var e_1, _a;
+            var e_1, _a, e_2, _b;
             var _this = this;
             var areaId = (typeof options.areaOrId == "string" ? options.areaOrId : options.areaOrId.id).toLowerCase();
             var dataAtDay = function (number, curAreaId) {
@@ -352,10 +352,20 @@ var WebApp;
                     if (options.execludedAreas) {
                         var curExMain = [];
                         var curExDelta = [];
-                        for (var exAreaId in options.execludedAreas) {
-                            curExMain.push(dataAtDay(dayNumber, exAreaId.toLowerCase()));
-                            if (options.isDayDelta)
-                                curExDelta.push(dataAtDay(dayNumber - 1, exAreaId.toLowerCase()));
+                        try {
+                            for (var _c = (e_2 = void 0, __values(options.execludedAreas)), _d = _c.next(); !_d.done; _d = _c.next()) {
+                                var exAreaId = _d.value;
+                                curExMain.push(dataAtDay(dayNumber, exAreaId.toLowerCase()));
+                                if (options.isDayDelta)
+                                    curExDelta.push(dataAtDay(dayNumber - 1, exAreaId.toLowerCase()));
+                            }
+                        }
+                        catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                        finally {
+                            try {
+                                if (_d && !_d.done && (_b = _c.return)) _b.call(_c);
+                            }
+                            finally { if (e_2) throw e_2.error; }
                         }
                         exMain.push(curExMain);
                         exDelta.push(curExDelta);
@@ -375,6 +385,7 @@ var WebApp;
         };
         /****************************************/
         IndicatorCalculator.prototype.getIndicatorValue = function (options) {
+            var e_3, _a;
             var _this = this;
             var areaId = (typeof options.areaOrId == "string" ? options.areaOrId : options.areaOrId.id).toLowerCase();
             var indicator = WebApp.linq(this._dataSet.indicators).first(function (a) { return a.id == options.indicatorId; });
@@ -390,10 +401,20 @@ var WebApp;
             if (options.execludedAreas) {
                 exMain = [];
                 exDelta = [];
-                for (var exAreaId in options.execludedAreas) {
-                    exMain.push(dataAtDay(options.dayNumber, exAreaId.toLowerCase()));
-                    if (options.isDayDelta)
-                        exDelta.push(dataAtDay(options.dayNumber - 1, exAreaId.toLowerCase()));
+                try {
+                    for (var _b = __values(options.execludedAreas), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var exAreaId = _c.value;
+                        exMain.push(dataAtDay(options.dayNumber, exAreaId.toLowerCase()));
+                        if (options.isDayDelta)
+                            exDelta.push(dataAtDay(options.dayNumber - 1, exAreaId.toLowerCase()));
+                    }
+                }
+                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_3) throw e_3.error; }
                 }
                 ;
             }
@@ -1150,7 +1171,7 @@ var WebApp;
         };
         /****************************************/
         GeoPlotPage.prototype.loadState = function (state) {
-            var e_2, _a;
+            var e_4, _a;
             if (!state.view)
                 state.view = "region";
             var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
@@ -1179,12 +1200,12 @@ var WebApp;
                         this._execludedArea.set(areaId, this._geo.areas[areaId.toLowerCase()]);
                     }
                 }
-                catch (e_2_1) { e_2 = { error: e_2_1 }; }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_2) throw e_2.error; }
+                    finally { if (e_4) throw e_4.error; }
                 }
             }
             if (state.indicator)
@@ -1547,7 +1568,7 @@ var WebApp;
         };
         /****************************************/
         GeoPlotPage.prototype.updateAreaIndicators = function () {
-            var e_3, _a, e_4, _b;
+            var e_5, _a, e_6, _b;
             var _this = this;
             if (!this.currentArea())
                 return;
@@ -1571,12 +1592,12 @@ var WebApp;
                         _loop_1(indicator);
                     }
                 }
-                catch (e_3_1) { e_3 = { error: e_3_1 }; }
+                catch (e_5_1) { e_5 = { error: e_5_1 }; }
                 finally {
                     try {
                         if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_5) throw e_5.error; }
                 }
                 this.currentArea().indicators(items);
             }
@@ -1587,17 +1608,17 @@ var WebApp;
                     item.value(this.getIndicatorValue(this.dayNumber(), areaId, item.indicator.id));
                 }
             }
-            catch (e_4_1) { e_4 = { error: e_4_1 }; }
+            catch (e_6_1) { e_6 = { error: e_6_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_4) throw e_4.error; }
+                finally { if (e_6) throw e_6.error; }
             }
         };
         /****************************************/
         GeoPlotPage.prototype.updateFactorDescription = function () {
-            var e_5, _a;
+            var e_7, _a;
             var desc = "";
             if (this.isDayDelta())
                 desc = "Nuovi ";
@@ -1616,12 +1637,12 @@ var WebApp;
                         i++;
                     }
                 }
-                catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                catch (e_7_1) { e_7 = { error: e_7_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_5) throw e_5.error; }
+                    finally { if (e_7) throw e_7.error; }
                 }
                 desc += ")";
             }
@@ -1915,26 +1936,26 @@ var WebApp;
             this.vars = {};
         }
         GraphContext.prototype.setExpressions = function (values) {
-            var e_6, _a, e_7, _b, e_8, _c, e_9, _d;
+            var e_8, _a, e_9, _b, e_10, _c, e_11, _d;
             var state = this.calculator.getState();
             var _loop_3 = function (value) {
-                var e_10, _a;
+                var e_12, _a;
                 var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
                 if (!curExp)
                     state.expressions.list.push(value);
                 else {
                     try {
-                        for (var _b = (e_10 = void 0, __values(Object.getOwnPropertyNames(value))), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        for (var _b = (e_12 = void 0, __values(Object.getOwnPropertyNames(value))), _c = _b.next(); !_c.done; _c = _b.next()) {
                             var prop = _c.value;
                             curExp[prop] = value[prop];
                         }
                     }
-                    catch (e_10_1) { e_10 = { error: e_10_1 }; }
+                    catch (e_12_1) { e_12 = { error: e_12_1 }; }
                     finally {
                         try {
                             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
-                        finally { if (e_10) throw e_10.error; }
+                        finally { if (e_12) throw e_12.error; }
                     }
                 }
             };
@@ -1944,12 +1965,12 @@ var WebApp;
                     _loop_3(value);
                 }
             }
-            catch (e_6_1) { e_6 = { error: e_6_1 }; }
+            catch (e_8_1) { e_8 = { error: e_8_1 }; }
             finally {
                 try {
                     if (values_1_1 && !values_1_1.done && (_a = values_1.return)) _a.call(values_1);
                 }
-                finally { if (e_6) throw e_6.error; }
+                finally { if (e_8) throw e_8.error; }
             }
             var groups = WebApp.linq(state.expressions.list).where(function (a) { return a.type != "folder"; }).groupBy(function (a) { return a.folderId ? a.folderId : ""; }).toDictionary(function (a) { return a.key; }, function (a) { return a.values.toArray(); });
             var newList = [];
@@ -1960,26 +1981,26 @@ var WebApp;
                     var items_3 = groups[folder.id];
                     if (items_3)
                         try {
-                            for (var items_1 = (e_8 = void 0, __values(items_3)), items_1_1 = items_1.next(); !items_1_1.done; items_1_1 = items_1.next()) {
+                            for (var items_1 = (e_10 = void 0, __values(items_3)), items_1_1 = items_1.next(); !items_1_1.done; items_1_1 = items_1.next()) {
                                 var item = items_1_1.value;
                                 newList.push(item);
                             }
                         }
-                        catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                        catch (e_10_1) { e_10 = { error: e_10_1 }; }
                         finally {
                             try {
                                 if (items_1_1 && !items_1_1.done && (_c = items_1.return)) _c.call(items_1);
                             }
-                            finally { if (e_8) throw e_8.error; }
+                            finally { if (e_10) throw e_10.error; }
                         }
                 }
             }
-            catch (e_7_1) { e_7 = { error: e_7_1 }; }
+            catch (e_9_1) { e_9 = { error: e_9_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_7) throw e_7.error; }
+                finally { if (e_9) throw e_9.error; }
             }
             var items = groups[""];
             if (items)
@@ -1989,12 +2010,12 @@ var WebApp;
                         newList.push(item);
                     }
                 }
-                catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                catch (e_11_1) { e_11 = { error: e_11_1 }; }
                 finally {
                     try {
                         if (items_2_1 && !items_2_1.done && (_d = items_2.return)) _d.call(items_2);
                     }
-                    finally { if (e_9) throw e_9.error; }
+                    finally { if (e_11) throw e_11.error; }
                 }
             state.expressions.list = newList;
             this.calculator.setState(state);
@@ -2383,7 +2404,7 @@ var WebApp;
         }
         /****************************************/
         StudioSerieRegression.prototype.addFunction = function (value) {
-            var e_11, _a;
+            var e_13, _a;
             var _this = this;
             var model = new RegressionFunctionViewModel();
             model.value = value;
@@ -2422,12 +2443,12 @@ var WebApp;
                     _loop_4(item);
                 }
             }
-            catch (e_11_1) { e_11 = { error: e_11_1 }; }
+            catch (e_13_1) { e_13 = { error: e_13_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_11) throw e_11.error; }
+                finally { if (e_13) throw e_13.error; }
             }
             model.vars(vars);
             this.functions.push(model);
@@ -2439,7 +2460,7 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.updateRegressionVars = function () {
-            var e_12, _a;
+            var e_14, _a;
             var model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
             if (model && model.regressionParameters) {
                 try {
@@ -2454,12 +2475,12 @@ var WebApp;
                         }
                     }
                 }
-                catch (e_12_1) { e_12 = { error: e_12_1 }; }
+                catch (e_14_1) { e_14 = { error: e_14_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_12) throw e_12.error; }
+                    finally { if (e_14) throw e_14.error; }
                 }
             }
         };
@@ -2469,7 +2490,7 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.setStateWork = function (state) {
-            var e_13, _a;
+            var e_15, _a;
             if (state.function) {
                 var func = WebApp.linq(this.functions).first(function (a) { return a.value.type == state.function.type; });
                 if (func) {
@@ -2489,12 +2510,12 @@ var WebApp;
                             _loop_5(item);
                         }
                     }
-                    catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                    catch (e_15_1) { e_15 = { error: e_15_1 }; }
                     finally {
                         try {
                             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
-                        finally { if (e_13) throw e_13.error; }
+                        finally { if (e_15) throw e_15.error; }
                     }
                     this.selectedFunction(func);
                 }
@@ -2504,7 +2525,7 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.getState = function () {
-            var e_14, _a;
+            var e_16, _a;
             var state = _super.prototype.getState.call(this);
             state.function = this.selectedFunction().value;
             state.showIntegration = this.showIntegration();
@@ -2518,12 +2539,12 @@ var WebApp;
                     item.value.autoCompute = item.autoCompute();
                 }
             }
-            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_14) throw e_14.error; }
+                finally { if (e_16) throw e_16.error; }
             }
             return state;
         };
@@ -2533,7 +2554,7 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.getExpressions = function () {
-            var e_15, _a, e_16, _b;
+            var e_17, _a, e_18, _b;
             var values = [];
             values.push({
                 type: "folder",
@@ -2559,12 +2580,12 @@ var WebApp;
                         this._varsMap[item.name] = null;
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_17) throw e_17.error; }
             }
             this._graphCtx.generateVars(this._varsMap);
             values.push({
@@ -2647,12 +2668,12 @@ var WebApp;
                     }
                 }
             }
-            catch (e_16_1) { e_16 = { error: e_16_1 }; }
+            catch (e_18_1) { e_18 = { error: e_18_1 }; }
             finally {
                 try {
                     if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_16) throw e_16.error; }
+                finally { if (e_18) throw e_18.error; }
             }
             return values;
         };
@@ -3007,7 +3028,7 @@ var WebApp;
         };
         /****************************************/
         TreeNodeViewModel.prototype.attach = function (treeView, parent) {
-            var e_17, _a;
+            var e_19, _a;
             this._treeView = treeView;
             this._parentNode = parent;
             try {
@@ -3016,12 +3037,12 @@ var WebApp;
                     childNode.attach(treeView);
                 }
             }
-            catch (e_17_1) { e_17 = { error: e_17_1 }; }
+            catch (e_19_1) { e_19 = { error: e_19_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_17) throw e_17.error; }
+                finally { if (e_19) throw e_19.error; }
             }
         };
         Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
@@ -3259,8 +3280,8 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_18_1;
-                    var e_18, _c;
+                    var _a, _b, node, e_20_1;
+                    var e_20, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -3279,14 +3300,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_18_1 = _d.sent();
-                                e_18 = { error: e_18_1 };
+                                e_20_1 = _d.sent();
+                                e_20 = { error: e_20_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_18) throw e_18.error; }
+                                finally { if (e_20) throw e_20.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }

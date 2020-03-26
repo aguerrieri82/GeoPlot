@@ -149,7 +149,7 @@
                 if (options.execludedAreas) {
                     var curExMain = [];
                     var curExDelta = [];
-                    for (var exAreaId in options.execludedAreas) {
+                    for (var exAreaId of options.execludedAreas) {
                         curExMain.push(dataAtDay(dayNumber, exAreaId.toLowerCase()));
                         if (options.isDayDelta)
                             curExDelta.push(dataAtDay(dayNumber - 1, exAreaId.toLowerCase()));
@@ -188,7 +188,7 @@
             if (options.execludedAreas) {
                 exMain = [];
                 exDelta = [];
-                for (var exAreaId in options.execludedAreas) {
+                for (var exAreaId of options.execludedAreas) {
                     exMain.push(dataAtDay(options.dayNumber, exAreaId.toLowerCase()));
                     if (options.isDayDelta)
                         exDelta.push(dataAtDay(options.dayNumber - 1, exAreaId.toLowerCase()));

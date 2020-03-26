@@ -173,7 +173,7 @@ namespace GeoPlot.Web.Controllers
                 var commit = await HttpGetJson<GitHubCommitResponse>(head.obj.url);
                 return commit.committer.date;
             }
-            catch (Exception ex)
+            catch
             {
                 return DateTime.Now;
             }
