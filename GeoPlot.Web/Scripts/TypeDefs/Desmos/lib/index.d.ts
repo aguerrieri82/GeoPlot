@@ -23,8 +23,6 @@ declare namespace Desmos {
 
     type LabelOrientation = EnumValue;
 
-    type MathBounds = "top" | "bottom" | "left" | "right";
-
     /****************************************/
     /* FUNCTIONS
     /****************************************/
@@ -44,7 +42,7 @@ declare namespace Desmos {
         redo(): void;
         clearHistory(): void;
         resize(): void;
-        setMathBounds(bounds: MathBounds): void;
+        setMathBounds(bounds: IMathBounds): void;
         screenshot(options?: IScreenshotOptions): void;
         asyncScreenshot(options?: IAsyncScreenshotOptions, callback?: (data: string) => void): void;
         observeEvent<K extends keyof IEventHandlerMap>(type: K, handler?: IEventHandlerMap[K]): void;
@@ -55,7 +53,7 @@ declare namespace Desmos {
         expressionAnalysis(): { [id: string]: IExpressionAnalysis };
         getExpressions(): Expression[];
         updateSettings(settings: IGraphingCalculatorOptions): void;
-        graphpaperBounds(): IGraphBounds;
+        readonly graphpaperBounds: IGraphBounds;
         mathToPixels(point: IPoint): IPoint;
         pixelsToMath(point: IPoint): IPoint;
         readonly settings: IObservable<IGraphingCalculatorOptions>;
@@ -71,10 +69,15 @@ declare namespace Desmos {
     };
 
 
+    interface IModel {
+        regressionParameters: { [name: string]: number };
+    }
+
 
     interface IGraphingController {
         _setItemHidden(id: string, isHidden: boolean);
         dispatch(event: DispatchEvent);
+        getItemModel(id: string): IModel;
     }
 
     interface IGraphingCalculator {
@@ -212,13 +215,16 @@ declare namespace Desmos {
         y: number;
     }
 
-    interface IRect {
-        top: number;
-        bottom: number;
-        left: number;
-        right: number;
-        width: number;
-        height: number;
+    interface IMathBounds {
+        top?: number;
+        bottom?: number;
+        left?: number;
+        right?: number;
+    }
+
+    interface IRect extends IMathBounds {
+        width?: number;
+        height?: number;
     }
 
     interface IExpressionAnalysis {
@@ -299,7 +305,7 @@ declare namespace Desmos {
 
     interface IAsyncScreenshotOptions extends IScreenshotOptions {
         mode?: "contain" | "stretch" | "preserveX" | "preserveY";
-        mathBounds?: MathBounds;
+        mathBounds?: IMathBounds;
         showLabels?: boolean;
     }
 

@@ -14,9 +14,7 @@
             <section class="panel series scroll">
                 <header>
                     <h6>Progetti</h6>
-                    <div class="actions">
-                        <a href="#!" title="Nuovo progetto" data-bind="click: newProject"><i class="material-icons">create_new_folder</i></a>
-                        <a href="#!" title="Salva" data-bind="click: saveState"><i class="material-icons">save</i></a>
+                    <div class="actions" data-bind="template: {foreach: items.root().actions(), name: 'ActionTemplate'}">
                     </div>
                 </header>
                 <div class="content">
@@ -30,10 +28,7 @@
             <section class="panel options scroll-v">
                 <header>
                     <h6>Opzioni</h6>
-                    <div class="actions" data-bind="foreach: items.selectedNode().value().actions">
-                        <a href="#!" data-bind="attr:{title: text}, click: execute">
-                            <i class="material-icons" data-bind="text: icon"></i>
-                        </a>
+                    <div class="actions" data-bind="template: { foreach: items.selectedNode().actions(), name: 'ActionTemplate'}">
                     </div>
                 </header>
                 <div class="content" data-bind="with: items.selectedNode().value()">
@@ -41,6 +36,15 @@
                         <label class="active">Nome</label>
                         <input type="text" data-bind="value: name" />
                     </div>
+                    <!--ko foreach: parameters -->
+                    <div class="paramter">
+                        <div>
+                            <span class="name" data-bind="text: name"></span>
+                            <span class="value" data-bind="text: value"></span>
+                        </div>
+                        <input type="range" data-bind="value: value, attr: {max: max, min:min, step: step}, valueUpdate: 'input'" />
+                    </div>
+                    <!--/ko-->
                     <!--ko template: {name: optionsTemplateName} -->
                     <!--/ko-->
                 </div>
@@ -52,6 +56,37 @@
         </section>
     </div>
 </div>
+
+<div id="options" class="modal">
+    <div class="modal-content">
+        <h4>Opzioni</h4>
+        <div class="row">
+            <div class="section">
+                <div class="col m6">
+                    <div class="input-field">
+                        <input type="number" data-bind="value: maxX" />
+                        <label class="active">Giorni (x)</label>
+                    </div>
+                </div>
+                <div class="col m6">
+                    <div class="input-field">
+                        <input type="number" data-bind="value: maxY" />
+                        <label class="active">Valore massimo (y)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat">OK</a>
+    </div>
+</div>
+
+<script type="text/html" id="ActionTemplate">
+    <a href="#!" data-bind="attr: {title: text}, click: execute">
+        <i class="material-icons" data-bind="text: icon"></i>
+    </a>
+</script>
 
 <script type="text/html" id="ProjectOptionsTemplate">
 
@@ -70,6 +105,19 @@
 
 
 <script type="text/html" id="RegressionOptionsTemplate">
+    <!--ko foreach: selectedFunction().vars -->
+    <div class="function-var">
+        <div>
+            <label> 
+                <input class="filled-in" type="checkbox" data-bind="checked: autoCompute" />
+                <span class="name" data-bind="text: value.label + ' (' + value.name + '): '"></span>
+                <span class="value" data-bind="text: curValue"></span>
+            </label>
+        </div>
+        <input type="range" data-bind="value: curValue, visible: !autoCompute(), attr: {max: value.maxValue, min: value.minValue, step: value.step}, valueUpdate: 'input'" />
+    </div>
+    <!--/ko-->
+
 </script>
 
 
@@ -79,11 +127,6 @@
             <a class="expand-collapse" href="#!" data-bind="click: expandCollapse"><i class="material-icons">arrow_drop_down</i></a>
             <a class="visibility" href="#!" data-bind="click: toggleVisible"><i class="material-icons" data-bind="text: value().icon, style: {color: value()['color'] && value().color() && isVisible() ? value().color() : 'unset'}"></i></a>
             <a href="#!" data-bind="click: toggleSelection"><span class="label" data-bind="text: value().name"></span></a>
-            <div class="actions" data-bind="foreach: actions">
-                <a href="#!" data-bind="attr:{title: text}, click: execute">
-                    <i class="material-icons" data-bind="text: icon"></i>
-                </a>
-            </div>
         </header>
         <!--ko if: nodes().length > 0-->
         <ul class="child-nodes" data-bind="template: {foreach: nodes, name: 'TreeItemTemplate'}">

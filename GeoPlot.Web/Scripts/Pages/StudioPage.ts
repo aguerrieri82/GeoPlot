@@ -4,6 +4,39 @@
 
     type GraphVarMap = IDictionary<string>;
 
+
+    function toSafeString(value: any): string {
+        if (value == null || value == undefined)
+            return undefined;
+        return value.toString();
+    }
+
+    /****************************************/
+    /* ParameterViewModel
+    /****************************************/
+
+    interface IParameterConfig {
+        value: KnockoutObservable<number>;
+        name: string;
+    }
+
+    /****************************************/
+
+    class ParameterViewModel {
+
+        constructor(config: IParameterConfig) {
+            this.value = config.value;   
+            this.name = config.name;
+        }
+
+        name: string;
+        min = ko.observable<number>();
+        max = ko.observable<number>();
+        step = ko.observable<number>();
+        isSelected = ko.observable<boolean>(true);
+        value: KnockoutObservable<number>;
+    }
+
     /****************************************/
     /* Regression
     /****************************************/
@@ -12,17 +45,15 @@
 
         setExpressions(values: Desmos.Expression[]) {
 
-            let state = this.calculator.getState();
+            const state = this.calculator.getState();
 
-            for (var value of values) {
-                /*
-                if (value.type != "folder")
-                    continue;*/
+            for (let value of values) {
+
                 const curExp = <Desmos.IFolderExpression>linq(state.expressions.list).first(a => a.id == value.id);
                 if (!curExp)
                     state.expressions.list.push(value);
                 else {
-                    for (var prop of Object.getOwnPropertyNames(value))
+                    for (let prop of Object.getOwnPropertyNames(value))
                         curExp[prop] = value[prop];
                 }
             }
@@ -33,13 +64,13 @@
 
             for (let folder of linq(state.expressions.list).where(a => a.type == "folder")) {
                 newList.push(folder);
-                let items = groups[folder.id];
+                const items = groups[folder.id];
                 if (items)
                     for (let item of items)
                         newList.push(item);
             }
 
-            let items = groups[""];
+            const items = groups[""];
             if (items)
                 for (let item of items)
                     newList.push(item);
@@ -47,12 +78,6 @@
             state.expressions.list = newList;
 
             this.calculator.setState(state);
-            /*
-            for (var value of values) {
-                if (value.type == "folder")
-                    continue;
-                this.calculator.setExpression(value);
-            }*/
         }
 
         /****************************************/
@@ -64,7 +89,7 @@
         /****************************************/
 
         updateTable(id: string, values: IFunctionPoint<number>[]) {
-            let exp = <Desmos.ITableExpression>linq(this.calculator.getExpressions()).where(a => a.id == id).first();
+            const exp = <Desmos.ITableExpression>linq(this.calculator.getExpressions()).where(a => a.id == id).first();
             if (exp) {
                 exp.columns[0].values = linq(values).select(a => a.x.toString()).toArray();
                 exp.columns[1].values = linq(values).select(a => a.y.toString()).toArray();
@@ -75,9 +100,9 @@
         /****************************************/
 
         updateExpression(value: Desmos.Expression) {
-            let exp = <Desmos.IMathExpression>linq(this.calculator.getExpressions()).where(a => a.id == value.id).first();
+            const exp = <Desmos.IMathExpression>linq(this.calculator.getExpressions()).where(a => a.id == value.id).first();
             if (exp) {
-                for (var prop of Object.getOwnPropertyNames(value))
+                for (let prop of Object.getOwnPropertyNames(value))
                     exp[prop] = value[prop];
                 this.calculator.setExpression(exp);
             }
@@ -106,7 +131,7 @@
 
         generateVars(map: GraphVarMap) {
 
-            for (var key in map) {
+            for (let key in map) {
                 if (!map[key])
                     map[key] = this.generateVar(key);
             }
@@ -164,12 +189,16 @@
         protected _varsMap: IDictionary<string>;
 
         constructor() {
+        }
 
-            this.actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Remove";
+        /****************************************/
+
+        protected createActions(result: ActionViewModel[]) {
+            result.push(apply(new ActionViewModel(), action => {
+                action.text = "Elimina";
                 action.icon = "delete";
                 action.execute = () => this.remove();
-            }));
+            }))
         }
 
         /****************************************/
@@ -240,6 +269,9 @@
                 if (value)
                     this.onSelected();
             })
+            const actions: ActionViewModel[] = [];
+            this.createActions(actions);
+            this.node.actions(actions);
         }
 
         /****************************************/
@@ -291,6 +323,8 @@
 
             this.updateGraphVisibility();
 
+            this.updateParameters();
+
             if (recursive)
                 this.children.foreach(a => a.updateGraph(recursive));
         }
@@ -317,7 +351,7 @@
 
         protected replaceVars(value: string): string {
             for (let item in this._varsMap) {
-                var reg = new RegExp("\\$" + item, "g");
+                const reg = new RegExp("\\$" + item, "g");
                 value = value.replace(reg, this._varsMap[item]);
             }
             return value;
@@ -345,6 +379,22 @@
                 value.updateGraph();
 
             return value;
+        }
+
+        /****************************************/
+
+        protected createParameters(result: ParameterViewModel[]) : boolean{
+            return false;
+        }
+
+        /****************************************/
+
+        protected updateParameters() {
+            const values: ParameterViewModel[] = [];
+            if (this.createParameters(values)) {
+                this.parameters.removeAll();
+                values.forEach(a => this.parameters.push(a));
+            }
         }
 
         /****************************************/
@@ -387,7 +437,7 @@
         itemType: string;
         icon: string;
         optionsTemplateName: string;
-        readonly actions: ActionViewModel[] = [];
+        parameters = ko.observableArray<ParameterViewModel>();
     }
 
     /****************************************/
@@ -413,6 +463,7 @@
         autoCompute: boolean;
         minValue?: number;
         maxValue?: number;
+        precision?: number;
         step?: number;
         value?: number;
     }
@@ -445,6 +496,8 @@
     class RegressionFunctionVarViewModel {
 
         value: IRegressionFunctionVar;
+        curValue = ko.observable<number>();
+        autoCompute = ko.observable<boolean>();
     }
 
     /****************************************/
@@ -481,28 +534,35 @@
                 vars: [{
                     name: "a",
                     label: "Scostamento",
-                    autoCompute: true
+                    autoCompute: true,
+                    precision: 0
                 },
                 {
                     name: "c",
                     label: "Totale",
-                    autoCompute: true
+                    autoCompute: true,
+                    minValue: 0,
+                    maxValue: 30000,
+                    precision: 0
                 },
                 {
                     name: "o",
                     label: "Incremento",
-                    autoCompute: true
+                    autoCompute: true,
+                    precision: 5
                 },
                 {
                     name: "u",
                     label: "Picco",
-                    autoCompute: true
+                    autoCompute: true,
+                    precision: 5
                 }]
             });
 
             this.selectedFunction.subscribe(a => {
                 if (!this.name() && a)
                     return this.name(a.value.name);
+
             });
 
             this.selectedFunction(this.functions[0]);
@@ -514,13 +574,63 @@
         /****************************************/
 
         protected addFunction(value: IRegressionFunction): RegressionFunctionViewModel {
-            var model = new RegressionFunctionViewModel();
+            const model = new RegressionFunctionViewModel();
             model.value = value;
             model.select = () => {
 
             };
+
+            const vars: RegressionFunctionVarViewModel[] = [];
+            for (let item of value.vars) {
+                const vModel = new RegressionFunctionVarViewModel();
+                vModel.value = item;
+                
+                vModel.curValue(item.value);
+                vModel.autoCompute(item.autoCompute);
+
+                vModel.autoCompute.subscribe(a => this.updateGraph());
+                vModel.curValue.subscribe(value => {
+                    if (!vModel.autoCompute()) {
+                        this._graphCtx.updateVariable(this.getGraphId(item.name + "-value"), this.getVar(item.name), value);
+                    }
+                });
+
+                vars.push(vModel);
+            }
+
+            model.vars(vars);
+
             this.functions.push(model);
             return model;
+        }
+
+        /****************************************/
+
+        protected onGraphChanged() {
+            this.updateRegressionVars();
+        }
+
+        /****************************************/
+
+        protected updateRegressionVars() {
+            let model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
+            if (model.regressionParameters) {
+                for (let item of this.selectedFunction().vars()) {
+                    const varName = this.getVar(item.value.name).replace("{", "").replace("}", "");
+                    let value = model.regressionParameters[varName];
+                    if (value != undefined) {
+                        if (item.value.precision != undefined)
+                            value = MathUtils.round(value, item.value.precision);
+                        item.curValue(value);
+                    }
+                }
+            }
+        }
+
+        /****************************************/
+
+        protected createParameters(result: ParameterViewModel[]): boolean {
+            return false;
         }
 
         /****************************************/
@@ -531,20 +641,28 @@
 
         /****************************************/
 
+        protected updateGraphWork() {
+            this.updateRegressionVars();
+        }
+
+        /****************************************/
+
         protected getExpressions(): Desmos.Expression[] {
 
-            let values: Desmos.Expression[] = [];
+            const values: Desmos.Expression[] = [];
 
             values.push({
                 type: "folder",
                 id: this.getGraphId("public"),
                 title: this.parent.name() + " - " + this.name(),
+                collapsed: true
             });
             values.push({
                 type: "folder",
                 id: this.getGraphId("private"),
                 secret: true,
                 title: this.parent.name() + " - " + this.name(),
+                collapsed: true
             });
 
             const func = this.selectedFunction().value;
@@ -553,7 +671,7 @@
             this._varsMap["y"] = this.parent.getVar("y");
             this._varsMap["time"] = this.parent.parent.getVar("time");
 
-            for (var item of func.vars) {
+            for (let item of func.vars) {
                 if (!this._varsMap[item.name])
                     this._varsMap[item.name] = null;
             }
@@ -622,6 +740,28 @@
                 showLabel: true
             });
 
+            for (let item of this.selectedFunction().vars()) {
+                if (item.autoCompute())
+                    this._graphCtx.calculator.removeExpression({ id: this.getGraphId(item.value.name + "-value") });
+                else {
+                    values.push({
+                        type: "expression",
+                        id: this.getGraphId(item.value.name + "-value"),
+                        latex: this.getVar(item.value.name) + "=" + (item.curValue() ? item.curValue().toString() : "0"),
+                        folderId: this.getGraphId("public"),
+                        label: item.value.name,
+                        slider: {
+                            min: toSafeString(item.value.minValue),
+                            max: toSafeString(item.value.maxValue),
+                            hardMax: true,
+                            hardMin: true,
+                            step: toSafeString(item.value.step)
+                        }
+                    });
+                }
+            }
+    
+
             return values;
         }
 
@@ -680,19 +820,35 @@
             if (config) {
                 this.setState(config);
             }
+        }
 
-            this.actions.push(apply(new ActionViewModel(), action => {
+        /****************************************/
+
+        protected createActions(result: ActionViewModel[]) {
+
+            super.createActions(result);
+
+            result.push(apply(new ActionViewModel(), action => {
                 action.text = "Aggiorna";
                 action.icon = "autorenew";
                 action.execute = () => this.updateSerie();
             }));
-            this.actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Regressione";
+
+            result.push(apply(new ActionViewModel(), action => {
+                action.text = "Nuova regressione";
                 action.icon = "add_box";
                 action.execute = () => {
-                    let reg = this.addRegression();
+                    const reg = this.addRegression();
                     this.node.isExpanded(true);
                     reg.node.isSelected(true);
+                }
+            }));
+
+            result.push(apply(new ActionViewModel(), action => {
+                action.text = "Zoom";
+                action.icon = "zoom_in";
+                action.execute = () => {
+                    this.zoom();
                 }
 
             }));
@@ -702,7 +858,7 @@
 
         static fromText(text: string): StudioSerie {
             try {
-                let obj = <IStudioData>JSON.parse(text);
+                const obj = <IStudioData>JSON.parse(text);
                 if (obj && obj.type == "serie")
                     return new StudioSerie({
                         name: obj.title,
@@ -728,11 +884,13 @@
                     type: "folder",
                     id: this.getGraphId("public"),
                     title: this.parent.name() + " - " + this.name(),
+                    collapsed: true
                 }, {
                     type: "folder",
                     id: this.getGraphId("private"),
                     title: this.parent.name() + " - " + this.name(),
-                    secret: true
+                    secret: true,
+                    collapsed: true
                 }, {
                     type: "expression",
                     id: this.getGraphId("offset"),
@@ -783,6 +941,17 @@
 
         /****************************************/
 
+        protected createParameters(result: ParameterViewModel[]): boolean {
+            result.push(apply(new ParameterViewModel({ value: this.offsetX, name: "Transla" }), p => {
+                p.max(this.values.length);
+                p.min(-this.values.length);
+                p.step(1);
+            }));
+            return true;
+        }
+
+        /****************************************/
+
         protected updateGraphWork() {
             this._graphCtx.updateTable(this.getGraphId("table"), this.values);
         }
@@ -790,8 +959,8 @@
         /****************************************/
 
         protected onGraphChanged() {
-            let item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
-            if (item)
+            const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+            if (item && item.evaluation)
                 this.offsetX(item.evaluation.value);
         }
 
@@ -806,6 +975,15 @@
         protected updateColor() {
             this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
         }     
+
+        /****************************************/
+
+        attachGraph(ctx: GraphContext) {
+            super.attachGraph(ctx);
+
+            this.offsetX.subscribe(value =>
+                this._graphCtx.updateVariable(this.getGraphId("offset"), this._varsMap["ofs"], value));
+        }
 
         /****************************************/
 
@@ -862,6 +1040,22 @@
 
         /****************************************/
 
+        zoom() {
+            const minX = linq(this.values).min(a => a.x);
+            const minY = linq(this.values).min(a => a.y);
+            const maxX = linq(this.values).max(a => a.x);
+            const maxY = linq(this.values).max(a => a.y);
+
+            this._graphCtx.calculator.setMathBounds({
+                top: maxY + (maxY - minY) * 0.1,
+                right: maxX + (maxX - minX) * 0.1,
+                bottom: minY - (maxY - minY) * 0.1,
+                left: minX - (maxX - minX) * 0.1,
+            });
+        }
+
+        /****************************************/
+
         color = ko.observable<string>();
         offsetX = ko.observable<number>(0);
         source: ISerieSource;
@@ -911,6 +1105,7 @@
                     type: "folder",
                     id: this.getGraphId("public"),
                     title: this.name(),
+                    collapsed: true
                 }, {
                     type: "expression",
                     folderId: this.getGraphId("public"),
@@ -927,6 +1122,17 @@
             ];
 
             return values;
+        }
+
+        /****************************************/
+
+        protected createParameters(result: ParameterViewModel[]): boolean {
+            result.push(apply(new ParameterViewModel({ value: this.time, name: "Giorno" }), p => {
+                p.max(100);
+                p.min(0);
+                p.step(1);
+            }));
+            return true;
         }
 
         /****************************************/
@@ -962,7 +1168,7 @@
         /****************************************/
 
         protected onGraphChanged() {
-            let item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
+            const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
             if (item)
                 this.time(item.evaluation.value);
         }
@@ -1093,7 +1299,7 @@
         isSelected = ko.observable(false);
         isVisible = ko.observable(true);
         isExpanded = ko.observable(false);
-        actions = ko.observableArray<ActionViewModel>();
+        actions = ko.observable<ActionViewModel[]>();
     }
 
     /****************************************/
@@ -1170,6 +1376,7 @@
                 //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                 pasteGraphLink: false,
                 pasteTableData: false,
+                expressionsCollapsed: true,
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
@@ -1178,19 +1385,65 @@
                 advancedStyling: true
             });
 
-            this.items.setRoot(new TreeNodeViewModel());
+            const actions: ActionViewModel[] = [];
+            actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Nuovo progetto";
+                action.icon = "create_new_folder";
+                action.execute = () => this.newProject();
+            }));
+            actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Salva";
+                action.icon = "save";
+                action.execute = () => this.saveState();
+            }));
+            actions.push(apply(new ActionViewModel(), action => {
+                action.text = "Opzioni";
+                action.icon = "settings";
+                action.execute = () => this.showOptions();
+            }));
 
-            //window.addEventListener("beforeunload", () => this.saveState());
+            const root = new TreeNodeViewModel<any>();
+            root.actions(actions);
+            this.items.setRoot(root);
 
             document.body.addEventListener("paste", ev => {
                 ev.preventDefault();
                 this.onPaste(ev.clipboardData);
             });
+
             document.body.addEventListener("keydown", ev => {
                 this.onKeyDown(ev);
             });
 
+            M.Modal.init(document.getElementById("options"), {
+                onCloseEnd: ()=> this.updateOptions()
+            });
+            
+
             setTimeout(() => this.init());
+        }
+
+        /****************************************/
+
+        protected updateOptions() {
+            const maxX = parseInt(<any>this.maxX());
+            const maxY = parseInt(<any>this.maxY());
+            this._graphCtx.calculator.setMathBounds({
+                bottom: -maxY / 10,
+                left: -maxX / 10,
+                right: maxX,
+                top: maxY
+            });
+        }
+
+        /****************************************/
+
+        showOptions() {
+            const bounds = this._graphCtx.calculator.graphpaperBounds;
+            this.maxX(Math.round(bounds.mathCoordinates.width));
+            this.maxY(Math.round(bounds.mathCoordinates.height));
+            const dialog = M.Modal.getInstance(document.getElementById("options"));
+            dialog.open();
         }
 
         /****************************************/
@@ -1224,7 +1477,7 @@
         /****************************************/
 
         newProject(): StudioProject {
-            let proj = this.addProject({ name: "Project " + (this.projects.count() + 1) });
+            const proj = this.addProject({ name: "Project " + (this.projects.count() + 1) });
             proj.node.isSelected(true);
             return proj;
         }
@@ -1246,7 +1499,7 @@
 
         getState(): IPageState {
 
-            let result: IPageState = { version: 2 };
+            const result: IPageState = { version: 2 };
             result.graphState = this._graphCtx.calculator.getState();
             result.vars = this._graphCtx.vars;
             result.projects = this.projects.select(a => a.getState()).toArray();
@@ -1277,7 +1530,7 @@
         /****************************************/
 
         loadState() {
-            let json = localStorage.getItem("studio");
+            const json = localStorage.getItem("studio");
             if (json)
                 this.setState(JSON.parse(json));
         }
@@ -1319,9 +1572,9 @@
                 project = this.newProject();
 
             if (project) {
-                let text = data.getData("text/plain").toString();
+                const text = data.getData("text/plain").toString();
                 if (text) {
-                    let serie = StudioSerie.fromText(text);
+                    const serie = StudioSerie.fromText(text);
                     if (serie) {
                         project.addSerie(serie);
                         project.node.isExpanded(true);
@@ -1336,7 +1589,7 @@
         get projects(): Linq<StudioProject> {
 
             function* items(this: StudioPage) {
-                for (var node of this.items.root().nodes())
+                for (let node of this.items.root().nodes())
                     yield (<StudioProject>node.value());
             }
 
@@ -1353,6 +1606,10 @@
         /****************************************/
 
         items = new TreeViewModel<ITreeItem>();
+
+        maxX = ko.observable<number>();
+
+        maxY = ko.observable<number>();
     }
 }
 

@@ -1890,6 +1890,23 @@ var WebApp;
 })(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
+    function toSafeString(value) {
+        if (value == null || value == undefined)
+            return undefined;
+        return value.toString();
+    }
+    /****************************************/
+    var ParameterViewModel = /** @class */ (function () {
+        function ParameterViewModel(config) {
+            this.min = ko.observable();
+            this.max = ko.observable();
+            this.step = ko.observable();
+            this.isSelected = ko.observable(true);
+            this.value = config.value;
+            this.name = config.name;
+        }
+        return ParameterViewModel;
+    }());
     /****************************************/
     /* Regression
     /****************************************/
@@ -1898,32 +1915,33 @@ var WebApp;
             this.vars = {};
         }
         GraphContext.prototype.setExpressions = function (values) {
-            var e_6, _a, e_7, _b, e_8, _c, e_9, _d, e_10, _e;
+            var e_6, _a, e_7, _b, e_8, _c, e_9, _d;
             var state = this.calculator.getState();
+            var _loop_3 = function (value) {
+                var e_10, _a;
+                var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
+                if (!curExp)
+                    state.expressions.list.push(value);
+                else {
+                    try {
+                        for (var _b = (e_10 = void 0, __values(Object.getOwnPropertyNames(value))), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var prop = _c.value;
+                            curExp[prop] = value[prop];
+                        }
+                    }
+                    catch (e_10_1) { e_10 = { error: e_10_1 }; }
+                    finally {
+                        try {
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                        }
+                        finally { if (e_10) throw e_10.error; }
+                    }
+                }
+            };
             try {
                 for (var values_1 = __values(values), values_1_1 = values_1.next(); !values_1_1.done; values_1_1 = values_1.next()) {
                     var value = values_1_1.value;
-                    /*
-                    if (value.type != "folder")
-                        continue;*/
-                    var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
-                    if (!curExp)
-                        state.expressions.list.push(value);
-                    else {
-                        try {
-                            for (var _f = (e_7 = void 0, __values(Object.getOwnPropertyNames(value))), _g = _f.next(); !_g.done; _g = _f.next()) {
-                                var prop = _g.value;
-                                curExp[prop] = value[prop];
-                            }
-                        }
-                        catch (e_7_1) { e_7 = { error: e_7_1 }; }
-                        finally {
-                            try {
-                                if (_g && !_g.done && (_b = _f.return)) _b.call(_f);
-                            }
-                            finally { if (e_7) throw e_7.error; }
-                        }
-                    }
+                    _loop_3(value);
                 }
             }
             catch (e_6_1) { e_6 = { error: e_6_1 }; }
@@ -1936,32 +1954,32 @@ var WebApp;
             var groups = WebApp.linq(state.expressions.list).where(function (a) { return a.type != "folder"; }).groupBy(function (a) { return a.folderId ? a.folderId : ""; }).toDictionary(function (a) { return a.key; }, function (a) { return a.values.toArray(); });
             var newList = [];
             try {
-                for (var _h = __values(WebApp.linq(state.expressions.list).where(function (a) { return a.type == "folder"; })), _j = _h.next(); !_j.done; _j = _h.next()) {
-                    var folder = _j.value;
+                for (var _e = __values(WebApp.linq(state.expressions.list).where(function (a) { return a.type == "folder"; })), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var folder = _f.value;
                     newList.push(folder);
                     var items_3 = groups[folder.id];
                     if (items_3)
                         try {
-                            for (var items_1 = (e_9 = void 0, __values(items_3)), items_1_1 = items_1.next(); !items_1_1.done; items_1_1 = items_1.next()) {
+                            for (var items_1 = (e_8 = void 0, __values(items_3)), items_1_1 = items_1.next(); !items_1_1.done; items_1_1 = items_1.next()) {
                                 var item = items_1_1.value;
                                 newList.push(item);
                             }
                         }
-                        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                        catch (e_8_1) { e_8 = { error: e_8_1 }; }
                         finally {
                             try {
-                                if (items_1_1 && !items_1_1.done && (_d = items_1.return)) _d.call(items_1);
+                                if (items_1_1 && !items_1_1.done && (_c = items_1.return)) _c.call(items_1);
                             }
-                            finally { if (e_9) throw e_9.error; }
+                            finally { if (e_8) throw e_8.error; }
                         }
                 }
             }
-            catch (e_8_1) { e_8 = { error: e_8_1 }; }
+            catch (e_7_1) { e_7 = { error: e_7_1 }; }
             finally {
                 try {
-                    if (_j && !_j.done && (_c = _h.return)) _c.call(_h);
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                 }
-                finally { if (e_8) throw e_8.error; }
+                finally { if (e_7) throw e_7.error; }
             }
             var items = groups[""];
             if (items)
@@ -1971,21 +1989,15 @@ var WebApp;
                         newList.push(item);
                     }
                 }
-                catch (e_10_1) { e_10 = { error: e_10_1 }; }
+                catch (e_9_1) { e_9 = { error: e_9_1 }; }
                 finally {
                     try {
-                        if (items_2_1 && !items_2_1.done && (_e = items_2.return)) _e.call(items_2);
+                        if (items_2_1 && !items_2_1.done && (_d = items_2.return)) _d.call(items_2);
                     }
-                    finally { if (e_10) throw e_10.error; }
+                    finally { if (e_9) throw e_9.error; }
                 }
             state.expressions.list = newList;
             this.calculator.setState(state);
-            /*
-            for (var value of values) {
-                if (value.type == "folder")
-                    continue;
-                this.calculator.setExpression(value);
-            }*/
         };
         /****************************************/
         GraphContext.prototype.setColor = function (id, color) {
@@ -2054,17 +2066,20 @@ var WebApp;
     /****************************************/
     var BaseItem = /** @class */ (function () {
         function BaseItem() {
-            var _this = this;
             this.name = ko.observable();
             this.time = ko.observable(0);
             this.color = ko.observable();
-            this.actions = [];
-            this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                action.text = "Remove";
+            this.parameters = ko.observableArray();
+        }
+        /****************************************/
+        BaseItem.prototype.createActions = function (result) {
+            var _this = this;
+            result.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Elimina";
                 action.icon = "delete";
                 action.execute = function () { return _this.remove(); };
             }));
-        }
+        };
         /****************************************/
         BaseItem.prototype.setState = function (state) {
             if (state.name)
@@ -2115,6 +2130,9 @@ var WebApp;
                 if (value)
                     _this.onSelected();
             });
+            var actions = [];
+            this.createActions(actions);
+            this.node.actions(actions);
         };
         /****************************************/
         BaseItem.prototype.attachGraph = function (ctx) {
@@ -2151,6 +2169,7 @@ var WebApp;
             this._graphCtx.setExpressions(values);
             this.updateGraphWork();
             this.updateGraphVisibility();
+            this.updateParameters();
             if (recursive)
                 this.children.foreach(function (a) { return a.updateGraph(recursive); });
         };
@@ -2194,6 +2213,19 @@ var WebApp;
             return value;
         };
         /****************************************/
+        BaseItem.prototype.createParameters = function (result) {
+            return false;
+        };
+        /****************************************/
+        BaseItem.prototype.updateParameters = function () {
+            var _this = this;
+            var values = [];
+            if (this.createParameters(values)) {
+                this.parameters.removeAll();
+                values.forEach(function (a) { return _this.parameters.push(a); });
+            }
+        };
+        /****************************************/
         BaseItem.prototype.updateGraphWork = function () {
         };
         /****************************************/
@@ -2222,6 +2254,8 @@ var WebApp;
     /****************************************/
     var RegressionFunctionVarViewModel = /** @class */ (function () {
         function RegressionFunctionVarViewModel() {
+            this.curValue = ko.observable();
+            this.autoCompute = ko.observable();
         }
         return RegressionFunctionVarViewModel;
     }());
@@ -2252,22 +2286,28 @@ var WebApp;
                 vars: [{
                         name: "a",
                         label: "Scostamento",
-                        autoCompute: true
+                        autoCompute: true,
+                        precision: 0
                     },
                     {
                         name: "c",
                         label: "Totale",
-                        autoCompute: true
+                        autoCompute: true,
+                        minValue: 0,
+                        maxValue: 30000,
+                        precision: 0
                     },
                     {
                         name: "o",
                         label: "Incremento",
-                        autoCompute: true
+                        autoCompute: true,
+                        precision: 5
                     },
                     {
                         name: "u",
                         label: "Picco",
-                        autoCompute: true
+                        autoCompute: true,
+                        precision: 5
                     }]
             });
             _this.selectedFunction.subscribe(function (a) {
@@ -2281,40 +2321,30 @@ var WebApp;
         }
         /****************************************/
         StudioSerieRegression.prototype.addFunction = function (value) {
+            var e_12, _a;
+            var _this = this;
             var model = new RegressionFunctionViewModel();
             model.value = value;
             model.select = function () {
             };
-            this.functions.push(model);
-            return model;
-        };
-        /****************************************/
-        StudioSerieRegression.prototype.setStateWork = function (state) {
-        };
-        /****************************************/
-        StudioSerieRegression.prototype.getExpressions = function () {
-            var e_12, _a;
-            var values = [];
-            values.push({
-                type: "folder",
-                id: this.getGraphId("public"),
-                title: this.parent.name() + " - " + this.name(),
-            });
-            values.push({
-                type: "folder",
-                id: this.getGraphId("private"),
-                secret: true,
-                title: this.parent.name() + " - " + this.name(),
-            });
-            var func = this.selectedFunction().value;
-            this._varsMap["x"] = this.parent.getVar("xofs");
-            this._varsMap["y"] = this.parent.getVar("y");
-            this._varsMap["time"] = this.parent.parent.getVar("time");
+            var vars = [];
+            var _loop_4 = function (item) {
+                var vModel = new RegressionFunctionVarViewModel();
+                vModel.value = item;
+                vModel.curValue(item.value);
+                vModel.autoCompute(item.autoCompute);
+                vModel.autoCompute.subscribe(function (a) { return _this.updateGraph(); });
+                vModel.curValue.subscribe(function (value) {
+                    if (!vModel.autoCompute()) {
+                        _this._graphCtx.updateVariable(_this.getGraphId(item.name + "-value"), _this.getVar(item.name), value);
+                    }
+                });
+                vars.push(vModel);
+            };
             try {
-                for (var _b = __values(func.vars), _c = _b.next(); !_c.done; _c = _b.next()) {
+                for (var _b = __values(value.vars), _c = _b.next(); !_c.done; _c = _b.next()) {
                     var item = _c.value;
-                    if (!this._varsMap[item.name])
-                        this._varsMap[item.name] = null;
+                    _loop_4(item);
                 }
             }
             catch (e_12_1) { e_12 = { error: e_12_1 }; }
@@ -2323,6 +2353,86 @@ var WebApp;
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
                 finally { if (e_12) throw e_12.error; }
+            }
+            model.vars(vars);
+            this.functions.push(model);
+            return model;
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.onGraphChanged = function () {
+            this.updateRegressionVars();
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.updateRegressionVars = function () {
+            var e_13, _a;
+            var model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
+            if (model.regressionParameters) {
+                try {
+                    for (var _b = __values(this.selectedFunction().vars()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var item = _c.value;
+                        var varName = this.getVar(item.value.name).replace("{", "").replace("}", "");
+                        var value = model.regressionParameters[varName];
+                        if (value != undefined) {
+                            if (item.value.precision != undefined)
+                                value = WebApp.MathUtils.round(value, item.value.precision);
+                            item.curValue(value);
+                        }
+                    }
+                }
+                catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_13) throw e_13.error; }
+                }
+            }
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.createParameters = function (result) {
+            return false;
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.setStateWork = function (state) {
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.updateGraphWork = function () {
+            this.updateRegressionVars();
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.getExpressions = function () {
+            var e_14, _a, e_15, _b;
+            var values = [];
+            values.push({
+                type: "folder",
+                id: this.getGraphId("public"),
+                title: this.parent.name() + " - " + this.name(),
+                collapsed: true
+            });
+            values.push({
+                type: "folder",
+                id: this.getGraphId("private"),
+                secret: true,
+                title: this.parent.name() + " - " + this.name(),
+                collapsed: true
+            });
+            var func = this.selectedFunction().value;
+            this._varsMap["x"] = this.parent.getVar("xofs");
+            this._varsMap["y"] = this.parent.getVar("y");
+            this._varsMap["time"] = this.parent.parent.getVar("time");
+            try {
+                for (var _c = __values(func.vars), _d = _c.next(); !_d.done; _d = _c.next()) {
+                    var item = _d.value;
+                    if (!this._varsMap[item.name])
+                        this._varsMap[item.name] = null;
+                }
+            }
+            catch (e_14_1) { e_14 = { error: e_14_1 }; }
+            finally {
+                try {
+                    if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+                }
+                finally { if (e_14) throw e_14.error; }
             }
             this._graphCtx.generateVars(this._varsMap);
             values.push({
@@ -2379,6 +2489,36 @@ var WebApp;
                 dragMode: "XY",
                 showLabel: true
             });
+            try {
+                for (var _e = __values(this.selectedFunction().vars()), _f = _e.next(); !_f.done; _f = _e.next()) {
+                    var item = _f.value;
+                    if (item.autoCompute())
+                        this._graphCtx.calculator.removeExpression({ id: this.getGraphId(item.value.name + "-value") });
+                    else {
+                        values.push({
+                            type: "expression",
+                            id: this.getGraphId(item.value.name + "-value"),
+                            latex: this.getVar(item.value.name) + "=" + (item.curValue() ? item.curValue().toString() : "0"),
+                            folderId: this.getGraphId("public"),
+                            label: item.value.name,
+                            slider: {
+                                min: toSafeString(item.value.minValue),
+                                max: toSafeString(item.value.maxValue),
+                                hardMax: true,
+                                hardMin: true,
+                                step: toSafeString(item.value.step)
+                            }
+                        });
+                    }
+                }
+            }
+            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            finally {
+                try {
+                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
+                }
+                finally { if (e_15) throw e_15.error; }
+            }
             return values;
         };
         return StudioSerieRegression;
@@ -2403,13 +2543,19 @@ var WebApp;
             if (config) {
                 _this.setState(config);
             }
-            _this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+            return _this;
+        }
+        /****************************************/
+        StudioSerie.prototype.createActions = function (result) {
+            var _this = this;
+            _super.prototype.createActions.call(this, result);
+            result.push(WebApp.apply(new ActionViewModel(), function (action) {
                 action.text = "Aggiorna";
                 action.icon = "autorenew";
                 action.execute = function () { return _this.updateSerie(); };
             }));
-            _this.actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                action.text = "Regressione";
+            result.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Nuova regressione";
                 action.icon = "add_box";
                 action.execute = function () {
                     var reg = _this.addRegression();
@@ -2417,8 +2563,14 @@ var WebApp;
                     reg.node.isSelected(true);
                 };
             }));
-            return _this;
-        }
+            result.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Zoom";
+                action.icon = "zoom_in";
+                action.execute = function () {
+                    _this.zoom();
+                };
+            }));
+        };
         /****************************************/
         StudioSerie.fromText = function (text) {
             try {
@@ -2444,11 +2596,13 @@ var WebApp;
                     type: "folder",
                     id: this.getGraphId("public"),
                     title: this.parent.name() + " - " + this.name(),
+                    collapsed: true
                 }, {
                     type: "folder",
                     id: this.getGraphId("private"),
                     title: this.parent.name() + " - " + this.name(),
-                    secret: true
+                    secret: true,
+                    collapsed: true
                 }, {
                     type: "expression",
                     id: this.getGraphId("offset"),
@@ -2495,13 +2649,23 @@ var WebApp;
             return values;
         };
         /****************************************/
+        StudioSerie.prototype.createParameters = function (result) {
+            var _this = this;
+            result.push(WebApp.apply(new ParameterViewModel({ value: this.offsetX, name: "Transla" }), function (p) {
+                p.max(_this.values.length);
+                p.min(-_this.values.length);
+                p.step(1);
+            }));
+            return true;
+        };
+        /****************************************/
         StudioSerie.prototype.updateGraphWork = function () {
             this._graphCtx.updateTable(this.getGraphId("table"), this.values);
         };
         /****************************************/
         StudioSerie.prototype.onGraphChanged = function () {
             var item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
-            if (item)
+            if (item && item.evaluation)
                 this.offsetX(item.evaluation.value);
         };
         /****************************************/
@@ -2511,6 +2675,14 @@ var WebApp;
         /****************************************/
         StudioSerie.prototype.updateColor = function () {
             this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
+        };
+        /****************************************/
+        StudioSerie.prototype.attachGraph = function (ctx) {
+            var _this = this;
+            _super.prototype.attachGraph.call(this, ctx);
+            this.offsetX.subscribe(function (value) {
+                return _this._graphCtx.updateVariable(_this.getGraphId("offset"), _this._varsMap["ofs"], value);
+            });
         };
         /****************************************/
         StudioSerie.prototype.setChildrenStateWork = function (state) {
@@ -2551,6 +2723,19 @@ var WebApp;
             this.values = this._graphCtx.serieCalculator.getSerie(this.source);
             this._graphCtx.updateTable(this.getGraphId("table"), this.values);
         };
+        /****************************************/
+        StudioSerie.prototype.zoom = function () {
+            var minX = WebApp.linq(this.values).min(function (a) { return a.x; });
+            var minY = WebApp.linq(this.values).min(function (a) { return a.y; });
+            var maxX = WebApp.linq(this.values).max(function (a) { return a.x; });
+            var maxY = WebApp.linq(this.values).max(function (a) { return a.y; });
+            this._graphCtx.calculator.setMathBounds({
+                top: maxY + (maxY - minY) * 0.1,
+                right: maxX + (maxX - minX) * 0.1,
+                bottom: minY - (maxY - minY) * 0.1,
+                left: minX - (maxX - minX) * 0.1,
+            });
+        };
         return StudioSerie;
     }(BaseItem));
     /****************************************/
@@ -2578,6 +2763,7 @@ var WebApp;
                     type: "folder",
                     id: this.getGraphId("public"),
                     title: this.name(),
+                    collapsed: true
                 }, {
                     type: "expression",
                     folderId: this.getGraphId("public"),
@@ -2593,6 +2779,15 @@ var WebApp;
                 }
             ];
             return values;
+        };
+        /****************************************/
+        StudioProject.prototype.createParameters = function (result) {
+            result.push(WebApp.apply(new ParameterViewModel({ value: this.time, name: "Giorno" }), function (p) {
+                p.max(100);
+                p.min(0);
+                p.step(1);
+            }));
+            return true;
         };
         /****************************************/
         StudioProject.prototype.setStateWork = function (state) {
@@ -2656,7 +2851,7 @@ var WebApp;
             this.isSelected = ko.observable(false);
             this.isVisible = ko.observable(true);
             this.isExpanded = ko.observable(false);
-            this.actions = ko.observableArray();
+            this.actions = ko.observable();
             this.value(value);
             this.isSelected.subscribe(function (a) {
                 if (a)
@@ -2677,7 +2872,7 @@ var WebApp;
         };
         /****************************************/
         TreeNodeViewModel.prototype.attach = function (treeView, parent) {
-            var e_13, _a;
+            var e_16, _a;
             this._treeView = treeView;
             this._parentNode = parent;
             try {
@@ -2686,12 +2881,12 @@ var WebApp;
                     childNode.attach(treeView);
                 }
             }
-            catch (e_13_1) { e_13 = { error: e_13_1 }; }
+            catch (e_16_1) { e_16 = { error: e_16_1 }; }
             finally {
                 try {
                     if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
-                finally { if (e_13) throw e_13.error; }
+                finally { if (e_16) throw e_16.error; }
             }
         };
         Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
@@ -2748,6 +2943,8 @@ var WebApp;
             this._dataSet = WebApp.InfectionDataSet;
             /****************************************/
             this.items = new TreeViewModel();
+            this.maxX = ko.observable();
+            this.maxY = ko.observable();
             this._data = model.data;
             this._geo = model.geo;
             this._graphCtx = new GraphContext();
@@ -2756,6 +2953,7 @@ var WebApp;
                 //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                 pasteGraphLink: false,
                 pasteTableData: false,
+                expressionsCollapsed: true,
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
@@ -2763,8 +2961,25 @@ var WebApp;
                 authorIDE: true,
                 advancedStyling: true
             });
-            this.items.setRoot(new TreeNodeViewModel());
-            //window.addEventListener("beforeunload", () => this.saveState());
+            var actions = [];
+            actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Nuovo progetto";
+                action.icon = "create_new_folder";
+                action.execute = function () { return _this.newProject(); };
+            }));
+            actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Salva";
+                action.icon = "save";
+                action.execute = function () { return _this.saveState(); };
+            }));
+            actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                action.text = "Opzioni";
+                action.icon = "settings";
+                action.execute = function () { return _this.showOptions(); };
+            }));
+            var root = new TreeNodeViewModel();
+            root.actions(actions);
+            this.items.setRoot(root);
             document.body.addEventListener("paste", function (ev) {
                 ev.preventDefault();
                 _this.onPaste(ev.clipboardData);
@@ -2772,8 +2987,30 @@ var WebApp;
             document.body.addEventListener("keydown", function (ev) {
                 _this.onKeyDown(ev);
             });
+            M.Modal.init(document.getElementById("options"), {
+                onCloseEnd: function () { return _this.updateOptions(); }
+            });
             setTimeout(function () { return _this.init(); });
         }
+        /****************************************/
+        StudioPage.prototype.updateOptions = function () {
+            var maxX = parseInt(this.maxX());
+            var maxY = parseInt(this.maxY());
+            this._graphCtx.calculator.setMathBounds({
+                bottom: -maxY / 10,
+                left: -maxX / 10,
+                right: maxX,
+                top: maxY
+            });
+        };
+        /****************************************/
+        StudioPage.prototype.showOptions = function () {
+            var bounds = this._graphCtx.calculator.graphpaperBounds;
+            this.maxX(Math.round(bounds.mathCoordinates.width));
+            this.maxY(Math.round(bounds.mathCoordinates.height));
+            var dialog = M.Modal.getInstance(document.getElementById("options"));
+            dialog.open();
+        };
         /****************************************/
         StudioPage.prototype.removeSelected = function () {
             if (!this.items.selectedNode())
@@ -2884,8 +3121,8 @@ var WebApp;
             /****************************************/
             get: function () {
                 function items() {
-                    var _a, _b, node, e_14_1;
-                    var e_14, _c;
+                    var _a, _b, node, e_17_1;
+                    var e_17, _c;
                     return __generator(this, function (_d) {
                         switch (_d.label) {
                             case 0:
@@ -2904,14 +3141,14 @@ var WebApp;
                                 return [3 /*break*/, 1];
                             case 4: return [3 /*break*/, 7];
                             case 5:
-                                e_14_1 = _d.sent();
-                                e_14 = { error: e_14_1 };
+                                e_17_1 = _d.sent();
+                                e_17 = { error: e_17_1 };
                                 return [3 /*break*/, 7];
                             case 6:
                                 try {
                                     if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                 }
-                                finally { if (e_14) throw e_14.error; }
+                                finally { if (e_17) throw e_17.error; }
                                 return [7 /*endfinally*/];
                             case 7: return [2 /*return*/];
                         }
