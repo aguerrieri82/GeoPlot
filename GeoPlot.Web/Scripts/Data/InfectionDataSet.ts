@@ -1,6 +1,6 @@
 ﻿/// <reference path="../indicators.ts" />
 
-namespace WebApp {
+namespace WebApp.GeoPlot {
 
     export interface IInfectionData {
         totalPositive: number;

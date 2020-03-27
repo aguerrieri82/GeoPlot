@@ -211,7 +211,7 @@
                     <div class="empty-text flex-row-inline item-margin-small">
                         <i class="material-icons small orange-text">warning</i>
                         <div>
-                            Selezionare una <span data-bind="text: WebApp.ViewModes[viewMode()].label.singular"></span>  per vedere gli indicatori
+                            Selezionare una <span data-bind="text: WebApp.GeoPlot.ViewModes[viewMode()].label.singular"></span>  per vedere gli indicatori
                         </div>
                     </div>
                     <!--/ko-->
@@ -263,7 +263,7 @@
             <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
                 <li>
                     <div class="card-title collapsible-header">
-                        <span data-bind="text: capitalizeFirst(WebApp.ViewModes[viewMode()].label.plural)"></span>&nbsp;più colpite
+                        <span data-bind="text: capitalizeFirst(WebApp.GeoPlot.ViewModes[viewMode()].label.plural)"></span>&nbsp;più colpite
                         <i class="material-icons">chevron_right</i>
                     </div>
                     <div class="collapsible-body">
@@ -381,6 +381,6 @@
     <script>
         WebApp.app.baseUrl = '@Url.Content("~/")';
         WebApp.app.initServices();
-        ko.applyBindings(new WebApp.GeoPlotPage(@Html.Json(Model)));
+        ko.applyBindings(new WebApp.GeoPlot.GeoPlotPage(@Html.Json(Model)));
     </script>
 }

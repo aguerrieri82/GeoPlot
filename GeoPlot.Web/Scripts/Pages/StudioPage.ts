@@ -1,4 +1,4 @@
-﻿namespace WebApp {
+﻿namespace WebApp.GeoPlot {
 
     type TData = IInfectionData;
 
@@ -19,7 +19,7 @@
         color?: string;
     }
 
-    export interface ISerieStateStudioData extends IStudioData{
+    export interface ISerieStateStudioData extends IStudioData {
         type: "serieState";
         state: IStudioSerieState;
     }
@@ -44,7 +44,7 @@
     class ParameterViewModel {
 
         constructor(config: IParameterConfig) {
-            this.value = config.value;   
+            this.value = config.value;
             this.name = config.name;
         }
 
@@ -226,6 +226,12 @@
 
         /****************************************/
 
+        canAccept(value: object): boolean {
+            return false;
+        }
+
+        /****************************************/
+
         canReadData(transfer: DataTransfer): boolean {
             return false;
         }
@@ -329,7 +335,7 @@
             let curNode = this.node;
 
             while (curNode) {
-                if (!curNode.isVisible()) 
+                if (!curNode.isVisible())
                     return false;
                 curNode = curNode.parentNode;
             }
@@ -338,7 +344,7 @@
 
         /****************************************/
 
-        updateGraphVisibility(recorsive = true) : boolean {
+        updateGraphVisibility(recorsive = true): boolean {
 
             const visible = this.isFullVisible();
 
@@ -437,7 +443,7 @@
 
         /****************************************/
 
-        protected createParameters(result: ParameterViewModel[]) : boolean{
+        protected createParameters(result: ParameterViewModel[]): boolean {
             return false;
         }
 
@@ -485,6 +491,7 @@
 
         folderId: string;
         node: TreeNodeViewModel<ITreeItem>;
+        canDrag = false;
         name = ko.observable<string>();
         time = ko.observable(0);
         color = ko.observable<string>();
@@ -508,7 +515,7 @@
     /****************************************/
 
     interface IStudioRegressionState extends IStudioRegressionConfig, IItemState {
-        
+
     }
 
     /****************************************/
@@ -623,24 +630,24 @@
                 type: "normal",
                 value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
                 vars: [
-                {
-                    name: "c",
-                    label: "Totale",
-                    autoCompute: true,
-                    precision: 0
-                },
-                {
-                    name: "o",
-                    label: "Varianza",
-                    autoCompute: true,
-                    precision: 5
-                },
-                {
-                    name: "u",
-                    label: "Media/Picco",
-                    autoCompute: true,
-                    precision: 0
-                }]
+                    {
+                        name: "c",
+                        label: "Totale",
+                        autoCompute: true,
+                        precision: 0
+                    },
+                    {
+                        name: "o",
+                        label: "Varianza",
+                        autoCompute: true,
+                        precision: 5
+                    },
+                    {
+                        name: "u",
+                        label: "Media/Picco",
+                        autoCompute: true,
+                        precision: 0
+                    }]
             });
 
             this.addFunction({
@@ -718,13 +725,13 @@
             for (let item of value.vars) {
                 const vModel = new RegressionFunctionVarViewModel();
                 vModel.value = item;
-                
+
                 vModel.curValue(item.value);
                 vModel.autoCompute(item.autoCompute);
                 vModel.min(item.minValue);
                 vModel.max(item.maxValue);
                 vModel.step(item.step);
-                 
+
                 vModel.min.subscribe(a => item.minValue = a);
                 vModel.max.subscribe(a => item.maxValue = a);
                 vModel.step.subscribe(a => item.step = a);
@@ -814,7 +821,7 @@
 
         /****************************************/
 
-        getState(): IStudioRegressionState{
+        getState(): IStudioRegressionState {
             const state = super.getState();
             state.function = this.selectedFunction().value;
             state.showIntegration = this.showIntegration();
@@ -863,8 +870,8 @@
             this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
             this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
             this._graphCtx.setColor(this.getGraphId("end-day-line"), this.color());
-            
-        }     
+
+        }
 
         /****************************************/
 
@@ -1023,7 +1030,7 @@
                     });
                 }
             }
-    
+
 
             return values;
         }
@@ -1072,6 +1079,7 @@
         constructor(config?: IStudioSerieConfig) {
             super();
 
+            this.canDrag = true;
             this.itemType = "serie";
             this.icon = "insert_chart";
             this.optionsTemplateName = "StudioOptionsTemplate";
@@ -1095,8 +1103,8 @@
                 version: 1,
                 type: "serieState",
                 state: this.getState()
-            };            
-            transfer.setData("text/plain", JSON.stringify(data));
+            };
+            transfer.setData("application/json+studio", JSON.stringify(data));
             transfer.setData("text/html+id", this.node.element.id);
             return true;
         }
@@ -1148,7 +1156,7 @@
                             color: obj.color
                         });
 
-                    if (obj.type == "serieState") 
+                    if (obj.type == "serieState")
                         return new StudioSerie(obj.state);
                 }
             }
@@ -1262,7 +1270,7 @@
         protected updateColor() {
             this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
             this.children.foreach(a => a.onParentChanged());
-        }     
+        }
 
         /****************************************/
 
@@ -1382,23 +1390,28 @@
                 this.setState(config);
         }
 
+        /****************************************/
+
+        canAccept(value: object): boolean {
+            return (value instanceof StudioSerie);
+        }
 
         /****************************************/
 
         canReadData(transfer: DataTransfer): boolean {
-            return transfer.types.indexOf("text/plain") != -1;
+            return transfer.types.indexOf("application/json+studio") != -1;
         }
 
         /****************************************/
 
         readData(transfer: DataTransfer) {
 
-            const textData = transfer.getData("text/plain");
+            const textData = transfer.getData("application/json+studio");
             let serie = StudioSerie.fromText(textData);
             if (serie) {
                 this.addSerie(serie);
                 this.node.isExpanded(true);
-            } 
+            }
         }
 
         /****************************************/
@@ -1515,15 +1528,17 @@
         writeData(transfer: DataTransfer): boolean;
     }
 
-    interface ITreeItem extends IDataTransferWriter, IDataTransferReader{
+    interface ITreeItem extends IDataTransferWriter, IDataTransferReader {
 
         attachNode(node: TreeNodeViewModel<ITreeItem>);
         remove(): void;
         onParentChanged(): void;
+        canAccept(value: object): boolean;
 
         name: KnockoutObservable<string>;
         color?: KnockoutObservable<string>;
 
+        readonly canDrag: boolean;
         readonly itemType: string;
         readonly icon: string;
         readonly node: TreeNodeViewModel<ITreeItem>;
@@ -1572,7 +1587,7 @@
         attachNode(element: HTMLElement) {
 
             this._element = element;
-            this._element.id = "id_" + new Date().getTime().toString();
+            this._element.id = DomUtils.generateId();
             this._element["$model"] = this;
 
             let header = <HTMLElement>this._element.querySelector("header");
@@ -1588,10 +1603,10 @@
 
         protected onDrag(ev: DragEvent) {
 
-            if (!this.value().writeData(ev.dataTransfer)) {
+            if (!this.value().writeData(ev.dataTransfer) || !this.value().canDrag) {
                 ev.preventDefault();
                 return false;
-            }            
+            }
         }
 
         /****************************************/
@@ -1614,12 +1629,13 @@
             ev.preventDefault();
 
             if (this._dargEnterCount == 1) {
-                let hasId = ev.dataTransfer.types.indexOf("text/html+id") != -1;
 
-                if (!hasId && !this.value().canReadData(ev.dataTransfer)) {
-                    ev.dataTransfer.dropEffect = "none";
-                }
-                else {
+                let canDrop = true;
+
+                if (!this.value().canReadData(ev.dataTransfer))
+                    canDrop = false;
+
+                if (canDrop) {
                     if (ev.ctrlKey)
                         ev.dataTransfer.dropEffect = "copy";
                     else
@@ -1627,6 +1643,9 @@
 
                     DomUtils.addClass(this._element, "drop");
                 }
+                else
+                    ev.dataTransfer.dropEffect = "move";
+
             }
         }
 
@@ -1637,30 +1656,35 @@
             ev.preventDefault();
 
             this._dargEnterCount = 0;
+
             DomUtils.removeClass(this._element, "drop");
 
-            var elId = ev.dataTransfer.getData("text/html+id");
-            var element = document.getElementById(elId);
+            const elId = ev.dataTransfer.getData("text/html+id");
 
-            if (element) {
-                var node = <TreeNodeViewModel<ITreeItem>>element["$model"];
-                if (node) {
-                    if (ev.ctrlKey) {
-                    }
-                    else {
-                        if (node._parentNode == this)
-                            return;
-                        node._parentNode.nodes.remove(node);
-                        node._parentNode = this;
-                        this.nodes.push(<any>node);
-                        this.isExpanded(true);
-                        node.value().onParentChanged();
+            if (elId) {
+
+                const element = document.getElementById(elId);
+                const node = <TreeNodeViewModel<ITreeItem>>element["$model"];
+
+                if (!this.value().canAccept(node.value()))
+                    return;
+
+                if (ev.ctrlKey) {
+
+                }
+                else {
+                    if (node._parentNode == this)
                         return;
-                    }
+                    node._parentNode.nodes.remove(node);
+                    node._parentNode = this;
+                    this.nodes.push(<any>node);
+                    this.isExpanded(true);
+                    node.value().onParentChanged();
+                    return;
                 }
             }
-
-            this.value().readData(ev.dataTransfer);
+            else
+                this.value().readData(ev.dataTransfer);
         }
 
         /****************************************/
@@ -1838,9 +1862,9 @@
             });
 
             M.Modal.init(document.getElementById("options"), {
-                onCloseEnd: ()=> this.updateOptions()
+                onCloseEnd: () => this.updateOptions()
             });
-            
+
 
             setTimeout(() => this.init());
         }

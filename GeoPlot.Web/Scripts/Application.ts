@@ -1,25 +1,28 @@
 ﻿namespace WebApp {
 
-    class GeoPlotApplication   {
+    export namespace GeoPlot {
 
-        constructor() {
-            
+        export class GeoPlotApplication {
+
+            constructor() {
+
+            }
+
+            /****************************************/
+
+            initServices() {
+
+                Services.httpClient = new XHRHttpClient();
+            }
+
+            /****************************************/
+
+            baseUrl: string;
         }
-
-        /****************************************/
-
-        initServices() {
-
-            Services.httpClient = new XHRHttpClient(); 
-        }
-
-        /****************************************/
-
-        baseUrl: string;
     }
 
     /****************************************/
 
-    export var app : IApplication = <any>(new GeoPlotApplication());
+    export var app: IApplication = <any>(new GeoPlot.GeoPlotApplication());
 }
  

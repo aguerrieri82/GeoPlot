@@ -1,4 +1,4 @@
-﻿namespace WebApp {
+﻿namespace WebApp.GeoPlot {
 
     export type ViewMode = "district" | "region" | "country";
 

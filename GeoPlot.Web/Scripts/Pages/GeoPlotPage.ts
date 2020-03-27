@@ -1,4 +1,4 @@
-﻿namespace WebApp {
+﻿namespace WebApp.GeoPlot {
 
     type TData = IInfectionData;
 
@@ -237,9 +237,9 @@
         private _dataSet = InfectionDataSet;
         private _keepState = false;
         private _debugMode = false;
-        private _preferences: IViewPreferences;   
+        private _preferences: IViewPreferences;
         private _calculator: IndicatorCalculator<TData>;
-        
+
         private _tips: IViewActions<IViewActionTip> = {
             areaSelected: {
                 order: 0,
@@ -314,7 +314,7 @@
                         this._tips.areaSelected.showAction();
                     this.isDayDelta(true);
                 }
-            },   
+            },
             factorChanged: {
                 order: 6,
                 featureName: "Indicatori",
@@ -327,7 +327,7 @@
                     this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalPositive"));
                     this.selectedFactor(linq(this._dataSet.factors).first(a => a.id == "population"));
                 }
-            },     
+            },
             groupChanged: {
                 order: 7,
                 featureName: "Grafico",
@@ -408,7 +408,7 @@
             "dpcm9": {
                 date: new Date(2020, 2, 9),
                 color: "#000",
-                dash: [5,5],
+                dash: [5, 5],
                 width: 1,
                 visible: true,
                 label: "DPCM 9 Marzo (italia zona rossa)"
@@ -556,7 +556,7 @@
                     this._preferences.actions.groupChanged++;
             });
 
-            this.startDay.subscribe(value=> {
+            this.startDay.subscribe(value => {
                 this.updateChart();
                 this.updateUrl();
             });
@@ -582,7 +582,7 @@
                 window.addEventListener("beforeunload", () => this.savePreferences());
 
             //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
-        } 
+        }
 
         /****************************************/
 
@@ -646,7 +646,7 @@
                     this.showTip(nextTip.key);
                 }
             }
-            else 
+            else
                 model.next = null;
 
             this.tip(model);
@@ -1182,7 +1182,7 @@
 
             /*
             if (this.selectedFactor().id != "none") {
-
+ 
                 if (this.groupSize() != 1)
                     this.groupSize(1);
             }*/
@@ -1251,7 +1251,7 @@
                         ctx.moveTo(offset, chart.chartArea.top);
                         ctx.lineTo(offset, chart.chartArea.bottom);
                         ctx.strokeStyle = item.color || "#000";
-                        
+
                         if (item.dash)
                             ctx.setLineDash(item.dash);
                         else

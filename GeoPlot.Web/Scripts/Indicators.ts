@@ -1,4 +1,4 @@
-﻿namespace WebApp {
+﻿namespace WebApp.GeoPlot {
 
     export class ConstIndicatorFunction<TData> implements IIndicatorFunction<TData> {
         private readonly _value: (value: TData, area?: IGeoArea) => number;
