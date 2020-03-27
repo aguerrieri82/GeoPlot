@@ -72,6 +72,20 @@ var WebApp;
     /****************************************/
     WebApp.app = (new GeoPlotApplication());
 })(WebApp || (WebApp = {}));
+if (window["ko"]) {
+    ko.bindingHandlers.attach = {
+        init: function (element, valueAccessor, allBindings, viewModel) {
+            var func = ko.unwrap(valueAccessor());
+            if (func === true || func == undefined)
+                func = viewModel["attachNode"];
+            if (typeof func != "function")
+                throw "Supplied argument is not a function";
+            setTimeout(function () {
+                return func.call(viewModel, element);
+            });
+        }
+    };
+}
 var WebApp;
 (function (WebApp) {
     var Geo = /** @class */ (function () {
@@ -133,6 +147,8 @@ function expandCollapse(elment) {
         setTimeout(function () { return content.style.display = "none"; }, 300);
     }
 }
+/****************************************/
+/* Chart
 /****************************************/
 if (window["Chart"]) {
     Chart.plugins.register({
@@ -2092,6 +2108,17 @@ var WebApp;
             }));
         };
         /****************************************/
+        BaseItem.prototype.canReadData = function (transfer) {
+            return false;
+        };
+        /****************************************/
+        BaseItem.prototype.readData = function (transfer) {
+        };
+        /****************************************/
+        BaseItem.prototype.writeData = function (transfer) {
+            return false;
+        };
+        /****************************************/
         BaseItem.prototype.setState = function (state) {
             if (state.name)
                 this.name(state.name);
@@ -2187,6 +2214,10 @@ var WebApp;
             if (recursive)
                 this.children.foreach(function (a) { return a.updateGraph(recursive); });
         };
+        /****************************************/
+        BaseItem.prototype.onParentChanged = function () {
+            this.updateGraphVisibility();
+        };
         Object.defineProperty(BaseItem.prototype, "parent", {
             /****************************************/
             get: function () {
@@ -2224,6 +2255,7 @@ var WebApp;
             value.attachGraph(this._graphCtx);
             if (updateGraph)
                 value.updateGraph();
+            value.onParentChanged();
             return value;
         };
         /****************************************/
@@ -2285,6 +2317,8 @@ var WebApp;
             _this._varsMap = {};
             _this.selectedFunction = ko.observable();
             _this.showIntegration = ko.observable(true);
+            _this.dayCount = ko.observable();
+            _this.endDay = ko.observable();
             _this._varsMap = {
                 "fun": null,
                 "sum": null,
@@ -2486,7 +2520,13 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.createParameters = function (result) {
-            return false;
+            var _this = this;
+            result.push(WebApp.apply(new ParameterViewModel({ value: this.endDay, name: "Giorni regressione" }), function (p) {
+                p.max = _this.dayCount;
+                p.min(0);
+                p.step(1);
+            }));
+            return true;
         };
         /****************************************/
         StudioSerieRegression.prototype.setStateWork = function (state) {
@@ -2547,6 +2587,20 @@ var WebApp;
                 finally { if (e_16) throw e_16.error; }
             }
             return state;
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.onParentChanged = function () {
+            _super.prototype.onParentChanged.call(this);
+            this.color(this.parent.color());
+            this.dayCount(WebApp.linq(this.parent.values).max(function (a) { return a.x; }));
+            if (this.endDay() == undefined)
+                this.endDay(this.dayCount());
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.updateColor = function () {
+            this._graphCtx.setColor(this.getGraphId("main-func"), this.color());
+            this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
+            this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
         };
         /****************************************/
         StudioSerieRegression.prototype.updateGraphWork = function () {
@@ -2702,6 +2756,17 @@ var WebApp;
             return _this;
         }
         /****************************************/
+        StudioSerie.prototype.writeData = function (transfer) {
+            var data = {
+                version: 1,
+                type: "serieState",
+                state: this.getState()
+            };
+            transfer.setData("text/plain", JSON.stringify(data));
+            transfer.setData("text/html+id", this.node.element.id);
+            return true;
+        };
+        /****************************************/
         StudioSerie.prototype.createActions = function (result) {
             var _this = this;
             _super.prototype.createActions.call(this, result);
@@ -2731,13 +2796,17 @@ var WebApp;
         StudioSerie.fromText = function (text) {
             try {
                 var obj = JSON.parse(text);
-                if (obj && obj.type == "serie")
-                    return new StudioSerie({
-                        name: obj.title,
-                        values: obj.values,
-                        source: obj.serie,
-                        color: obj.color
-                    });
+                if (obj) {
+                    if (obj.type == "serie")
+                        return new StudioSerie({
+                            name: obj.title,
+                            values: obj.values,
+                            source: obj.serie,
+                            color: obj.color
+                        });
+                    if (obj.type == "serieState")
+                        return new StudioSerie(obj.state);
+                }
             }
             catch (_a) {
             }
@@ -2831,6 +2900,7 @@ var WebApp;
         /****************************************/
         StudioSerie.prototype.updateColor = function () {
             this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
+            this.children.foreach(function (a) { return a.onParentChanged(); });
         };
         /****************************************/
         StudioSerie.prototype.attachGraph = function (ctx) {
@@ -2911,6 +2981,19 @@ var WebApp;
                 _this.setState(config);
             return _this;
         }
+        /****************************************/
+        StudioProject.prototype.canReadData = function (transfer) {
+            return transfer.types.indexOf("text/plain") != -1;
+        };
+        /****************************************/
+        StudioProject.prototype.readData = function (transfer) {
+            var textData = transfer.getData("text/plain");
+            var serie = StudioSerie.fromText(textData);
+            if (serie) {
+                this.addSerie(serie);
+                this.node.isExpanded(true);
+            }
+        };
         /****************************************/
         StudioProject.prototype.getExpressions = function () {
             this._graphCtx.generateVars(this._varsMap);
@@ -3001,6 +3084,7 @@ var WebApp;
     var TreeNodeViewModel = /** @class */ (function () {
         function TreeNodeViewModel(value) {
             var _this = this;
+            this._dargEnterCount = 0;
             /****************************************/
             this.nodes = ko.observableArray();
             this.value = ko.observable();
@@ -3014,6 +3098,87 @@ var WebApp;
                     _this._treeView.select(_this);
             });
         }
+        Object.defineProperty(TreeNodeViewModel.prototype, "element", {
+            /****************************************/
+            get: function () {
+                return this._element;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /****************************************/
+        TreeNodeViewModel.prototype.attachNode = function (element) {
+            var _this = this;
+            this._element = element;
+            this._element.id = "id_" + new Date().getTime().toString();
+            this._element["$model"] = this;
+            var header = this._element.querySelector("header");
+            header.ondragstart = function (ev) { return _this.onDrag(ev); };
+            header.ondragover = function (ev) { return _this.onDragOver(ev); };
+            header.ondragenter = function (ev) { return _this.onDragEnter(ev); };
+            header.ondragleave = function (ev) { return _this.onDragLeave(ev); };
+            header.ondrop = function (ev) { return _this.onDrop(ev); };
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.onDrag = function (ev) {
+            if (!this.value().writeData(ev.dataTransfer)) {
+                ev.preventDefault();
+                return false;
+            }
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.onDragEnter = function (ev) {
+            this._dargEnterCount++;
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.onDragLeave = function (ev) {
+            this._dargEnterCount--;
+            if (this._dargEnterCount == 0)
+                WebApp.DomUtils.removeClass(this._element, "drop");
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.onDragOver = function (ev) {
+            ev.preventDefault();
+            if (this._dargEnterCount == 1) {
+                var hasId = ev.dataTransfer.types.indexOf("text/html+id") != -1;
+                if (!hasId && !this.value().canReadData(ev.dataTransfer)) {
+                    ev.dataTransfer.dropEffect = "none";
+                }
+                else {
+                    if (ev.ctrlKey)
+                        ev.dataTransfer.dropEffect = "copy";
+                    else
+                        ev.dataTransfer.dropEffect = "move";
+                    WebApp.DomUtils.addClass(this._element, "drop");
+                }
+            }
+        };
+        /****************************************/
+        TreeNodeViewModel.prototype.onDrop = function (ev) {
+            ev.preventDefault();
+            this._dargEnterCount = 0;
+            WebApp.DomUtils.removeClass(this._element, "drop");
+            var elId = ev.dataTransfer.getData("text/html+id");
+            var element = document.getElementById(elId);
+            if (element) {
+                var node = element["$model"];
+                if (node) {
+                    if (ev.ctrlKey) {
+                    }
+                    else {
+                        if (node._parentNode == this)
+                            return;
+                        node._parentNode.nodes.remove(node);
+                        node._parentNode = this;
+                        this.nodes.push(node);
+                        this.isExpanded(true);
+                        node.value().onParentChanged();
+                        return;
+                    }
+                }
+            }
+            this.value().readData(ev.dataTransfer);
+        };
         /****************************************/
         TreeNodeViewModel.prototype.remove = function () {
             if (this._parentNode)

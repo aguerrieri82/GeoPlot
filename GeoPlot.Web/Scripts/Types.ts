@@ -88,20 +88,6 @@
 
     /****************************************/
 
-    export interface IStudioData {
-        version: number;
-    }
-
-    export interface IStudioData {
-        type: "serie";
-        serie: ISerieSource;
-        title: string;
-        values?: IFunctionPoint<number>[];
-        color?: string;
-    }
-
-    /****************************************/
-
     export interface ISerieSource {
         areaId: string;
         exeludedAreaIds?: string[];

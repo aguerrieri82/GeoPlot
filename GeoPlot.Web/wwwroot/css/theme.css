@@ -218,6 +218,13 @@ ul.collapsible li.active .collapsible-header i {
 .hidden {
   display: none; }
 
+.fit-container {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0; }
+
 .flex-row-inline {
   display: flex;
   flex-direction: row;
@@ -541,9 +548,12 @@ svg.map.experimental {
   .tree-view ul > li {
     position: relative;
     transition-duration: 0.3s; }
+    .tree-view ul > li.drop > header {
+      border: dashed 2px #333; }
     .tree-view ul > li > header {
       display: flex;
-      white-space: nowrap; }
+      white-space: nowrap;
+      z-index: 1; }
       .tree-view ul > li > header .expand-collapse i {
         transition-duration: 0.3s;
         transform: rotate(-90deg); }

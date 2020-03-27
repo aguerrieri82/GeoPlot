@@ -218,9 +218,16 @@
             position: relative;
             transition-duration: 0.3s;
 
+            &.drop {
+                > header  {
+                    border: dashed 2px #333;
+                }
+            }
+
             > header {
                 display: flex;
                 white-space: nowrap;
+                z-index: 1;
 
                 .expand-collapse i {
                     transition-duration: 0.3s;

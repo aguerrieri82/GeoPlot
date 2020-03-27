@@ -5,7 +5,5 @@
 - data al posto del numero giorno
 - copia incolla serie / progetto
 - storage su server dello stduio
-- aggironamento colori regressione
 - incollare dal excel
- -mettere step in regression
  -regressione inizio e fine range

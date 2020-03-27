@@ -12,8 +12,10 @@
 
 
   <ItemGroup>
+    <None Remove="Scripts\Bindings.ts" />
     <None Remove="Scripts\Desmos.d.ts" />
     <None Remove="Scripts\Pages\StudioPage.ts" />
+    <None Remove="Scripts\TypeDefs\DOM\index.d.ts" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="3.8.3">

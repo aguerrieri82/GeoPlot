@@ -49,21 +49,7 @@ function expandCollapse(elment: HTMLElement) {
 }
 
 /****************************************/
-/* Definitions
-/****************************************/
-
-interface Clipboard {
-    write(data: Iterable<ClipboardItem>): Promise<void>;
-}
-
-interface ClipboardItem {
-}
-
-declare var ClipboardItem: {
-    prototype: ClipboardItem;
-    new(items: { [type: string]: Blob | string }): ClipboardItem;
-};
-
+/* Chart
 /****************************************/
 
 if (window["Chart"]) {

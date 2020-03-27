@@ -11,6 +11,25 @@
         return value.toString();
     }
 
+    type StudioData = ISerieStudioData | ISerieStateStudioData;
+
+    export interface IStudioData {
+        version: number;
+    }
+
+    export interface ISerieStudioData extends IStudioData {
+        type: "serie";
+        serie: ISerieSource;
+        title: string;
+        values?: IFunctionPoint<number>[];
+        color?: string;
+    }
+
+    export interface ISerieStateStudioData extends IStudioData{
+        type: "serieState";
+        state: IStudioSerieState;
+    }
+
     /****************************************/
     /* ParameterViewModel
     /****************************************/
@@ -205,6 +224,23 @@
 
         /****************************************/
 
+        canReadData(transfer: DataTransfer): boolean {
+            return false;
+        }
+
+        /****************************************/
+
+        readData(transfer: DataTransfer) {
+        }
+
+        /****************************************/
+
+        writeData(transfer: DataTransfer): boolean {
+            return false;
+        }
+
+        /****************************************/
+
         setState(state: TState) {
             if (state.name)
                 this.name(state.name);
@@ -339,6 +375,12 @@
 
         /****************************************/
 
+        onParentChanged() {
+            this.updateGraphVisibility();
+        }
+
+        /****************************************/
+
         get parent(): TParent {
             return <TParent>this.node.parentNode.value();
         }
@@ -385,6 +427,8 @@
 
             if (updateGraph)
                 value.updateGraph();
+
+            value.onParentChanged();
 
             return value;
         }
@@ -651,6 +695,7 @@
                 this.setState(config);
         }
 
+
         /****************************************/
 
         protected addFunction(value: IRegressionFunction): RegressionFunctionViewModel {
@@ -724,7 +769,12 @@
         /****************************************/
 
         protected createParameters(result: ParameterViewModel[]): boolean {
-            return false;
+            result.push(apply(new ParameterViewModel({ value: this.endDay, name: "Giorni regressione" }), p => {
+                p.max = this.dayCount;
+                p.min(0);
+                p.step(1);
+            }));
+            return true;
         }
 
         /****************************************/
@@ -767,6 +817,23 @@
             return state;
         }
 
+        /****************************************/
+
+        onParentChanged() {
+            super.onParentChanged();
+            this.color(this.parent.color());
+            this.dayCount(linq(this.parent.values).max(a => a.x));
+            if (this.endDay() == undefined)
+                this.endDay(this.dayCount());
+        }
+
+        /****************************************/
+
+        protected updateColor() {
+            this._graphCtx.setColor(this.getGraphId("main-func"), this.color());
+            this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
+            this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
+        }     
 
         /****************************************/
 
@@ -902,6 +969,8 @@
         functions: RegressionFunctionViewModel[];
         selectedFunction = ko.observable<RegressionFunctionViewModel>();
         showIntegration = ko.observable<boolean>(true);
+        dayCount = ko.observable<number>();
+        endDay = ko.observable<number>();
     }
 
     /****************************************/
@@ -957,6 +1026,19 @@
 
         /****************************************/
 
+        writeData(transfer: DataTransfer): boolean {
+            var data: StudioData = {
+                version: 1,
+                type: "serieState",
+                state: this.getState()
+            };            
+            transfer.setData("text/plain", JSON.stringify(data));
+            transfer.setData("text/html+id", this.node.element.id);
+            return true;
+        }
+
+        /****************************************/
+
         protected createActions(result: ActionViewModel[]) {
 
             super.createActions(result);
@@ -991,18 +1073,25 @@
 
         static fromText(text: string): StudioSerie {
             try {
-                const obj = <IStudioData>JSON.parse(text);
-                if (obj && obj.type == "serie")
-                    return new StudioSerie({
-                        name: obj.title,
-                        values: obj.values,
-                        source: obj.serie,
-                        color: obj.color
-                    });
+                const obj = <StudioData>JSON.parse(text);
+                if (obj) {
+
+                    if (obj.type == "serie")
+                        return new StudioSerie({
+                            name: obj.title,
+                            values: obj.values,
+                            source: obj.serie,
+                            color: obj.color
+                        });
+
+                    if (obj.type == "serieState") 
+                        return new StudioSerie(obj.state);
+                }
             }
             catch{
             }
         }
+
         /****************************************/
 
         protected getExpressions(): Desmos.Expression[] {
@@ -1107,6 +1196,7 @@
 
         protected updateColor() {
             this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
+            this.children.foreach(a => a.onParentChanged());
         }     
 
         /****************************************/
@@ -1227,6 +1317,25 @@
                 this.setState(config);
         }
 
+
+        /****************************************/
+
+        canReadData(transfer: DataTransfer): boolean {
+            return transfer.types.indexOf("text/plain") != -1;
+        }
+
+        /****************************************/
+
+        readData(transfer: DataTransfer) {
+
+            const textData = transfer.getData("text/plain");
+            let serie = StudioSerie.fromText(textData);
+            if (serie) {
+                this.addSerie(serie);
+                this.node.isExpanded(true);
+            } 
+        }
+
         /****************************************/
 
         protected getExpressions(): Desmos.Expression[] {
@@ -1331,18 +1440,28 @@
     /* TreeViewModel
     /****************************************/
 
-    interface ITreeItem {
+    interface IDataTransferReader {
+        canReadData(transfer: DataTransfer): boolean;
+        readData(transfer: DataTransfer);
+    }
+
+    interface IDataTransferWriter {
+        writeData(transfer: DataTransfer): boolean;
+    }
+
+    interface ITreeItem extends IDataTransferWriter, IDataTransferReader{
 
         attachNode(node: TreeNodeViewModel<ITreeItem>);
         remove(): void;
+        onParentChanged(): void;
 
         name: KnockoutObservable<string>;
         color?: KnockoutObservable<string>;
+
         readonly itemType: string;
         readonly icon: string;
         readonly node: TreeNodeViewModel<ITreeItem>;
     }
-
 
     /****************************************/
 
@@ -1359,10 +1478,12 @@
 
     /****************************************/
 
-    class TreeNodeViewModel<T> {
+    class TreeNodeViewModel<T extends ITreeItem> {
 
         protected _treeView: TreeViewModel<T>;
         protected _parentNode: TreeNodeViewModel<T>;
+        protected _element: HTMLElement;
+        protected _dargEnterCount = 0;
 
         constructor(value?: T) {
 
@@ -1372,6 +1493,108 @@
                 if (a)
                     this._treeView.select(this);
             });
+        }
+
+        /****************************************/
+
+        get element(): HTMLElement {
+            return this._element;
+        }
+
+        /****************************************/
+
+        attachNode(element: HTMLElement) {
+
+            this._element = element;
+            this._element.id = "id_" + new Date().getTime().toString();
+            this._element["$model"] = this;
+
+            let header = <HTMLElement>this._element.querySelector("header");
+
+            header.ondragstart = ev => this.onDrag(ev);
+            header.ondragover = ev => this.onDragOver(ev);
+            header.ondragenter = ev => this.onDragEnter(ev);
+            header.ondragleave = ev => this.onDragLeave(ev);
+            header.ondrop = ev => this.onDrop(ev);
+        }
+
+        /****************************************/
+
+        protected onDrag(ev: DragEvent) {
+
+            if (!this.value().writeData(ev.dataTransfer)) {
+                ev.preventDefault();
+                return false;
+            }            
+        }
+
+        /****************************************/
+
+        protected onDragEnter(ev: DragEvent) {
+            this._dargEnterCount++;
+        }
+
+        /****************************************/
+
+        protected onDragLeave(ev: DragEvent) {
+            this._dargEnterCount--;
+            if (this._dargEnterCount == 0)
+                DomUtils.removeClass(this._element, "drop");
+        }
+
+        /****************************************/
+
+        protected onDragOver(ev: DragEvent) {
+            ev.preventDefault();
+
+            if (this._dargEnterCount == 1) {
+                let hasId = ev.dataTransfer.types.indexOf("text/html+id") != -1;
+
+                if (!hasId && !this.value().canReadData(ev.dataTransfer)) {
+                    ev.dataTransfer.dropEffect = "none";
+                }
+                else {
+                    if (ev.ctrlKey)
+                        ev.dataTransfer.dropEffect = "copy";
+                    else
+                        ev.dataTransfer.dropEffect = "move";
+
+                    DomUtils.addClass(this._element, "drop");
+                }
+            }
+        }
+
+
+        /****************************************/
+
+        protected onDrop(ev: DragEvent) {
+            ev.preventDefault();
+
+            this._dargEnterCount = 0;
+            DomUtils.removeClass(this._element, "drop");
+
+            var elId = ev.dataTransfer.getData("text/html+id");
+            var element = document.getElementById(elId);
+
+            if (element) {
+                var node = <TreeNodeViewModel<ITreeItem>>element["$model"];
+                if (node) {
+                    if (ev.ctrlKey) {
+                    }
+                    else {
+                        if (node._parentNode == this)
+                            return;
+                        node._parentNode.nodes.remove(node);
+                        node._parentNode = this;
+                        this.nodes.push(<any>node);
+                        this.isExpanded(true);
+                        node.value().onParentChanged();
+                        return;
+                    }
+                }
+            }
+
+            this.value().readData(ev.dataTransfer);
         }
 
         /****************************************/
@@ -1437,7 +1660,7 @@
 
     /****************************************/
 
-    export class TreeViewModel<T> {
+    export class TreeViewModel<T extends ITreeItem> {
 
         private _selectedNode: TreeNodeViewModel<T>;
 
