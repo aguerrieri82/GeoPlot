@@ -5,13 +5,7 @@
     type GraphVarMap = IDictionary<string>;
 
 
-    function toSafeString(value: any): string {
-        if (value == null || value == undefined)
-            return undefined;
-        return value.toString();
-    }
-
-    type StudioData = ISerieStudioData | ISerieStateStudioData;
+    export type StudioData = ISerieStudioData | ISerieStateStudioData;
 
     export interface IStudioData {
         version: number;
@@ -28,6 +22,12 @@
     export interface ISerieStateStudioData extends IStudioData{
         type: "serieState";
         state: IStudioSerieState;
+    }
+
+    function toSafeString(value: any): string {
+        if (value == null || value == undefined)
+            return undefined;
+        return value.toString();
     }
 
     /****************************************/
@@ -131,6 +131,8 @@
         /****************************************/
 
         updateVariable(id: string, varName, value: number) {
+            if (!varName)
+                return;
             this.updateExpression(<Desmos.IMathExpression>{ id: id, latex: varName + "=" + value.toString() });
         }
 
@@ -575,7 +577,9 @@
                 "n1": null,
                 "n2": null,
                 "value": null,
-                "time": null
+                "time": null,
+                "tend": null,
+                "xp": null
             };
 
             this.itemType = "regression";
@@ -689,6 +693,9 @@
 
             });
 
+            this.endDay.subscribe(a => this.updateEndDay());
+            this.maxDay.subscribe(a => this.updateEndDay());
+
             this.selectedFunction(this.functions[0]);
 
             if (config)
@@ -746,6 +753,11 @@
         /****************************************/
 
         protected onGraphChanged() {
+            /*
+            const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("end-day")];
+            if (item && item.evaluation)
+                this.endDay(item.evaluation.value);*/
+
             this.updateRegressionVars();
         }
 
@@ -770,7 +782,7 @@
 
         protected createParameters(result: ParameterViewModel[]): boolean {
             result.push(apply(new ParameterViewModel({ value: this.endDay, name: "Giorni regressione" }), p => {
-                p.max = this.dayCount;
+                p.max = this.maxDay;
                 p.min(0);
                 p.step(1);
             }));
@@ -822,9 +834,26 @@
         onParentChanged() {
             super.onParentChanged();
             this.color(this.parent.color());
-            this.dayCount(linq(this.parent.values).max(a => a.x));
+            this.maxDay(linq(this.parent.values).max(a => a.x));
             if (this.endDay() == undefined)
-                this.endDay(this.dayCount());
+                this.endDay(this.maxDay());
+        }
+
+        /****************************************/
+
+        protected updateEndDay() {
+            if (!this._varsMap["tend"])
+                return;
+            this._graphCtx.updateExpression({
+                type: "expression",
+                id: this.getGraphId("end-day"),
+                latex: this._varsMap["tend"] + "=" + this.endDay(),
+                slider: {
+                    min: "0",
+                    step: "1",
+                    max: (this.maxDay()).toString(),
+                }
+            });
         }
 
         /****************************************/
@@ -833,6 +862,8 @@
             this._graphCtx.setColor(this.getGraphId("main-func"), this.color());
             this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
             this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
+            this._graphCtx.setColor(this.getGraphId("end-day-line"), this.color());
+            
         }     
 
         /****************************************/
@@ -863,7 +894,7 @@
 
             const func = this.selectedFunction().value;
 
-            this._varsMap["x"] = this.parent.getVar("xofs");
+            this._varsMap["x"] = "";
             this._varsMap["y"] = this.parent.getVar("y");
             this._varsMap["time"] = this.parent.parent.getVar("time");
 
@@ -873,6 +904,7 @@
             }
 
             this._graphCtx.generateVars(this._varsMap);
+            this._varsMap["x"] = this.getVar("xp");
 
             values.push({
                 type: "expression",
@@ -939,6 +971,38 @@
                 showLabel: true
             });
 
+            values.push({
+                type: "expression",
+                id: this.getGraphId("end-day"),
+                latex: this._varsMap["tend"] + "=" + this.endDay(),
+                folderId: this.getGraphId("public"),
+                label: "Giorni Previsione",
+                slider: {
+                    min: (0).toString(),
+                    max: (this.maxDay()).toString(),
+                    hardMax: true,
+                    hardMin: true,
+                    step: "1"
+                }
+            });
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("end-day-line"),
+                color: this.color(),
+                latex: "x=" + this._varsMap["tend"],
+                folderId: this.getGraphId("private"),
+                lines: true
+            });
+
+            values.push({
+                type: "expression",
+                id: this.getGraphId("end-day-serie"),
+                latex: this.replaceVars("$xp=[0,...,$tend]+" + this.parent.getVar("ofs")),
+                folderId: this.getGraphId("private"),
+                hidden: true
+            });
+
             for (let item of this.selectedFunction().vars()) {
                 if (item.autoCompute())
                     this._graphCtx.calculator.removeExpression({ id: this.getGraphId(item.value.name + "-value") });
@@ -969,7 +1033,7 @@
         functions: RegressionFunctionViewModel[];
         selectedFunction = ko.observable<RegressionFunctionViewModel>();
         showIntegration = ko.observable<boolean>(true);
-        dayCount = ko.observable<number>();
+        maxDay = ko.observable<number>();
         endDay = ko.observable<number>();
     }
 
@@ -1181,9 +1245,10 @@
         /****************************************/
 
         protected onGraphChanged() {
+            /*
             const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
             if (item && item.evaluation)
-                this.offsetX(item.evaluation.value);
+                this.offsetX(item.evaluation.value);*/
         }
 
         /****************************************/
@@ -1410,9 +1475,10 @@
         /****************************************/
 
         protected onGraphChanged() {
+            /*
             const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
             if (item)
-                this.time(item.evaluation.value);
+                this.time(item.evaluation.value);*/
         }
 
         /****************************************/

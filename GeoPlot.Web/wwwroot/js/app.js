@@ -2061,6 +2061,8 @@ var WebApp;
         };
         /****************************************/
         GraphContext.prototype.updateVariable = function (id, varName, value) {
+            if (!varName)
+                return;
             this.updateExpression({ id: id, latex: varName + "=" + value.toString() });
         };
         /****************************************/
@@ -2317,7 +2319,7 @@ var WebApp;
             _this._varsMap = {};
             _this.selectedFunction = ko.observable();
             _this.showIntegration = ko.observable(true);
-            _this.dayCount = ko.observable();
+            _this.maxDay = ko.observable();
             _this.endDay = ko.observable();
             _this._varsMap = {
                 "fun": null,
@@ -2325,7 +2327,9 @@ var WebApp;
                 "n1": null,
                 "n2": null,
                 "value": null,
-                "time": null
+                "time": null,
+                "tend": null,
+                "xp": null
             };
             _this.itemType = "regression";
             _this.icon = "show_chart";
@@ -2431,6 +2435,8 @@ var WebApp;
                 if (!_this.name() && a)
                     return _this.name(a.value.name);
             });
+            _this.endDay.subscribe(function (a) { return _this.updateEndDay(); });
+            _this.maxDay.subscribe(function (a) { return _this.updateEndDay(); });
             _this.selectedFunction(_this.functions[0]);
             if (config)
                 _this.setState(config);
@@ -2490,6 +2496,10 @@ var WebApp;
         };
         /****************************************/
         StudioSerieRegression.prototype.onGraphChanged = function () {
+            /*
+            const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("end-day")];
+            if (item && item.evaluation)
+                this.endDay(item.evaluation.value);*/
             this.updateRegressionVars();
         };
         /****************************************/
@@ -2522,7 +2532,7 @@ var WebApp;
         StudioSerieRegression.prototype.createParameters = function (result) {
             var _this = this;
             result.push(WebApp.apply(new ParameterViewModel({ value: this.endDay, name: "Giorni regressione" }), function (p) {
-                p.max = _this.dayCount;
+                p.max = _this.maxDay;
                 p.min(0);
                 p.step(1);
             }));
@@ -2592,15 +2602,31 @@ var WebApp;
         StudioSerieRegression.prototype.onParentChanged = function () {
             _super.prototype.onParentChanged.call(this);
             this.color(this.parent.color());
-            this.dayCount(WebApp.linq(this.parent.values).max(function (a) { return a.x; }));
+            this.maxDay(WebApp.linq(this.parent.values).max(function (a) { return a.x; }));
             if (this.endDay() == undefined)
-                this.endDay(this.dayCount());
+                this.endDay(this.maxDay());
+        };
+        /****************************************/
+        StudioSerieRegression.prototype.updateEndDay = function () {
+            if (!this._varsMap["tend"])
+                return;
+            this._graphCtx.updateExpression({
+                type: "expression",
+                id: this.getGraphId("end-day"),
+                latex: this._varsMap["tend"] + "=" + this.endDay(),
+                slider: {
+                    min: "0",
+                    step: "1",
+                    max: (this.maxDay()).toString(),
+                }
+            });
         };
         /****************************************/
         StudioSerieRegression.prototype.updateColor = function () {
             this._graphCtx.setColor(this.getGraphId("main-func"), this.color());
             this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
             this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
+            this._graphCtx.setColor(this.getGraphId("end-day-line"), this.color());
         };
         /****************************************/
         StudioSerieRegression.prototype.updateGraphWork = function () {
@@ -2624,7 +2650,7 @@ var WebApp;
                 collapsed: true
             });
             var func = this.selectedFunction().value;
-            this._varsMap["x"] = this.parent.getVar("xofs");
+            this._varsMap["x"] = "";
             this._varsMap["y"] = this.parent.getVar("y");
             this._varsMap["time"] = this.parent.parent.getVar("time");
             try {
@@ -2642,6 +2668,7 @@ var WebApp;
                 finally { if (e_17) throw e_17.error; }
             }
             this._graphCtx.generateVars(this._varsMap);
+            this._varsMap["x"] = this.getVar("xp");
             values.push({
                 type: "expression",
                 id: this.getGraphId("main"),
@@ -2698,6 +2725,35 @@ var WebApp;
                 label: this.parent.name(),
                 dragMode: "XY",
                 showLabel: true
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("end-day"),
+                latex: this._varsMap["tend"] + "=" + this.endDay(),
+                folderId: this.getGraphId("public"),
+                label: "Giorni Previsione",
+                slider: {
+                    min: (0).toString(),
+                    max: (this.maxDay()).toString(),
+                    hardMax: true,
+                    hardMin: true,
+                    step: "1"
+                }
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("end-day-line"),
+                color: this.color(),
+                latex: "x=" + this._varsMap["tend"],
+                folderId: this.getGraphId("private"),
+                lines: true
+            });
+            values.push({
+                type: "expression",
+                id: this.getGraphId("end-day-serie"),
+                latex: this.replaceVars("$xp=[0,...,$tend]+" + this.parent.getVar("ofs")),
+                folderId: this.getGraphId("private"),
+                hidden: true
             });
             try {
                 for (var _e = __values(this.selectedFunction().vars()), _f = _e.next(); !_f.done; _f = _e.next()) {
@@ -2889,9 +2945,10 @@ var WebApp;
         };
         /****************************************/
         StudioSerie.prototype.onGraphChanged = function () {
-            var item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+            /*
+            const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
             if (item && item.evaluation)
-                this.offsetX(item.evaluation.value);
+                this.offsetX(item.evaluation.value);*/
         };
         /****************************************/
         StudioSerie.prototype.onSelected = function () {
@@ -3053,9 +3110,10 @@ var WebApp;
         };
         /****************************************/
         StudioProject.prototype.onGraphChanged = function () {
-            var item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
+            /*
+            const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
             if (item)
-                this.time(item.evaluation.value);
+                this.time(item.evaluation.value);*/
         };
         /****************************************/
         StudioProject.prototype.attachGraph = function (ctx) {

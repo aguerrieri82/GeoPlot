@@ -889,7 +889,7 @@
 
         async copySerieForStudio() {
 
-            let obj: IStudioData = {
+            let obj: StudioData = {
                 type: "serie",
                 version: 1,
                 color: this.selectedIndicator().colorLight,

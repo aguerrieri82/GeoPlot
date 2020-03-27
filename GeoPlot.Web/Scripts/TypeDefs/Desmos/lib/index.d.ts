@@ -248,8 +248,8 @@ declare namespace Desmos {
 
     interface ISliderBounds extends IDomain {
         step?: string;
-        hardMax: boolean;
-        hardMin: boolean;
+        hardMax?: boolean;
+        hardMin?: boolean;
     }
 
     /****************************************/
