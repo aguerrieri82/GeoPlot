@@ -427,6 +427,11 @@ svg.map.experimental {
     .dev-message {
       display: none; } }
 
+.parameter .name {
+  font-weight: bold; }
+  .parameter .name:after {
+    content: ':'; }
+
 .studio-page {
   display: flex;
   flex-direction: row;

@@ -22,6 +22,16 @@
     }
 }
 
+.parameter{
+    .name{
+        font-weight: bold;
+
+        &:after{
+            content: ':';
+        }
+    }
+}
+
 .studio-page {
     display: flex;
     flex-direction: row;

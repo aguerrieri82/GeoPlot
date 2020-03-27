@@ -502,6 +502,16 @@ var WebApp;
 (function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+function $string(format) {
+    var REP_EXP = /\$\((?<id>[^)]+)\)/g;
+    return format.replace(REP_EXP, function (m, value) { return WebApp.GeoPlot.StringTable[value]; });
+}
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
         var AggregationFunc;
         (function (AggregationFunc) {
             AggregationFunc[AggregationFunc["SUm"] = 0] = "SUm";
@@ -2132,7 +2142,7 @@ var WebApp;
             BaseItem.prototype.createActions = function (result) {
                 var _this = this;
                 result.push(WebApp.apply(new ActionViewModel(), function (action) {
-                    action.text = "Elimina";
+                    action.text = $string("$(delete)");
                     action.icon = "delete";
                     action.execute = function () { return _this.remove(); };
                 }));
@@ -2368,92 +2378,92 @@ var WebApp;
                 _this.optionsTemplateName = "RegressionOptionsTemplate";
                 _this.functions = [];
                 _this.addFunction({
-                    name: "Log-Normale",
+                    name: $string("$(log-normal)"),
                     type: "log-normal",
                     value: "$y\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
                     vars: [{
                             name: "a",
-                            label: "Scostamento",
+                            label: $string("$(offset)"),
                             autoCompute: true,
                             precision: 0
                         },
                         {
                             name: "c",
-                            label: "Totale",
+                            label: $string("$(total)"),
                             autoCompute: true,
                             precision: 0
                         },
                         {
                             name: "o",
-                            label: "Varianza",
+                            label: $string("$(variance)"),
                             autoCompute: true,
                             precision: 5
                         },
                         {
                             name: "u",
-                            label: "Media",
+                            label: $string("$(average)"),
                             autoCompute: true,
                             precision: 5
                         }]
                 });
                 _this.addFunction({
-                    name: "Normale",
+                    name: $string("$(normal)"),
                     type: "normal",
                     value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
                     vars: [
                         {
                             name: "c",
-                            label: "Totale",
+                            label: $string("$(total)"),
                             autoCompute: true,
                             precision: 0
                         },
                         {
                             name: "o",
-                            label: "Varianza",
+                            label: $string("$(variance)"),
                             autoCompute: true,
                             precision: 5
                         },
                         {
                             name: "u",
-                            label: "Media/Picco",
+                            label: $string("$(avg-peak)"),
                             autoCompute: true,
                             precision: 0
                         }
                     ]
                 });
                 _this.addFunction({
-                    name: "Esponenziale",
+                    name: $string("$(exponential)"),
                     type: "exponential",
                     value: "$y\\sim $a^{\\left($x-$b\\right)}",
                     vars: [
                         {
                             name: "a",
-                            label: "Base",
+                            label: $string("$(base)"),
                             autoCompute: true,
                             precision: 5
                         },
                         {
                             name: "b",
-                            label: "Offset",
+                            label: $string("$(offset)"),
                             autoCompute: true,
                             precision: 5
                         }
                     ]
                 });
                 _this.addFunction({
-                    name: "Lineare",
+                    name: $string("$(linear)"),
                     type: "linear",
                     value: "$y\\sim $a+$m$x",
                     vars: [
                         {
                             name: "a",
-                            label: "Offset",
+                            label: $string("$(offset)"),
                             autoCompute: true,
                             precision: 5
                         },
                         {
                             name: "m",
-                            label: "Slope",
+                            label: $string("$(slope)"),
                             autoCompute: true,
                             precision: 5
                         }
@@ -2563,7 +2573,7 @@ var WebApp;
             /****************************************/
             StudioSerieRegression.prototype.createParameters = function (result) {
                 var _this = this;
-                result.push(WebApp.apply(new ParameterViewModel({ value: this.endDay, name: "Giorni regressione" }), function (p) {
+                result.push(WebApp.apply(new ParameterViewModel({ value: this.endDay, name: $string("$(reg-days)") }), function (p) {
                     p.max = _this.maxDay;
                     p.min(0);
                     p.step(1);
@@ -2860,13 +2870,13 @@ var WebApp;
                 var _this = this;
                 _super.prototype.createActions.call(this, result);
                 result.push(WebApp.apply(new ActionViewModel(), function (action) {
-                    action.text = "Aggiorna";
-                    action.icon = "autorenew";
+                    action.text = $string("$(update)"),
+                        action.icon = "autorenew";
                     action.execute = function () { return _this.updateSerie(); };
                 }));
                 result.push(WebApp.apply(new ActionViewModel(), function (action) {
-                    action.text = "Nuova regressione";
-                    action.icon = "add_box";
+                    action.text = $string("$(new-regression)"),
+                        action.icon = "add_box";
                     action.execute = function () {
                         var reg = _this.addRegression();
                         _this.node.isExpanded(true);
@@ -2874,8 +2884,8 @@ var WebApp;
                     };
                 }));
                 result.push(WebApp.apply(new ActionViewModel(), function (action) {
-                    action.text = "Zoom";
-                    action.icon = "zoom_in";
+                    action.text = $string("$(zoom)"),
+                        action.icon = "zoom_in";
                     action.execute = function () {
                         _this.zoom();
                     };
@@ -2965,7 +2975,7 @@ var WebApp;
             /****************************************/
             StudioSerie.prototype.createParameters = function (result) {
                 var _this = this;
-                result.push(WebApp.apply(new ParameterViewModel({ value: this.offsetX, name: "Transla" }), function (p) {
+                result.push(WebApp.apply(new ParameterViewModel({ value: this.offsetX, name: $string("$(shift)") }), function (p) {
                     p.max(_this.values.length);
                     p.min(-_this.values.length);
                     p.step(1);
@@ -3115,7 +3125,7 @@ var WebApp;
             };
             /****************************************/
             StudioProject.prototype.createParameters = function (result) {
-                result.push(WebApp.apply(new ParameterViewModel({ value: this.time, name: "Giorno" }), function (p) {
+                result.push(WebApp.apply(new ParameterViewModel({ value: this.time, name: $string("$(day)") }), function (p) {
                     p.max(100);
                     p.min(0);
                     p.step(1);
@@ -3381,18 +3391,18 @@ var WebApp;
                 });
                 var actions = [];
                 actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                    action.text = "Nuovo progetto";
-                    action.icon = "create_new_folder";
+                    action.text = $string("$(new-project)"),
+                        action.icon = "create_new_folder";
                     action.execute = function () { return _this.newProject(); };
                 }));
                 actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                    action.text = "Salva";
-                    action.icon = "save";
+                    action.text = $string("$(save)"),
+                        action.icon = "save";
                     action.execute = function () { return _this.saveState(); };
                 }));
                 actions.push(WebApp.apply(new ActionViewModel(), function (action) {
-                    action.text = "Opzioni";
-                    action.icon = "settings";
+                    action.text = $string("$(options)"),
+                        action.icon = "settings";
                     action.execute = function () { return _this.showOptions(); };
                 }));
                 var root = new TreeNodeViewModel();
@@ -3500,7 +3510,7 @@ var WebApp;
             /****************************************/
             StudioPage.prototype.saveState = function () {
                 localStorage.setItem("studio", JSON.stringify(this.getState()));
-                M.toast({ html: "Studio salvato sul tuo dispositivo." });
+                M.toast({ html: $string("$(msg-saved)") });
             };
             /****************************************/
             StudioPage.prototype.demo = function () {

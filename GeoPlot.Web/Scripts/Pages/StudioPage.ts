@@ -218,7 +218,7 @@
 
         protected createActions(result: ActionViewModel[]) {
             result.push(apply(new ActionViewModel(), action => {
-                action.text = "Elimina";
+                action.text = $string("$(delete)");
                 action.icon = "delete";
                 action.execute = () => this.remove();
             }))
@@ -596,93 +596,93 @@
             this.functions = [];
 
             this.addFunction({
-                name: "Log-Normale",
+                name: $string("$(log-normal)"),
                 type: "log-normal",
                 value: "$y\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
                 vars: [{
                     name: "a",
-                    label: "Scostamento",
+                    label: $string("$(offset)"),
                     autoCompute: true,
                     precision: 0
                 },
                 {
                     name: "c",
-                    label: "Totale",
+                    label: $string("$(total)"),
                     autoCompute: true,
                     precision: 0
                 },
                 {
                     name: "o",
-                    label: "Varianza",
+                    label: $string("$(variance)"),
                     autoCompute: true,
                     precision: 5
                 },
                 {
                     name: "u",
-                    label: "Media",
+                    label: $string("$(average)"),
                     autoCompute: true,
                     precision: 5
                 }]
             });
 
             this.addFunction({
-                name: "Normale",
+                name: $string("$(normal)"),
                 type: "normal",
                 value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
                 vars: [
                     {
                         name: "c",
-                        label: "Totale",
+                        label: $string("$(total)"),
                         autoCompute: true,
                         precision: 0
                     },
                     {
                         name: "o",
-                        label: "Varianza",
+                        label: $string("$(variance)"),
                         autoCompute: true,
                         precision: 5
                     },
                     {
                         name: "u",
-                        label: "Media/Picco",
+                        label: $string("$(avg-peak)"),
                         autoCompute: true,
                         precision: 0
                     }]
             });
 
             this.addFunction({
-                name: "Esponenziale",
+                name: $string("$(exponential)"),
                 type: "exponential",
                 value: "$y\\sim $a^{\\left($x-$b\\right)}",
                 vars: [
                     {
                         name: "a",
-                        label: "Base",
+                        label: $string("$(base)"),
                         autoCompute: true,
                         precision: 5
                     },
                     {
                         name: "b",
-                        label: "Offset",
+                        label: $string("$(offset)"),
                         autoCompute: true,
                         precision: 5
                     }]
             });
 
             this.addFunction({
-                name: "Lineare",
+                name: $string("$(linear)"),
                 type: "linear",
                 value: "$y\\sim $a+$m$x",
                 vars: [
                     {
                         name: "a",
-                        label: "Offset",
+                        label: $string("$(offset)"),
                         autoCompute: true,
                         precision: 5
                     },
                     {
                         name: "m",
-                        label: "Slope",
+                        label: $string("$(slope)"),
                         autoCompute: true,
                         precision: 5
                     }]
@@ -788,7 +788,7 @@
         /****************************************/
 
         protected createParameters(result: ParameterViewModel[]): boolean {
-            result.push(apply(new ParameterViewModel({ value: this.endDay, name: "Giorni regressione" }), p => {
+            result.push(apply(new ParameterViewModel({ value: this.endDay, name: $string("$(reg-days)") }), p => {
                 p.max = this.maxDay;
                 p.min(0);
                 p.step(1);
@@ -1116,13 +1116,13 @@
             super.createActions(result);
 
             result.push(apply(new ActionViewModel(), action => {
-                action.text = "Aggiorna";
+                action.text = $string("$(update)"),
                 action.icon = "autorenew";
                 action.execute = () => this.updateSerie();
             }));
 
             result.push(apply(new ActionViewModel(), action => {
-                action.text = "Nuova regressione";
+                action.text = $string("$(new-regression)"),
                 action.icon = "add_box";
                 action.execute = () => {
                     const reg = this.addRegression();
@@ -1132,7 +1132,7 @@
             }));
 
             result.push(apply(new ActionViewModel(), action => {
-                action.text = "Zoom";
+                action.text = $string("$(zoom)"),
                 action.icon = "zoom_in";
                 action.execute = () => {
                     this.zoom();
@@ -1236,7 +1236,7 @@
         /****************************************/
 
         protected createParameters(result: ParameterViewModel[]): boolean {
-            result.push(apply(new ParameterViewModel({ value: this.offsetX, name: "Transla" }), p => {
+            result.push(apply(new ParameterViewModel({ value: this.offsetX, name: $string("$(shift)")}), p => {
                 p.max(this.values.length);
                 p.min(-this.values.length);
                 p.step(1);
@@ -1447,7 +1447,7 @@
         /****************************************/
 
         protected createParameters(result: ParameterViewModel[]): boolean {
-            result.push(apply(new ParameterViewModel({ value: this.time, name: "Giorno" }), p => {
+            result.push(apply(new ParameterViewModel({ value: this.time, name: $string("$(day)")}), p => {
                 p.max(100);
                 p.min(0);
                 p.step(1);
@@ -1833,17 +1833,17 @@
 
             const actions: ActionViewModel[] = [];
             actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Nuovo progetto";
+                action.text = $string("$(new-project)"),
                 action.icon = "create_new_folder";
                 action.execute = () => this.newProject();
             }));
             actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Salva";
+                action.text = $string("$(save)"),
                 action.icon = "save";
                 action.execute = () => this.saveState();
             }));
             actions.push(apply(new ActionViewModel(), action => {
-                action.text = "Opzioni";
+                action.text = $string("$(options)"),
                 action.icon = "settings";
                 action.execute = () => this.showOptions();
             }));
@@ -1985,7 +1985,7 @@
 
         saveState() {
             localStorage.setItem("studio", JSON.stringify(this.getState()));
-            M.toast({ html: "Studio salvato sul tuo dispositivo." });
+            M.toast({html: $string("$(msg-saved)")});
         }
 
         /****************************************/

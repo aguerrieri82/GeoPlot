@@ -15,6 +15,7 @@
     <None Remove="Scripts\Bindings.ts" />
     <None Remove="Scripts\Desmos.d.ts" />
     <None Remove="Scripts\Pages\StudioPage.ts" />
+    <None Remove="Scripts\StringTable.ts" />
     <None Remove="Scripts\TypeDefs\DOM\index.d.ts" />
   </ItemGroup>
   <ItemGroup>
@@ -28,10 +29,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj" />
     <ProjectReference Include="..\GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Templates\" />
   </ItemGroup>
 
 
