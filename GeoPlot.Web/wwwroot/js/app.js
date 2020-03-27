@@ -498,15 +498,9 @@ var WebApp;
         GeoPlot.IndicatorCalculator = IndicatorCalculator;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
-var WebApp;
-(function (WebApp) {
-    var GeoPlot;
-    (function (GeoPlot) {
-    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
-})(WebApp || (WebApp = {}));
 function $string(format) {
     var REP_EXP = /\$\((?<id>[^)]+)\)/g;
-    return format.replace(REP_EXP, function (m, value) { return WebApp.GeoPlot.StringTable[value]; });
+    return format.replace(REP_EXP, function (m, value) { return StringTable[value]; });
 }
 var WebApp;
 (function (WebApp) {
@@ -537,14 +531,14 @@ var WebApp;
             indicators: [
                 {
                     id: "totalPositive",
-                    name: "Positivi Totali",
+                    name: $string("$(total-positive)"),
                     colorLight: "#f44336",
                     colorDark: "#b71c1c",
                     compute: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalPositive; })
                 },
                 {
                     id: "currentPositive",
-                    name: "Attuali Positivi",
+                    name: $string("$(current-positive)"),
                     validFor: ["region", "country"],
                     colorLight: "#e91e63",
                     colorDark: "#880e4f",
@@ -552,7 +546,7 @@ var WebApp;
                 },
                 {
                     id: "totalDeath",
-                    name: "Deceduti",
+                    name: $string("$(death)"),
                     validFor: ["region", "country"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
@@ -560,7 +554,7 @@ var WebApp;
                 },
                 {
                     id: "totalSevere",
-                    name: "Gravi",
+                    name: $string("$(severe)"),
                     validFor: ["region", "country"],
                     colorLight: "#ff9800",
                     colorDark: "#e65100",
@@ -568,7 +562,7 @@ var WebApp;
                 },
                 {
                     id: "totalHospedalized",
-                    name: "Ricoverati",
+                    name: $string("$(hospedalized)"),
                     validFor: ["region", "country"],
                     colorLight: "#fdd835",
                     colorDark: "#fbc02d",
@@ -576,7 +570,7 @@ var WebApp;
                 },
                 {
                     id: "totalHealed",
-                    name: "Guariti",
+                    name: $string("$(healed)"),
                     validFor: ["region", "country"],
                     colorLight: "#4caf50",
                     colorDark: "#1b5e20",
@@ -584,7 +578,7 @@ var WebApp;
                 },
                 {
                     id: "toatlTests",
-                    name: "Tamponi",
+                    name: $string("$(tested)"),
                     validFor: ["region", "country"],
                     colorLight: "#03a9f4",
                     colorDark: "#01579b",
@@ -592,7 +586,7 @@ var WebApp;
                 },
                 {
                     id: "surface",
-                    name: "Superfice (Geo)",
+                    name: $string("$(surface) ($(geo))"),
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
@@ -600,7 +594,7 @@ var WebApp;
                 },
                 {
                     id: "density",
-                    name: "Densita (Geo)",
+                    name: $string("$(density) ($(geo))"),
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
@@ -608,7 +602,7 @@ var WebApp;
                 },
                 {
                     id: "population",
-                    name: "Popolazione (Geo)",
+                    name: $string("$(population) ($(geo))"),
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
@@ -616,7 +610,7 @@ var WebApp;
                 },
                 {
                     id: "populationOld",
-                    name: "Popolazione +65 (Geo)",
+                    name: $string("$(population) +65 ($(geo))"),
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
@@ -626,62 +620,62 @@ var WebApp;
             factors: [
                 {
                     id: "none",
-                    name: "Nessuno",
+                    name: $string("$(none)"),
                     compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return i; }),
                     format: function (a) { return formatNumber(a); },
                     reference: function (v, a) { return "N/A"; },
-                    description: "[indicator]"
+                    description: $string("[indicator]")
                 },
                 {
                     id: "population",
-                    name: "Popolazione",
+                    name: $string("$(population)"),
                     compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.total) * 100000; }),
                     format: function (a) { return formatNumber(a); },
                     reference: function (v, a) { return formatNumber(a.demography.total); },
-                    description: "[indicator] ogni 100.000 abitanti"
+                    description: $string("[indicator] $(every-100k)")
                 },
                 {
                     id: "population",
-                    name: "Popolazione +65",
+                    name: $string("$(population) +65"),
                     compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / a.demography.over65) * 100000; }),
                     format: function (a) { return formatNumber(WebApp.MathUtils.round(a, 1)); },
                     reference: function (v, a) { return formatNumber(a.demography.over65); },
-                    description: "[indicator] ogni 100.000 abitanti +65"
+                    description: $string("[indicator] $(every-100k) +65")
                 },
                 {
                     id: "density",
-                    name: "Densità",
+                    name: $string("$(density)"),
                     compute: new GeoPlot.SimpleFactorFunction(function (i, v, a) { return (i / (a.demography.total / a.surface)) * 100000; }),
                     format: function (a) { return formatNumber(WebApp.MathUtils.round(a, 1)); },
                     reference: function (v, a) { return formatNumber(WebApp.MathUtils.round(a.demography.total / a.surface, 1)); },
-                    description: "[indicator] rispetto densità territorio"
+                    description: $string("[indicator] $(over-density)")
                 },
                 {
                     id: "totalPositive",
-                    name: "Positivi Totali",
+                    name: $string("$(total-positive)"),
                     validFor: ["region", "country"],
                     compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.totalPositive; })),
                     format: function (a) { return WebApp.MathUtils.round(a, 1) + "%"; },
                     reference: function (v, a) { return !v.totalPositive ? "N/A" : formatNumber(v.totalPositive); },
-                    description: "% [indicator] su positivi totali"
+                    description: $string("% [indicator] $(over-total-positive)")
                 },
                 {
                     id: "severe",
-                    name: "Gravi",
+                    name: $string("$(severe)"),
                     validFor: ["region", "country"],
                     compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.totalSevere; })),
                     format: function (a) { return WebApp.MathUtils.round(a, 1) + "%"; },
                     reference: function (v, a) { return !v.totalSevere ? "N/A" : formatNumber(v.totalSevere); },
-                    description: "% [indicator] sui gravi totali"
+                    description: $string("% [indicator] $(over-severe)")
                 },
                 {
                     id: "test",
-                    name: "Tamponi",
+                    name: $string("$(tested)"),
                     validFor: ["region", "country"],
                     compute: new GeoPlot.DoubleFactorFunction(function (i, f) { return !i ? 0 : (i / f) * 100; }, new GeoPlot.SimpleIndicatorFunction(function (v) { return v.toatlTests; })),
                     format: function (a) { return WebApp.MathUtils.round(a, 1) + "%"; },
                     reference: function (v, a) { return !v.toatlTests ? "N/A" : formatNumber(v.toatlTests); },
-                    description: "% [indicator] sui tamponi eseguiti"
+                    description: $string("% [indicator] $(over-tested)")
                 }
             ]
         };
@@ -694,8 +688,8 @@ var WebApp;
         GeoPlot.ViewModes = {
             "district": {
                 label: {
-                    singular: "provincia",
-                    plural: "province"
+                    singular: $string("$(district)"),
+                    plural: $string("$(districts)")
                 },
                 mapGroup: "group_district",
                 tab: "districtTab",
@@ -704,8 +698,8 @@ var WebApp;
             },
             "region": {
                 label: {
-                    singular: "regione",
-                    plural: "regioni"
+                    singular: $string("$(region)"),
+                    plural: $string("$(regions)")
                 },
                 mapGroup: "group_region",
                 tab: "regionTab",
@@ -714,8 +708,8 @@ var WebApp;
             },
             "country": {
                 label: {
-                    singular: "italiana",
-                    plural: "italiane"
+                    singular: $string("$(italian)"),
+                    plural: $string("$(italians)")
                 },
                 mapGroup: "group_country",
                 tab: "italyTab",
@@ -1058,7 +1052,7 @@ var WebApp;
                 this._mapSvg.addEventListener("click", function (e) { return _this.onMapClick(e); });
                 this.days = [];
                 for (var i = 0; i < this._data.days.length; i++)
-                    this.days.push({ number: i, value: new Date(this._data.days[i].date), text: WebApp.DateUtils.format(this._data.days[i].date, "{DD}/{MM}") });
+                    this.days.push({ number: i, value: new Date(this._data.days[i].date), text: WebApp.DateUtils.format(this._data.days[i].date, $string("$(date-format-short)")) });
                 M.Tooltip.init(document.querySelectorAll(".tooltipped"));
                 M.Sidenav.init(document.getElementById("mobile-menu"));
                 var areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
@@ -1365,7 +1359,7 @@ var WebApp;
                                                 return [4 /*yield*/, navigator.clipboard.write([item])];
                                             case 1:
                                                 _b.sent();
-                                                M.toast({ html: "Mappa copiata negli appunti." });
+                                                M.toast({ html: $string("$(msg-map-copied)") });
                                                 return [2 /*return*/];
                                         }
                                     });
@@ -1379,7 +1373,7 @@ var WebApp;
                             element_1.target = "_blan";
                             element_1.download = "map.svg";
                             element_1.click();
-                            M.toast({ html: "Funzionalità non supportata, download in corso." });
+                            M.toast({ html: $string("$(msg-no-copy)") });
                         }
                         return [2 /*return*/];
                     });
@@ -1399,7 +1393,7 @@ var WebApp;
                                 return [4 /*yield*/, navigator.clipboard.write([item])];
                             case 1:
                                 _b.sent();
-                                M.toast({ html: "Grafico copiato negli appunti." });
+                                M.toast({ html: $string("$(msg-chart-copied)") });
                                 return [3 /*break*/, 3];
                             case 2:
                                 url = window.URL.createObjectURL(blob);
@@ -1408,7 +1402,7 @@ var WebApp;
                                 element.target = "_blan";
                                 element.download = this._chart.options.title.text + ".png";
                                 element.click();
-                                M.toast({ html: "Funzionalità non supportata, download in corso." });
+                                M.toast({ html: $string("$(msg-no-copy)") });
                                 _b.label = 3;
                             case 3: return [2 /*return*/];
                         }
@@ -1424,9 +1418,9 @@ var WebApp;
                         data = this._chart.data.datasets[0].data;
                         text = "";
                         for (i = 0; i < data.length; i++)
-                            text += WebApp.DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + WebApp.MathUtils.round(data[i].y, 1) + "\n";
+                            text += WebApp.DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + WebApp.MathUtils.round(data[i].y, 1) + "\n";
                         WebApp.DomUtils.copyText(text);
-                        M.toast({ html: "Serie copiata sugli appunti." });
+                        M.toast({ html: $string("$(msg-serie-copied)") });
                         this._preferences.actions.chartActionExecuted++;
                         return [2 /*return*/];
                     });
@@ -1455,7 +1449,7 @@ var WebApp;
                         };
                         obj.values = this._calculator.getSerie(obj.serie);
                         WebApp.DomUtils.copyText(JSON.stringify(obj));
-                        M.toast({ html: "Serie copiata sugli appunti." });
+                        M.toast({ html: $string("$(msg-serie-copied)") });
                         return [2 /*return*/];
                     });
                 });
@@ -1575,7 +1569,7 @@ var WebApp;
                         this._execludedArea.delete(areaId);
                     else {
                         this._execludedArea.set(areaId, area);
-                        M.toast({ html: "Regione " + area.name + " esclusa dai conteggi." });
+                        M.toast({ html: $string("$(msg-region-ex)").replace("[region]", area.name) });
                     }
                     this.updateIndicator();
                 }
@@ -1845,7 +1839,9 @@ var WebApp;
                 var area = value.value;
                 var day = this._data.days[dayNumber];
                 if (!day || !day.values[id]) {
-                    M.toast({ html: "Dati non disponibili" });
+                    M.toast({
+                        html: $string("$msg-no-data)")
+                    });
                     return;
                 }
                 value.data(day.values[id]);
@@ -1883,7 +1879,7 @@ var WebApp;
             /****************************************/
             GeoPlotPage.prototype.updateDayData = function () {
                 var day = this._data.days[this.dayNumber()];
-                this.currentData(WebApp.DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
+                this.currentData(WebApp.DateUtils.format(day.date, $string("$(date-format)")));
                 this.updateMap();
                 this.updateArea(this.currentArea());
                 this.updateAreaIndicators();
@@ -3046,8 +3042,26 @@ var WebApp;
             };
             /****************************************/
             StudioSerie.prototype.updateSerie = function () {
-                this.values = this._graphCtx.serieCalculator.getSerie(this.source);
-                this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+                return __awaiter(this, void 0, void 0, function () {
+                    var model;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                if (!!this._graphCtx.serieCalculator) return [3 /*break*/, 2];
+                                M.toast({ html: $string("$(msg-downloading-data)") });
+                                return [4 /*yield*/, WebApp.Http.getJsonAsync("~/StudioData")];
+                            case 1:
+                                model = _a.sent();
+                                this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(model.data, GeoPlot.InfectionDataSet, model.geo);
+                                _a.label = 2;
+                            case 2:
+                                this.values = this._graphCtx.serieCalculator.getSerie(this.source);
+                                this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+                                M.toast({ html: $string("$(msg-update-complete)") });
+                                return [2 /*return*/];
+                        }
+                    });
+                });
             };
             /****************************************/
             StudioSerie.prototype.zoom = function () {
@@ -3366,17 +3380,13 @@ var WebApp;
         GeoPlot.TreeViewModel = TreeViewModel;
         /****************************************/
         var StudioPage = /** @class */ (function () {
-            function StudioPage(model) {
+            function StudioPage() {
                 var _this = this;
-                this._dataSet = GeoPlot.InfectionDataSet;
                 /****************************************/
                 this.items = new TreeViewModel();
                 this.maxX = ko.observable();
                 this.maxY = ko.observable();
-                this._data = model.data;
-                this._geo = model.geo;
                 this._graphCtx = new GraphContext();
-                this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(this._data, this._dataSet, this._geo);
                 this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                     //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                     pasteGraphLink: false,

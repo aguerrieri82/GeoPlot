@@ -12,6 +12,7 @@ using GeoPlot.Coronavirus;
 using GeoPlot.Core;
 using System.Net.Http;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace GeoPlot.Web.Controllers
 {
@@ -50,6 +51,11 @@ namespace GeoPlot.Web.Controllers
 
         public async Task<IActionResult> Studio()
         {
+            return View();
+        }
+
+        public async Task<IActionResult> StudioData()
+        {
             var lastUpdate = await GetLastCommit();
 
             var model = new StudioViewModel()
@@ -57,7 +63,15 @@ namespace GeoPlot.Web.Controllers
                 Geo = await LoadGeoAreas(),
                 Data = await LoadInfectionData(lastUpdate),
             };
-            return View(model);
+
+            foreach (var area in model.Geo.Areas)
+                area.Value.Geometry = null;
+
+            return Json(model, new JsonSerializerSettings()
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            });
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
@@ -144,7 +158,7 @@ namespace GeoPlot.Web.Controllers
             return result;
         }
 
-        async Task<GeoAreaSet> LoadGeoAreas()
+        async Task<GeoAreaSet> LoadGeoAreas(bool includePoly = true)
         {
             var cacheFile = _env.WebRootPath + "\\data\\italy_geo.json";
             if (System.IO.File.Exists(cacheFile))

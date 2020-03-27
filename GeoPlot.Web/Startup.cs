@@ -27,7 +27,7 @@ namespace GeoPlot.Web
             var mvcOptions = services.AddControllersWithViews(options =>
             {
                 options.Filters.Add(new AppendVersionFilter());
-            });
+            }).AddNewtonsoftJson();
 #if DEBUG
             mvcOptions.AddRazorRuntimeCompilation();
 #endif
@@ -36,7 +36,7 @@ namespace GeoPlot.Web
             services.AddSingleton<IStringTable, JsonStringTable>(sp =>
             {
                 var env = sp.GetService<IWebHostEnvironment>();
-                return new JsonStringTable(env.WebRootPath + "\\lang\\en.json");
+                return new JsonStringTable(env.WebRootPath + "\\lang\\");
             });
         }
 

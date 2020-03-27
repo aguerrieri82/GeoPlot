@@ -21,14 +21,14 @@ namespace WebApp.GeoPlot {
         indicators: [
             {
                 id: "totalPositive",
-                name: "Positivi Totali",
+                name: $string("$(total-positive)"),
                 colorLight: "#f44336",
                 colorDark: "#b71c1c",
                 compute: new SimpleIndicatorFunction(a => a.totalPositive)
             },
             {
                 id: "currentPositive",
-                name: "Attuali Positivi",
+                name: $string("$(current-positive)"),
                 validFor: ["region", "country"],
                 colorLight: "#e91e63",
                 colorDark: "#880e4f",
@@ -36,7 +36,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "totalDeath",
-                name: "Deceduti",
+                name: $string("$(death)"),
                 validFor: ["region", "country"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
@@ -44,7 +44,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "totalSevere",
-                name: "Gravi",
+                name: $string("$(severe)"),
                 validFor: ["region", "country"],
                 colorLight: "#ff9800",
                 colorDark: "#e65100",
@@ -52,7 +52,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "totalHospedalized",
-                name: "Ricoverati",
+                name: $string("$(hospedalized)"),
                 validFor: ["region", "country"],
                 colorLight: "#fdd835",
                 colorDark: "#fbc02d",
@@ -60,7 +60,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "totalHealed",
-                name: "Guariti",
+                name: $string("$(healed)"),
                 validFor: ["region", "country"],
                 colorLight: "#4caf50",
                 colorDark: "#1b5e20",
@@ -68,7 +68,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "toatlTests",
-                name: "Tamponi",
+                name: $string("$(tested)"),
                 validFor: ["region", "country"],
                 colorLight: "#03a9f4",
                 colorDark: "#01579b",
@@ -76,7 +76,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "surface",
-                name: "Superfice (Geo)",
+                name: $string("$(surface) ($(geo))"),
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
@@ -84,7 +84,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "density",
-                name: "Densita (Geo)",
+                name: $string("$(density) ($(geo))"),
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
@@ -92,7 +92,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "population",
-                name: "Popolazione (Geo)",
+                name: $string("$(population) ($(geo))"),
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
@@ -100,7 +100,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "populationOld",
-                name: "Popolazione +65 (Geo)",
+                name: $string("$(population) +65 ($(geo))"),
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
@@ -110,62 +110,62 @@ namespace WebApp.GeoPlot {
         factors: [
             {
                 id: "none",
-                name: "Nessuno",
+                name: $string("$(none)"),
                 compute: new SimpleFactorFunction((i, v, a) => i),
                 format: a => formatNumber(a),
                 reference: (v, a) => "N/A",
-                description: "[indicator]"
+                description: $string("[indicator]")
             },
             {
                 id: "population",
-                name: "Popolazione",
+                name: $string("$(population)"),
                 compute: new SimpleFactorFunction((i, v, a) => (i / a.demography.total) * 100000),
                 format: a => formatNumber(a),
                 reference: (v, a) => formatNumber(a.demography.total),
-                description: "[indicator] ogni 100.000 abitanti"
+                description: $string("[indicator] $(every-100k)")
             },
             {
                 id: "population",
-                name: "Popolazione +65",
+                name: $string("$(population) +65"),
                 compute: new SimpleFactorFunction((i, v, a) => (i / a.demography.over65) * 100000),
                 format: a => formatNumber(MathUtils.round(a, 1)),
                 reference: (v, a) => formatNumber(a.demography.over65),
-                description: "[indicator] ogni 100.000 abitanti +65"
+                description: $string("[indicator] $(every-100k) +65")
             },
             {
                 id: "density",
-                name: "Densità",
+                name: $string("$(density)"),
                 compute: new SimpleFactorFunction((i, v, a) => (i / (a.demography.total / a.surface)) * 100000),
                 format: a => formatNumber(MathUtils.round(a, 1)),
                 reference: (v, a) => formatNumber(MathUtils.round(a.demography.total / a.surface, 1)),
-                description: "[indicator] rispetto densità territorio"
+                description: $string("[indicator] $(over-density)")
             },
             {
                 id: "totalPositive",
-                name: "Positivi Totali",
+                name: $string("$(total-positive)"),
                 validFor: ["region", "country"],
                 compute: new DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalPositive)),
                 format: a => MathUtils.round(a, 1) + "%",
                 reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive),
-                description: "% [indicator] su positivi totali"
+                description: $string("% [indicator] $(over-total-positive)")
             },
             {
                 id: "severe",
-                name: "Gravi",
+                name: $string("$(severe)"),
                 validFor: ["region", "country"],
                 compute: new DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalSevere)),
                 format: a => MathUtils.round(a, 1) + "%",
                 reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere),
-                description: "% [indicator] sui gravi totali"
+                description: $string("% [indicator] $(over-severe)")
             },
             {
                 id: "test",
-                name: "Tamponi",
+                name: $string("$(tested)"),
                 validFor: ["region", "country"],
                 compute: new DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new SimpleIndicatorFunction(v => v.toatlTests)),
                 format: a => MathUtils.round(a, 1) + "%",
                 reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
-                description: "% [indicator] sui tamponi eseguiti"
+                description: $string("% [indicator] $(over-tested)")
             }
         ]
     };

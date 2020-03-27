@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 namespace GeoPlot.Web
 {
     [HtmlTargetElement("*", Attributes = "string")]
-    [HtmlTargetElement("meta", Attributes = "content")]
-    [HtmlTargetElement("a", Attributes = "title")]
+    [HtmlTargetElement("*", Attributes = "string-*")]
     public class StringAttributeTagHelper :  TagHelper
     {
         readonly IStringTable _stringTable;
@@ -21,22 +20,19 @@ namespace GeoPlot.Web
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
             var contentAttr = output.Attributes["content"];
-            if (output.TagName == "meta")
+
+            foreach (var attr in output.Attributes.Where(a=> a.Name.StartsWith("string-")).ToArray())
             {
-                output.Attributes.SetAttribute("content", _stringTable.Format(contentAttr.Value.ToString()));
-                return;
-            }
-            if (output.TagName == "a")
-            {
-                if (output.Attributes.TryGetAttribute("title", out var titleAttr))
-                    output.Attributes.SetAttribute("title", _stringTable.Format(titleAttr.Value.ToString()));
+                var name = attr.Name.Substring(7);
+                output.Attributes.Add(name, _stringTable.Format(attr.Value.ToString()));
+                output.Attributes.Remove(attr);
             }
 
             if (output.Attributes.TryGetAttribute("string", out var stringAttr))
             {
-                    output.Content.Clear();
-                    output.Content.Append(_stringTable.Format(stringAttr.Value.ToString()));
-                    output.Attributes.RemoveAll("string");
+                output.Content.Clear();
+                output.Content.Append(_stringTable.Format(stringAttr.Value.ToString()));
+                output.Attributes.Remove(stringAttr);
             }
         }
     }

@@ -13,8 +13,8 @@
     export var ViewModes : { [K in ViewMode]: IViewModeData } = {
         "district": {
             label: {
-                singular: "provincia",
-                plural: "province"
+                singular: $string("$(district)"),
+                plural: $string("$(districts)")
             },
             mapGroup: "group_district",
             tab: "districtTab",
@@ -23,8 +23,8 @@
         },
         "region": {
             label: {
-                singular: "regione",
-                plural: "regioni"
+                singular: $string("$(region)"),
+                plural: $string("$(regions)")
             },
             mapGroup: "group_region",
             tab: "regionTab",
@@ -33,8 +33,8 @@
         },
         "country": {
             label: {
-                singular: "italiana",
-                plural: "italiane"
+                singular: $string("$(italian)"),
+                plural: $string("$(italians)")
             },
             mapGroup: "group_country",
             tab: "italyTab",

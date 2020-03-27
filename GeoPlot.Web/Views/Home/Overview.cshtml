@@ -6,15 +6,15 @@
 }
 <div class="container">
     <section class="main title">
-        <h6>Giorno <span data-bind="text: currentData"></span></h6>
+        <h6><string>$(day)</string> <span data-bind="text: currentData"></span></h6>
     </section>
     <div class="row">
         <div class="main col s12 m6 l7">
             <section class="card card-map">
                 <ul class="tabs" id="areaTabs">
-                    <li class="tab"><a href="#districtTab">Province</a></li>
-                    <li class="tab"><a href="#regionTab">Regioni</a></li>
-                    <li class="tab"><a href="#italyTab">Italia</a></li>
+                    <li class="tab"><a href="#districtTab"><string transform="CapitalizeFirst">$(districts)</string></a></li>
+                    <li class="tab"><a href="#regionTab"><string transform="CapitalizeFirst">$(regions)</string></a></li>
+                    <li class="tab"><a href="#italyTab"><string transform="CapitalizeFirst">$(italy)</string></a></li>
                 </ul>
                 <div class="card-content">
                     <div id="regionTab" data-view-mode="region"></div>
@@ -22,7 +22,7 @@
                     <div id="italyTab" data-view-mode="country"></div>
                     <div class="center-align map-container">
                         <div class="actions">
-                            <a href="#!" title="Copia mappa" data-bind="click: copyMap"><i class="material-icons">image</i></a>
+                            <a href="#!" string-title="$(copy-map)" data-bind="click: copyMap"><i class="material-icons">image</i></a>
                         </div>
                         <svg version="1.1" xmlns="http://www.w3.org/2000/svg" class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
                             <style type="text/css">
@@ -115,8 +115,8 @@
                         <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
                     </div>
                     <div>
-                        <button title="Play" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
-                        <button title="Pause" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
+                        <button string-title="$(play)" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
+                        <button string-title="$(pause)" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
                     </div>
                 </div>
             </section>
@@ -139,7 +139,7 @@
                                 <div data-bind="text: currentArea().reference"></div>
                             </div>
                             <div class="summary-field">
-                                <label data-bind="attr: {title: factorDescription}">Fattore</label>
+                                <label data-bind="attr: {title: factorDescription}" string="$(factor)"></label>
                                 <div data-bind="text: currentArea().factor"></div>
                             </div>
                         </div>
@@ -149,10 +149,10 @@
                                     <span data-bind="text: factorDescription"></span>
                                 </label>
                                 <div class="actions">
-                                    <a href="#!" title="Copia serie per studio" data-bind="click: copySerieForStudio"><i class="material-icons">input</i></a>
-                                    <a href="#!" title="Copia grafico" data-bind="click: copyChart"><i class="material-icons">image</i></a>
-                                    <a href="#!" title="Copia serie" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
-                                    <a href="#!" title="Espandi grafico" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
+                                    <a href="#!" string-title="$(copy-studio)" data-bind="click: copySerieForStudio"><i class="material-icons">input</i></a>
+                                    <a href="#!" string-title="$(copy-chart)" data-bind="click: copyChart"><i class="material-icons">image</i></a>
+                                    <a href="#!" string-title="$(copy-serie)" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
+                                    <a href="#!" string-title="$(expand-chart)" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
                                 </div>
 
                             </div>
@@ -164,7 +164,7 @@
                     </div>
                     <div class="card-section expandable indicators">
                         <h6 class="section-title" onclick="expandCollapse(this)">
-                            <span>Indicatori</span>
+                            <span string="$(indicators)"></span>
                             <i class="material-icons">chevron_right</i>
                         </h6>
                         <div class="section-content">
@@ -178,7 +178,7 @@
                     </div>
                     <div class="card-section expandable closed chart-options">
                         <h6 class="section-title" onclick="expandCollapse(this)">
-                            <span>Opzioni grafico</span>
+                            <span string="$(chart-options)"></span>
                             <i class="material-icons">chevron_right</i>
                         </h6>
                         <div class="section-content">
@@ -186,7 +186,7 @@
                                 <div class="col s12 log-scale">
                                     <label>
                                         <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
-                                        <span>Scala logaritmica</span>
+                                        <span string="$(log-scale)"></span>
                                     </label>
                                 </div>
                             </div>
@@ -194,13 +194,13 @@
                                 <div class="col s6 input-field">
                                     <select data-bind="options: groupDays, value: groupSize"></select>
                                     <label>
-                                        <span>Ragruppa (giorni)</span>
-                                        <i class="material-icons tooltipped" data-position="top" data-tooltip="Raggruppa i dati sommandoli per gli N° giorni consecutivi. Nel caso la dimensione del gruppo non sia divisibile con il numero dei giorni saranno troncati i dati più recenti. Spostare la data di inizio per avere i dati attuali.">info</i>
+                                        <span string="$(group-days)"></span>
+                                        <i class="material-icons tooltipped" data-position="top" string-data-tooltip="$(info-group-days)">info</i>
                                     </label>
                                 </div>
                                 <div class="col s6 input-field">
                                     <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
-                                    <label>A partire da</label>
+                                    <label string="$(starting-from)"></label>
                                 </div>
                             </div>
                         </div>
@@ -211,7 +211,7 @@
                     <div class="empty-text flex-row-inline item-margin-small">
                         <i class="material-icons small orange-text">warning</i>
                         <div>
-                            Selezionare una <span data-bind="text: WebApp.GeoPlot.ViewModes[viewMode()].label.singular"></span>  per vedere gli indicatori
+                            <string>$(msg-select-a-1)</string> <span data-bind="text: WebApp.GeoPlot.ViewModes[viewMode()].label.singular"></span> <string>$(msg-select-a-2)</string>
                         </div>
                     </div>
                     <!--/ko-->
@@ -219,41 +219,41 @@
             </section>
             <section class="card">
                 <div class="card-content">
-                    <span class="card-title">Filtro</span>
+                    <span class="card-title" string="$(filter)"></span>
                     <div class="row no-margin row-indicator">
                         <div class="col s6 input-field filter-indicator">
                             <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
-                            <label>Indicatore</label>
+                            <label string="$(indicator)"></label>
                         </div>
                         <div class="col s6 input-field filter-factor">
                             <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
-                            <label>In rapporto a</label>
+                            <label string="$(in-relation-to)"></label>
                         </div>
                     </div>
                     <div class="row no-margin row-factor">
                         <div class="col s12">
                             <label class="day-delta">
                                 <input class="filled-in" type="checkbox" data-bind="checked: isDayDelta" />
-                                <span>Incremento giornaliero</span>
+                                <span string="$(daily-increment)"></span>
                             </label>
                         </div>
                         <div class="col s6 input-field">
                             <label>
                                 <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor" />
-                                <span>Soglia automatica</span>
-                                <i class="material-icons tooltipped" data-position="top" data-tooltip="La colorazione nella mappa è relativa al valore più alto dell'indicatore che si ha avuto in un area geografica (rosso scuro = soglia, bianco = 0).&#013; E' possibile impostare manualmente il valore di riferimento (soglia massima) e rendere i colori relativi a quel valore.">info</i>
+                                <span string="$(auto-threshold)"></span>
+                                <i class="material-icons tooltipped" data-position="top" string-data-tooltip="$(info-auto-threshold)"></i>
                             </label>
                         </div>
                         <div class="input-field col s6 max-factor">
                             <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
-                            <label class="active" for="limit">Soglia fattore</label>
+                            <label string="$(factor-threshold)" class="active" for="limit"></label>
                         </div>
                     </div>
                     <div class="row no-margin row-factor">
                         <div class="col s12">
                             <label>
                                 <input class="filled-in" type="checkbox" data-bind="checked: isShowEnvData" />
-                                <span>Mostra dati ambientali</span>
+                                <span string="$(show-environmental-data)"></span>
                             </label>
                         </div>
                     </div>
@@ -263,7 +263,7 @@
             <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
                 <li>
                     <div class="card-title collapsible-header">
-                        <span data-bind="text: capitalizeFirst(WebApp.GeoPlot.ViewModes[viewMode()].label.plural)"></span>&nbsp;più colpite
+                        <span data-bind="text: capitalizeFirst(WebApp.GeoPlot.ViewModes[viewMode()].label.plural)"></span><string>&nbsp;$(more-effected)</string>
                         <i class="material-icons">chevron_right</i>
                     </div>
                     <div class="collapsible-body">
@@ -271,7 +271,7 @@
                         <table class="responsive-table highlight">
                             <thead>
                                 <tr>
-                                    <th>Nome</th>
+                                    <th string="$(name)"></th>
                                     <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
                                     <!--ko if: selectedFactor().id != 'none'-->
                                     <th data-bind="text: selectedFactor().name"></th>
@@ -297,34 +297,34 @@
         </div>
     </div>
     <section class="main data-source">
-        <h5>Fonte Dati:</h5>
+        <h5 string="$(data-source):"></h5>
         <ul>
             <li>
-                <label>Indicatori</label>
+                <label string="$(indicators)"></label>
                 <a href="https://github.com/pcm-dpc/COVID-19/tree/master/dati-json" target="_blank">Protezione civile</a>
-                <span class="last-update">aggiornati al @string.Format("{0:dd/MM/yyyy} alle {0:HH:mm:ss}", Model.LastUpdate)</span>
+                <span class="last-update"><string>@string.Format("$(updated-on) {0:dd/MM/yyyy} $(at) {0:HH:mm:ss}", Model.LastUpdate)</string></span>
             </li>
             <li>
-                <label>Demografia</label>
+                <label string="$(demography)">Demografia</label>
                 <a href="http://demo.istat.it/pop2019/index3.html" target="_blank">Istat</a>
-                <span class="last-update">aggiornati al 2019</span>
+                <span class="last-update"><string>$(updated-on) 2019</string></span>
             </li>
             <li>
-                <label>Superficie</label>
+                <label string="$(surface)"></label>
                 <a href="https://www.istat.it/it/files/2013/02/Dati-comunali-e-provinciali.zip" target="_blank">Istat</a>
-                <span class="last-update">aggiornati al 2011</span>
+                <span class="last-update"><string>$(updated-on) 2011</string></span>
             </li>
             <li>
-                <label>Dati geografici</label>
+                <label string="$(geo-data)">Dati geografici</label>
                 <a href="https://github.com/openpolis/geojson-italy/tree/master/geojson" target="_blank">Open polis</a>
-                <span class="last-update">aggiornati a Settembre 2019</span>
+                <span class="last-update"><string>$(updated-at) Settembre 2019</string></span>
             </li>
             <li>
-                <label>Dati ambientali</label>
+                <label string="$(environmental-data)"></label>
                 <a href="http://aidef.apps.eea.europa.eu/?source=%7B%22query%22%3A%7B%22match_all%22%3A%7B%7D%7D%2C%22display_type%22%3A%22tabular%22%7D" target="_blank">Europian Environment Agency</a>
-                <span class="last-update">aggiornati al 2018</span>
+                <span class="last-update"><string>$(updated-on) 2018</string></span>
                 <div class="note">
-                    Concentrazione PM10 su 1 anno al 90.4 percentile
+                    <string>$(env-method)</string>
                     <div class="legend">
                         <i class="good"></i>
                         <span>&lt; 20 µg m³</span>
@@ -355,15 +355,15 @@
             <div class="main">
                 <i class="material-icons yellow-text text-darken-1">lightbulb_outline</i>
                 <div>
-                    <h5 class="title">Lo sapevi che?</h5>
+                    <h5 class="title" string="$(do-u-know)"></h5>
                     <div class="body" data-bind="html: value.html"></div>
-                    <a class="not-show" href="#!" data-bind="click: dontShowAgain">Non mostrarmi suggerimenti</a>
+                    <a class="not-show" href="#!" data-bind="click: dontShowAgain" string="$(msg-no-suggestions)"></a>
                 </div>
             </div>
             <ul class="actions">
-                <li data-bind="visible: next != null"><a class="waves-effect waves-light" href="#!" data-bind="click: next">Prossimo&nbsp;›</a></li>
-                <li><a class="waves-effect waves-light" href="#!" data-bind="click: executeAction">Come?</a></li>
-                <li><a class="waves-effect waves-light" href="#!" data-bind="click: understood">Capito!</a></li>
+                <li data-bind="visible: next != null"><a class="waves-effect waves-light" href="#!" data-bind="click: next" string="$(btn-next)"></a></li>
+                <li><a class="waves-effect waves-light" href="#!" data-bind="click: executeAction" string="$(btn-how)"></a></li>
+                <li><a class="waves-effect waves-light" href="#!" data-bind="click: understood" string="$(btn-understood)"></a></li>
             </ul>
         </div>
     </div>

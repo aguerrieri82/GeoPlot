@@ -461,7 +461,7 @@
 
             this.days = [];
             for (var i = 0; i < this._data.days.length; i++)
-                this.days.push({ number: i, value: new Date(this._data.days[i].date), text: DateUtils.format(this._data.days[i].date, "{DD}/{MM}") });
+                this.days.push({ number: i, value: new Date(this._data.days[i].date), text: DateUtils.format(this._data.days[i].date, $string("$(date-format-short)")) });
 
             M.Tooltip.init(document.querySelectorAll(".tooltipped"));
 
@@ -833,7 +833,7 @@
                     canvas.toBlob(async pngBlob => {
                         let item = new ClipboardItem({ [pngBlob.type]: pngBlob });
                         await navigator.clipboard.write([item]);
-                        M.toast({ html: "Mappa copiata negli appunti." })
+                        M.toast({ html: $string("$(msg-map-copied)")})
                     })
                 }
                 svgImage.src = window.URL.createObjectURL(blob);
@@ -844,7 +844,7 @@
                 element.target = "_blan";
                 element.download = "map.svg";
                 element.click();
-                M.toast({ html: "Funzionalità non supportata, download in corso." })
+                M.toast({ html: $string("$(msg-no-copy)") })
             }
         }
 
@@ -855,7 +855,7 @@
                 if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
                     let item = new ClipboardItem({ [blob.type]: blob });
                     await navigator.clipboard.write([item]);
-                    M.toast({ html: "Grafico copiato negli appunti." })
+                    M.toast({ html: $string("$(msg-chart-copied)") })
                 }
                 else {
                     const url = window.URL.createObjectURL(blob);
@@ -864,7 +864,7 @@
                     element.target = "_blan";
                     element.download = this._chart.options.title.text + ".png";
                     element.click();
-                    M.toast({ html: "Funzionalità non supportata, download in corso." })
+                    M.toast({ html: $string("$(msg-no-copy)") })
                 }
             });
             this._preferences.actions.chartActionExecuted++;
@@ -877,11 +877,11 @@
             const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
             let text = "";
             for (let i = 0; i < data.length; i++)
-                text += DateUtils.format(data[i].x, "{YYYY}-{MM}-{DD}") + "\t" + i + "\t" + MathUtils.round(data[i].y, 1) + "\n";
+                text += DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + MathUtils.round(data[i].y, 1) + "\n";
 
             DomUtils.copyText(text);
 
-            M.toast({ html: "Serie copiata sugli appunti." })
+            M.toast({ html: $string("$(msg-serie-copied)")})
             this._preferences.actions.chartActionExecuted++;
         }
 
@@ -910,7 +910,7 @@
 
             DomUtils.copyText(JSON.stringify(obj));
 
-            M.toast({ html: "Serie copiata sugli appunti." })
+            M.toast({ html: $string("$(msg-serie-copied)") })
         }
 
         /****************************************/
@@ -1058,7 +1058,7 @@
                     this._execludedArea.delete(areaId);
                 else {
                     this._execludedArea.set(areaId, area);
-                    M.toast({ html: "Regione " + area.name + " esclusa dai conteggi." });
+                    M.toast({html: $string("$(msg-region-ex)").replace("[region]", area.name ) });
                 }
                 this.updateIndicator();
             }
@@ -1361,7 +1361,8 @@
             const day = this._data.days[dayNumber];
 
             if (!day || !day.values[id]) {
-                M.toast({ html: "Dati non disponibili" });
+                M.toast({
+                    html: $string("$msg-no-data)")});
                 return;
             }
 
@@ -1419,7 +1420,7 @@
 
             const day = this._data.days[this.dayNumber()];
 
-            this.currentData(DateUtils.format(day.date, "{DD}/{MM}/{YYYY}"));
+            this.currentData(DateUtils.format(day.date, $string("$(date-format)")));
 
             this.updateMap();
 

@@ -1,12 +1,9 @@
-﻿namespace WebApp.GeoPlot {
-
-    export declare var StringTable: IDictionary<string>;
-}
+﻿declare var StringTable: WebApp.IDictionary<string>;
 
 function $string(format: string): string {
 
     var REP_EXP = /\$\((?<id>[^)]+)\)/g;
 
-    return format.replace(REP_EXP, (m, value) => WebApp.GeoPlot.StringTable[value]);
+    return format.replace(REP_EXP, (m, value) => StringTable[value]);
 }
  

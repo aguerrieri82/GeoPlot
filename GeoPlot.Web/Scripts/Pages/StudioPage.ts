@@ -1329,9 +1329,18 @@
 
         /****************************************/
 
-        updateSerie() {
+        async updateSerie() {
+
+            if (!this._graphCtx.serieCalculator) {
+                M.toast({ html: $string("$(msg-downloading-data)") })
+                const model = await Http.getJsonAsync<IStudioViewModel>("~/StudioData");
+                this._graphCtx.serieCalculator = new IndicatorCalculator(model.data, InfectionDataSet, model.geo);
+            }
+
             this.values = this._graphCtx.serieCalculator.getSerie(this.source);
             this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+
+            M.toast({html: $string("$(msg-update-complete)")})
         }
 
         /****************************************/
@@ -1806,18 +1815,11 @@
 
     export class StudioPage {
 
-        private readonly _data: IDayAreaDataSet<TData>;
-        private readonly _dataSet = InfectionDataSet;
-        private readonly _geo: IGeoAreaSet;
         private _graphCtx: GraphContext;
 
-        constructor(model: IStudioViewModel) {
-
-            this._data = model.data;
-            this._geo = model.geo;
+        constructor() {
 
             this._graphCtx = new GraphContext();
-            this._graphCtx.serieCalculator = new IndicatorCalculator(this._data, this._dataSet, this._geo);
             this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                 //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                 pasteGraphLink: false,

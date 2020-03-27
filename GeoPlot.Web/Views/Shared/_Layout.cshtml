@@ -16,12 +16,12 @@
 
     <title><string>@ViewData["Title"] - $(site-title)</string></title>
 
-    <meta name="title" content="Coronavirus Italia" />
-    <meta name="description" content="$(site-description)"/>
+    <meta name="title"  string-content="$(site-title)" />
+    <meta name="description" string-content="$(site-description)"/>
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.oggibo.it/coronavirus/Overview"/>
-    <meta property="og:title" content="$(site-title)" />
-    <meta property="og:description" content="$(site-description)"/>
+    <meta property="og:title"  string-content="$(site-title)" />
+    <meta property="og:description"  string-content="$(site-description)"/>
     <meta property="og:image" content="@Url.Content("~/image/preview-alt.png")"/>
 
     <environment include="Production">
@@ -102,6 +102,11 @@
         </div>
     </footer>
 
+    <script>
+        StringTable = @(Html.Raw(StringTable.ToJson()));
+    </script>
+
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.debug.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script type="text/javascript">
@@ -119,9 +124,6 @@
         <script src="~/js/app.js" asp-append-version="true"></script>
     </environment>
 
-    <script>
-        WebApp.GeoPlot.StringTable = @(Html.Raw(StringTable.ToJson()));
-    </script>
 
     @RenderSection("Scripts", required: false)
 </body>

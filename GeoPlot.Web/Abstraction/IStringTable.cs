@@ -10,6 +10,10 @@ namespace GeoPlot.Web
     {
         string this[string id] { get; }
 
+        void SetLanguage(string code);
+
+        string CurrentLanguage {get;}
+
         string ToJson();
     }
 

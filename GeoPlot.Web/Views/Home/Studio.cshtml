@@ -1,5 +1,4 @@
-﻿@model StudioViewModel
-@{
+﻿@{
     ViewData["Title"] = "Studio";
 }
 
@@ -157,7 +156,7 @@
     <li data-bind="css: {selected: isSelected, visible: isVisible, expanded: isExpanded}, attach: true">
         <header data-bind="css: value().itemType, attr: {draggable: value().canDrag}">
             <a class="expand-collapse" href="#!" data-bind="click: expandCollapse"><i class="material-icons">arrow_drop_down</i></a>
-            <a class="visibility" title="mostra/nascondi" href="#!" data-bind="click: toggleVisible"><i class="material-icons" data-bind="text: value().icon, style: {color: value()['color'] && value().color() && isVisible() ? value().color() : 'unset'}"></i></a>
+            <a class="visibility" string-title="$(show-hide)" href="#!" data-bind="click: toggleVisible"><i class="material-icons" data-bind="text: value().icon, style: {color: value()['color'] && value().color() && isVisible() ? value().color() : 'unset'}"></i></a>
             <a draggable="false" href="#!" data-bind="click: toggleSelection"><span class="label" data-bind="text: value().name"></span></a>
         </header>
         <!--ko if: nodes().length > 0-->
@@ -176,6 +175,6 @@
     <script>
         WebApp.app.baseUrl = '@Url.Content("~/")';
         WebApp.app.initServices();
-        ko.applyBindings(new WebApp.GeoPlot.StudioPage(@Html.Json(Model)));
+        ko.applyBindings(new WebApp.GeoPlot.StudioPage());
     </script>
 }
