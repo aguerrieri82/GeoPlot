@@ -62,15 +62,15 @@
                 <ul class="right hide-on-med-and-down">
                     @foreach (var item in menu)
                     {
-                        <li class="@Html.ActiveClass(item.Action, item.Controller)">
-                            <a asp-controller="@item.Controller" asp-action="@item.Action">
-                                @if (item.Icon != null)
+                    <li class="@Html.ActiveClass(item.Action, item.Controller)">
+                        <a asp-controller="@item.Controller" asp-action="@item.Action">
+                            @if (item.Icon != null)
                                 {
-                                    <i class="material-icons left">@item.Icon</i>
+                            <i class="material-icons left">@item.Icon</i>
                                 }
-                                <string>@item.Name</string>
-                            </a>
-                        </li>
+                            <string>@item.Name</string>
+                        </a>
+                    </li>
                     }
                     <li><a href="https://youtu.be/6GxybVPwiDc" target="_blank"><i class="material-icons left">help</i><string>$(tutorial)</string></a></li>
                 </ul>
@@ -82,15 +82,15 @@
     <ul class="sidenav" id="mobile-menu">
         @foreach (var item in menu)
         {
-            <li class="@Html.ActiveClass(item.Action, item.Controller)">
-                <a asp-controller="@item.Controller" asp-action="@item.Action">
-                    @if (item.Icon != null)
+        <li class="@Html.ActiveClass(item.Action, item.Controller)">
+            <a asp-controller="@item.Controller" asp-action="@item.Action">
+                @if (item.Icon != null)
                     {
-                        <i class="material-icons left">@item.Icon</i>
+                <i class="material-icons left">@item.Icon</i>
                     }
-                    <string>@item.Name</string>
-                </a>
-            </li>
+                <string>@item.Name</string>
+            </a>
+        </li>
         }
         <li><a href="https://youtu.be/6GxybVPwiDc" target="_blank"><i class="material-icons left">help</i>Guida</a></li>
     </ul>
@@ -110,17 +110,24 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.debug.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-    <script type="text/javascript">
+
+    <script>
+
         if (!("Promise" in self))
             document.write("<script src='@Url.Content("https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js")'><\/script>");
+
         if (!("Symbol" in self))
             self["Symbol"] = { iterator: "$iterator" };
-    </script>
-    <script>
+
         M.Tooltip.init(document.querySelectorAll(".tooltipped"));
         M.Sidenav.init(document.getElementById("mobile-menu"));
-        StringTable = @(Html.Raw(StringTable.ToJson(RequestLanguage.Language)));
+
+        $language = '@RequestLanguage.FullCode';
+
+        $stringTable = @(Html.Raw(StringTable.ToJson(RequestLanguage.Code)));
+
     </script>
+
     <environment include="Production">
         <script src="~/lib/webapp/webapp.core.min.js" asp-append-version="true"></script>
         <script src="~/js/app.min.js" asp-append-version="true"></script>
@@ -129,7 +136,6 @@
         <script src="~/lib/webapp/webapp.core.js" asp-append-version="true"></script>
         <script src="~/js/app.js" asp-append-version="true"></script>
     </environment>
-
 
     @RenderSection("Scripts", required: false)
 </body>

@@ -63,7 +63,7 @@
       "italy": "Italy",
       "msg-no-data": "No data available",
       "date-format": "{MM}-{DD}-{YYYY}",
-      "date-short": "{MM}-{MM}",
+      "date-format-short": "{MM}-{MM}",
       "copy-map": "Copy map",
       "indicators": "Indicators",
       "indicator": "Indicator",

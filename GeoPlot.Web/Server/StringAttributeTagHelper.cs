@@ -26,14 +26,14 @@ namespace GeoPlot.Web
             foreach (var attr in output.Attributes.Where(a=> a.Name.StartsWith("string-")).ToArray())
             {
                 var name = attr.Name.Substring(7);
-                output.Attributes.Add(name, _stringTable.Format(_reqLanguage.Language, attr.Value.ToString()));
+                output.Attributes.Add(name, _stringTable.Format(_reqLanguage.Code, attr.Value.ToString()));
                 output.Attributes.Remove(attr);
             }
 
             if (output.Attributes.TryGetAttribute("string", out var stringAttr))
             {
                 output.Content.Clear();
-                output.Content.Append(_stringTable.Format(_reqLanguage.Language, stringAttr.Value.ToString()));
+                output.Content.Append(_stringTable.Format(_reqLanguage.Code, stringAttr.Value.ToString()));
                 output.Attributes.Remove(stringAttr);
             }
         }

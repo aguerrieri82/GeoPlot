@@ -39,7 +39,7 @@ namespace GeoPlot.Web
                         lang = "en";
                 }
             }
-            _reqLanguage.Language = lang;
+            _reqLanguage.Code = lang;
 
             await next();
         }

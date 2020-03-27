@@ -2,6 +2,16 @@
 {
     public class RequestLanguage
     {
-        public string Language { get; set; }
+        public string Code { get; set; }
+
+        public string FullCode
+        {
+            get
+            {
+                if (Code == "en")
+                    return "en-US";
+                return Code + "-" + Code.ToUpper();
+            }
+        }
     }
 }

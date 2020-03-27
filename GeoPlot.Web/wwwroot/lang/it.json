@@ -63,7 +63,7 @@
       "msg-update-complete": "Aggiornamento completato.",
       "italy": "Italia",
       "date-format": "{DD}/{MM}/{YYYY}",
-      "date-short": "{DD}/{MM}",
+      "date-format-short": "{DD}/{MM}",
       "copy-map": "Copia mappa",
       "indicators": "Indicatori",
       "indicator": "Indicatore",

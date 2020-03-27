@@ -115,11 +115,11 @@ var WebApp;
         GeoPlot.Geo = Geo;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
-var itNumberFormat = new Intl.NumberFormat("it-IT", {});
+var $numberFormat = new Intl.NumberFormat($language, {});
 function formatNumber(value) {
     if (!value)
         return "";
-    return itNumberFormat.format(value);
+    return $numberFormat.format(value);
 }
 /****************************************/
 function capitalizeFirst(value) {
@@ -500,7 +500,7 @@ var WebApp;
 })(WebApp || (WebApp = {}));
 function $string(format) {
     var REP_EXP = /\$\((?<id>[^)]+)\)/g;
-    return format.replace(REP_EXP, function (m, value) { return StringTable[value]; });
+    return format.replace(REP_EXP, function (m, value) { return $stringTable[value]; });
 }
 var WebApp;
 (function (WebApp) {

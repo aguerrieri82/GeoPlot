@@ -1,10 +1,11 @@
-﻿
-var itNumberFormat = new Intl.NumberFormat("it-IT", {});
+﻿declare var $language: string;
+
+var $numberFormat = new Intl.NumberFormat($language, {});
 
 function formatNumber(value: number) {
     if (!value)
         return "";
-    return itNumberFormat.format(value);
+    return $numberFormat.format(value);
 }
 
 /****************************************/

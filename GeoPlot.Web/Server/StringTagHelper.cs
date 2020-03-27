@@ -22,7 +22,7 @@ namespace GeoPlot.Web
         {
             var pattern = (await output.GetChildContentAsync()).GetContent();
             
-            var text = _stringTable.Format(_reqLanguage.Language, pattern);
+            var text = _stringTable.Format(_reqLanguage.Code, pattern);
             output.Content.Clear();
             output.Content.AppendHtml(text);
             output.TagName = "";
