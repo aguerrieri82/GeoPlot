@@ -9,6 +9,15 @@
     {
       "library": "bluebird@3.5.4",
       "destination": "wwwroot/lib/bluebird/"
-    }    
+    },
+    {
+      "library": "flag-icon-css@3.4.6",
+      "destination": "wwwroot/lib/flag-icon-css/",
+      "files": [
+        "css/flag-icon.min.css",
+        "flags/4x3/it.svg",
+        "flags/4x3/gb.svg"
+      ]
+    }
   ]
 }

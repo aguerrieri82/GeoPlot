@@ -6,6 +6,7 @@
     };
 }
 @inject IStringTable StringTable
+@inject RequestLanguage RequestLanguage
 
 <!DOCTYPE html>
 <html lang="en">
@@ -16,13 +17,13 @@
 
     <title><string>@ViewData["Title"] - $(site-title)</string></title>
 
-    <meta name="title"  string-content="$(site-title)" />
-    <meta name="description" string-content="$(site-description)"/>
+    <meta name="title" string-content="$(site-title)" />
+    <meta name="description" string-content="$(site-description)" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://www.oggibo.it/coronavirus/Overview"/>
-    <meta property="og:title"  string-content="$(site-title)" />
-    <meta property="og:description"  string-content="$(site-description)"/>
-    <meta property="og:image" content="@Url.Content("~/image/preview-alt.png")"/>
+    <meta property="og:url" content="https://www.oggibo.it/coronavirus/Overview" />
+    <meta property="og:title" string-content="$(site-title)" />
+    <meta property="og:description" string-content="$(site-description)" />
+    <meta property="og:image" content="@Url.Content("~/image/preview-alt.png")" />
 
     <environment include="Production">
         <link href="~/css/theme.min.css" asp-append-version="true" rel="stylesheet" />
@@ -43,6 +44,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="~/lib/flag-icon-css/css/flag-icon.min.css" rel="stylesheet" />
 
     @RenderSection("Head", required: false)
 
@@ -53,8 +55,11 @@
             <div class="nav-wrapper container">
                 <a asp-controller="Home" asp-action="Index" class="brand-logo">Coronavirus</a>
                 <a href="#" data-target="mobile-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
-
-                <ul id="nav-mobile" class="right hide-on-med-and-down">
+                <ul class="right">
+                    <li><a href="@Url.ChangeLanguage("it")" title="Italiano"><span class="flag-icon flag-icon-it"></span></a></li>
+                    <li><a href="@Url.ChangeLanguage("en")" title="English"><span class="flag-icon flag-icon-gb"></span></a></li>
+                </ul>
+                <ul class="right hide-on-med-and-down">
                     @foreach (var item in menu)
                     {
                         <li class="@Html.ActiveClass(item.Action, item.Controller)">
@@ -69,6 +74,7 @@
                     }
                     <li><a href="https://youtu.be/6GxybVPwiDc" target="_blank"><i class="material-icons left">help</i><string>$(tutorial)</string></a></li>
                 </ul>
+
             </div>
         </nav>
 
@@ -102,11 +108,6 @@
         </div>
     </footer>
 
-    <script>
-        StringTable = @(Html.Raw(StringTable.ToJson()));
-    </script>
-
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.debug.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script type="text/javascript">
@@ -114,6 +115,11 @@
             document.write("<script src='@Url.Content("https://cdnjs.cloudflare.com/ajax/libs/bluebird/3.7.2/bluebird.min.js")'><\/script>");
         if (!("Symbol" in self))
             self["Symbol"] = { iterator: "$iterator" };
+    </script>
+    <script>
+        M.Tooltip.init(document.querySelectorAll(".tooltipped"));
+        M.Sidenav.init(document.getElementById("mobile-menu"));
+        StringTable = @(Html.Raw(StringTable.ToJson(RequestLanguage.Language)));
     </script>
     <environment include="Production">
         <script src="~/lib/webapp/webapp.core.min.js" asp-append-version="true"></script>

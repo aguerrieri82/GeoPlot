@@ -11,10 +11,12 @@ namespace GeoPlot.Web
     public class StringAttributeTagHelper :  TagHelper
     {
         readonly IStringTable _stringTable;
+        readonly RequestLanguage _reqLanguage;
 
-        public StringAttributeTagHelper(IStringTable stringTable)
+        public StringAttributeTagHelper(IStringTable stringTable, RequestLanguage reqLanguage)
         {
             _stringTable = stringTable;
+            _reqLanguage = reqLanguage;
         }
 
         public override void Process(TagHelperContext context, TagHelperOutput output)
@@ -24,14 +26,14 @@ namespace GeoPlot.Web
             foreach (var attr in output.Attributes.Where(a=> a.Name.StartsWith("string-")).ToArray())
             {
                 var name = attr.Name.Substring(7);
-                output.Attributes.Add(name, _stringTable.Format(attr.Value.ToString()));
+                output.Attributes.Add(name, _stringTable.Format(_reqLanguage.Language, attr.Value.ToString()));
                 output.Attributes.Remove(attr);
             }
 
             if (output.Attributes.TryGetAttribute("string", out var stringAttr))
             {
                 output.Content.Clear();
-                output.Content.Append(_stringTable.Format(stringAttr.Value.ToString()));
+                output.Content.Append(_stringTable.Format(_reqLanguage.Language, stringAttr.Value.ToString()));
                 output.Attributes.Remove(stringAttr);
             }
         }

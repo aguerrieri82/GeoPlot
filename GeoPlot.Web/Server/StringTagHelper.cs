@@ -10,17 +10,19 @@ namespace GeoPlot.Web
     public class StringTagHelper :  TagHelper
     {
         readonly IStringTable _stringTable;
-
-        public StringTagHelper(IStringTable stringTable)
+        readonly RequestLanguage _reqLanguage;
+        public StringTagHelper(IStringTable stringTable, RequestLanguage reqLanguage)
         {
             _stringTable = stringTable;
+            _reqLanguage = reqLanguage;
         }
 
 
         public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
         {
             var pattern = (await output.GetChildContentAsync()).GetContent();
-            var text = _stringTable.Format(pattern);
+            
+            var text = _stringTable.Format(_reqLanguage.Language, pattern);
             output.Content.Clear();
             output.Content.AppendHtml(text);
             output.TagName = "";

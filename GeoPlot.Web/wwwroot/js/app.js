@@ -1053,8 +1053,6 @@ var WebApp;
                 this.days = [];
                 for (var i = 0; i < this._data.days.length; i++)
                     this.days.push({ number: i, value: new Date(this._data.days[i].date), text: WebApp.DateUtils.format(this._data.days[i].date, $string("$(date-format-short)")) });
-                M.Tooltip.init(document.querySelectorAll(".tooltipped"));
-                M.Sidenav.init(document.getElementById("mobile-menu"));
                 var areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
                 areaTabs.options.onShow = function (el) {
                     _this.setViewMode(el.dataset["viewMode"]);

@@ -11,18 +11,17 @@ namespace GeoPlot.Web.Services
     {
         class TableData
         {
-            public string Language;
-            public IDictionary<string, string> Values;
+            public string Language { get; set; }
+
+            public IDictionary<string, string> Values { get; set; }
         }
 
         IDictionary<string, IDictionary<string, string>> _table;
         string _basePath;
-        string _currentLanguage;
 
         public JsonStringTable(string basePath)
         {
             _basePath = basePath;
-            _currentLanguage = "en";
             Load();
         }
 
@@ -41,29 +40,24 @@ namespace GeoPlot.Web.Services
             }
         }
 
-        public string this[string id] 
+        protected IDictionary<string, string> GetTable(string language)
         {
-            get
-            {
-                if (_table[_currentLanguage].TryGetValue(id, out var result))
-                    return result;
-                return id;                    
-            }
+            if (_table.TryGetValue(language, out var table))
+                return table;
+            return _table["en"];
         }
 
-        public string CurrentLanguage => _currentLanguage;
-
-        public void SetLanguage(string code)
+        public string Get(string language, string id)
         {
-            if (!_table.ContainsKey(code))
-                _currentLanguage = "en";
-            else
-                _currentLanguage = "code";
+            var table = GetTable(language);
+            if (table.TryGetValue(id, out var result))
+                return result;
+            return id;
         }
 
-        public string ToJson()
+        public string ToJson(string language)
         {
-            return JsonConvert.SerializeObject(_table[CurrentLanguage]);
+            return JsonConvert.SerializeObject(GetTable(language));
         }
 
     }

@@ -8,21 +8,17 @@ namespace GeoPlot.Web
 {
     public interface IStringTable
     {
-        string this[string id] { get; }
+        string Get(string language, string id);
 
-        void SetLanguage(string code);
-
-        string CurrentLanguage {get;}
-
-        string ToJson();
+        string ToJson(string language);
     }
 
     public static class StringTableExtensions 
     {
-        public static string Format(this IStringTable table, string format, params object[] args)
+        public static string Format(this IStringTable table, string language, string format, params object[] args)
         {
             var REP_EXP = new Regex(@"\$\((?<id>[^)]+)\)", RegexOptions.IgnoreCase);
-            var text = REP_EXP.Replace(format, a => table[a.Groups["id"].Value]);
+            var text = REP_EXP.Replace(format, a => table.Get(language, a.Groups["id"].Value));
             return string.Format(text, args);
         }
     }
