@@ -11,11 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.Entities", "GeoPlot
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.Coronavirus", "GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj", "{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp.Compiler.Tool", "..\Eusoft\WebApp\src\Eusoft.WebApp.Compiler.Tool\Eusoft.WebApp.Compiler.Tool.csproj", "{71365FF1-9CDE-4762-8447-74BF80D4C343}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp.Compiler", "..\Eusoft\WebApp\src\Eusoft.WebApp.Compiler\Eusoft.WebApp.Compiler.csproj", "{BC7F10CA-B57A-42C5-9483-70B30D178F9C}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp", "..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj", "{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp", "Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj", "{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -48,18 +44,6 @@ Global
 		{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{71365FF1-9CDE-4762-8447-74BF80D4C343}.Debug (Sign)|Any CPU.ActiveCfg = Debug|Any CPU
-		{71365FF1-9CDE-4762-8447-74BF80D4C343}.Debug (Sign)|Any CPU.Build.0 = Debug|Any CPU
-		{71365FF1-9CDE-4762-8447-74BF80D4C343}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{71365FF1-9CDE-4762-8447-74BF80D4C343}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{71365FF1-9CDE-4762-8447-74BF80D4C343}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{71365FF1-9CDE-4762-8447-74BF80D4C343}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BC7F10CA-B57A-42C5-9483-70B30D178F9C}.Debug (Sign)|Any CPU.ActiveCfg = Debug (Sign)|Any CPU
-		{BC7F10CA-B57A-42C5-9483-70B30D178F9C}.Debug (Sign)|Any CPU.Build.0 = Debug (Sign)|Any CPU
-		{BC7F10CA-B57A-42C5-9483-70B30D178F9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BC7F10CA-B57A-42C5-9483-70B30D178F9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BC7F10CA-B57A-42C5-9483-70B30D178F9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BC7F10CA-B57A-42C5-9483-70B30D178F9C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}.Debug (Sign)|Any CPU.ActiveCfg = Debug|Any CPU
 		{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}.Debug (Sign)|Any CPU.Build.0 = Debug|Any CPU
 		{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU

@@ -505,7 +505,7 @@
                     return;
                 this.updateIndicator();
                 if (value.id != "totalPositive")
-                    this.markAction("indicatorChanged");
+                    this.markAction("indicatorChanged", value.id);
             });
 
             this.selectedFactor.subscribe(value => {
@@ -513,7 +513,7 @@
                     return;
                 this.updateIndicator();
                 if (value.id != "none")
-                    this.markAction("factorChanged");
+                    this.markAction("factorChanged", value.id);
                 setTimeout(() => M.FormSelect.init(document.querySelectorAll(".row-chart-group select")));
             });
 
@@ -525,10 +525,10 @@
                 this.updateUrl();
             });
 
-            this.maxFactor.subscribe(() => {
+            this.maxFactor.subscribe(value => {
                 if (!this.autoMaxFactor()) {
                     this.updateMap();
-                    this.markAction("maxFactorChanged");
+                    this.markAction("maxFactorChanged", value.toString());
                 }
                 this.updateUrl();
             });
@@ -557,7 +557,7 @@
                 this.updateChart();
                 this.updateUrl();
                 if (value > 1)
-                    this.markAction("groupChanged");
+                    this.markAction("groupChanged", value.toString());
             });
 
             this.startDay.subscribe(value => {
@@ -595,25 +595,26 @@
             this._preferences.actions[actionId]++;
             this.savePreferences();
 
-            if (!window["ga"])
+            if (!window["gtag"])
                 return;
-            ga("send", "event", {
-                eventCategory: "GeoPlot",
-                eventAction: actionId,
-                eventValue: this._preferences.actions[actionId],
-                eventLabel: label
+
+            gtag("event", actionId, {
+                event_category: "GeoPlot",
+                event_label: label,
+                value: this._preferences.actions[actionId]
             });
+
         }
 
         /****************************************/
 
         protected markTip(tipId: keyof IViewActions<number>, action: string) {
-            if (!window["ga"])
+            if (!window["gtag"])
                 return;
-            ga("send", "event", {
-                eventCategory: "GeoPlot/Tip",
-                eventAction: action,
-                eventLabel: tipId
+
+            gtag("event", action, {
+                event_category: "GeoPlot/Tip",
+                event_label: tipId
             });
         }
 
@@ -975,7 +976,7 @@
         setViewMode(mode: ViewMode) {
 
             if (mode != "region")
-                this.markAction("viewChanged");
+                this.markAction("viewChanged", mode);
             this.viewMode(mode);
 
             const districtGroup = document.getElementById("group_district");
@@ -1109,7 +1110,7 @@
                     this.selectedArea = area;
             }
 
-            this.markAction("areaSelected");
+            this.markAction("areaSelected", area.name);
         }
 
         /****************************************/
@@ -1169,7 +1170,7 @@
                     let item = new IndicatorViewModel();
                     item.indicator = indicator;
                     item.select = () => {
-                        this.markAction("indicatorSelected");
+                        this.markAction("indicatorSelected", item.indicator.id);
                         this.selectedIndicator(indicator);
                         setTimeout(() =>
                             M.FormSelect.init(document.querySelectorAll(".row-indicator select")));

@@ -1082,14 +1082,14 @@ var WebApp;
                         return;
                     _this.updateIndicator();
                     if (value.id != "totalPositive")
-                        _this.markAction("indicatorChanged");
+                        _this.markAction("indicatorChanged", value.id);
                 });
                 this.selectedFactor.subscribe(function (value) {
                     if (!value)
                         return;
                     _this.updateIndicator();
                     if (value.id != "none")
-                        _this.markAction("factorChanged");
+                        _this.markAction("factorChanged", value.id);
                     setTimeout(function () { return M.FormSelect.init(document.querySelectorAll(".row-chart-group select")); });
                 });
                 this.autoMaxFactor.subscribe(function (value) {
@@ -1099,10 +1099,10 @@ var WebApp;
                     }
                     _this.updateUrl();
                 });
-                this.maxFactor.subscribe(function () {
+                this.maxFactor.subscribe(function (value) {
                     if (!_this.autoMaxFactor()) {
                         _this.updateMap();
-                        _this.markAction("maxFactorChanged");
+                        _this.markAction("maxFactorChanged", value.toString());
                     }
                     _this.updateUrl();
                 });
@@ -1126,7 +1126,7 @@ var WebApp;
                     _this.updateChart();
                     _this.updateUrl();
                     if (value > 1)
-                        _this.markAction("groupChanged");
+                        _this.markAction("groupChanged", value.toString());
                 });
                 this.startDay.subscribe(function (value) {
                     _this.updateChart();
@@ -1151,23 +1151,21 @@ var WebApp;
             GeoPlotPage.prototype.markAction = function (actionId, label) {
                 this._preferences.actions[actionId]++;
                 this.savePreferences();
-                if (!window["ga"])
+                if (!window["gtag"])
                     return;
-                ga("send", "event", {
-                    eventCategory: "GeoPlot",
-                    eventAction: actionId,
-                    eventValue: this._preferences.actions[actionId],
-                    eventLabel: label
+                gtag("event", actionId, {
+                    event_category: "GeoPlot",
+                    event_label: label,
+                    value: this._preferences.actions[actionId]
                 });
             };
             /****************************************/
             GeoPlotPage.prototype.markTip = function (tipId, action) {
-                if (!window["ga"])
+                if (!window["gtag"])
                     return;
-                ga("send", "event", {
-                    eventCategory: "GeoPlot/Tip",
-                    eventAction: action,
-                    eventLabel: tipId
+                gtag("event", action, {
+                    event_category: "GeoPlot/Tip",
+                    event_label: tipId
                 });
             };
             /****************************************/
@@ -1500,7 +1498,7 @@ var WebApp;
             /****************************************/
             GeoPlotPage.prototype.setViewMode = function (mode) {
                 if (mode != "region")
-                    this.markAction("viewChanged");
+                    this.markAction("viewChanged", mode);
                 this.viewMode(mode);
                 var districtGroup = document.getElementById("group_district");
                 if (mode == "district")
@@ -1609,7 +1607,7 @@ var WebApp;
                     if (item.parentElement.classList.contains(this.viewMode()))
                         this.selectedArea = area;
                 }
-                this.markAction("areaSelected");
+                this.markAction("areaSelected", area.name);
             };
             /****************************************/
             GeoPlotPage.prototype.nextFrame = function () {
@@ -1654,7 +1652,7 @@ var WebApp;
                         var item = new IndicatorViewModel();
                         item.indicator = indicator;
                         item.select = function () {
-                            _this.markAction("indicatorSelected");
+                            _this.markAction("indicatorSelected", item.indicator.id);
                             _this.selectedIndicator(indicator);
                             setTimeout(function () {
                                 return M.FormSelect.init(document.querySelectorAll(".row-indicator select"));
