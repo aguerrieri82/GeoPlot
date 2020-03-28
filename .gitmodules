@@ -1,0 +1,3 @@
+[submodule "Eusoft"]
+	path = Eusoft
+	url = http://eusoft.net:8080/tfs/DefaultCollection/_git/Eusoft
