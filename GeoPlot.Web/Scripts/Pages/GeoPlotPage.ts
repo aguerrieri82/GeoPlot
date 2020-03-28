@@ -595,6 +595,8 @@
             this._preferences.actions[actionId]++;
             this.savePreferences();
 
+            if (!window["ga"])
+                return;
             ga("send", "event", {
                 eventCategory: "GeoPlot",
                 eventAction: actionId,
@@ -606,7 +608,8 @@
         /****************************************/
 
         protected markTip(tipId: keyof IViewActions<number>, action: string) {
-
+            if (!window["ga"])
+                return;
             ga("send", "event", {
                 eventCategory: "GeoPlot/Tip",
                 eventAction: action,

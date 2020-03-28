@@ -1151,6 +1151,8 @@ var WebApp;
             GeoPlotPage.prototype.markAction = function (actionId, label) {
                 this._preferences.actions[actionId]++;
                 this.savePreferences();
+                if (!window["ga"])
+                    return;
                 ga("send", "event", {
                     eventCategory: "GeoPlot",
                     eventAction: actionId,
@@ -1160,6 +1162,8 @@ var WebApp;
             };
             /****************************************/
             GeoPlotPage.prototype.markTip = function (tipId, action) {
+                if (!window["ga"])
+                    return;
                 ga("send", "event", {
                     eventCategory: "GeoPlot/Tip",
                     eventAction: action,
