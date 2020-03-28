@@ -2906,7 +2906,8 @@ var WebApp;
                     action.text = $string("$(new-regression)"),
                         action.icon = "add_box";
                     action.execute = function () {
-                        var reg = _this.addRegression();
+                        var reg = _this.addRegression(null, false);
+                        reg.updateGraph();
                         _this.node.isExpanded(true);
                         reg.node.isSelected(true);
                     };
@@ -3584,11 +3585,14 @@ var WebApp;
                             project.node.isExpanded(true);
                             serie.node.isExpanded(true);
                             serie.zoom();
-                            var reg = serie.addRegression();
+                            var reg = serie.addRegression(null, false);
+                            reg.updateGraph();
                             reg.node.isSelected(true);
                         }
                     }
                 }
+                else
+                    M.toast({ html: $string("$(msg-select-project)") });
             };
             Object.defineProperty(StudioPage.prototype, "projects", {
                 /****************************************/

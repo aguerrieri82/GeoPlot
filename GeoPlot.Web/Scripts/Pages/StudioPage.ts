@@ -1125,7 +1125,8 @@
                 action.text = $string("$(new-regression)"),
                 action.icon = "add_box";
                 action.execute = () => {
-                    const reg = this.addRegression();
+                    const reg = this.addRegression(null, false);
+                    reg.updateGraph();
                     this.node.isExpanded(true);
                     reg.node.isSelected(true);
                 }
@@ -2028,11 +2029,14 @@
                         project.node.isExpanded(true);
                         serie.node.isExpanded(true);
                         serie.zoom();
-                        const reg = serie.addRegression();
+                        const reg = serie.addRegression(null, false);
+                        reg.updateGraph();
                         reg.node.isSelected(true);
                     }
                 }
             }
+            else
+                M.toast({ html: $string("$(msg-select-project)") });
         }
 
         /****************************************/
