@@ -10,6 +10,7 @@
     "lib": [ "es5", "es2015.promise", "dom", "es2015.iterable", "es2017.string", "ES2020" ]
   },
   "compileOnSave": true,
+  "typeAcquisition": { "enable": true }, 
   "references": [
     { "path": "../../Eusoft/WebApp/src/Eusoft.WebApp/Scripts/core" }
   ],

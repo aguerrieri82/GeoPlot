@@ -5,6 +5,7 @@
   "devDependencies": {
     "@types/knockout": "3.4.66",
     "@types/chart.js": "2.9.15",
-    "@types/materialize-css": "1.0.7"
+    "@types/materialize-css": "1.0.7",
+    "@types/google.analytics": "0.0.40"
   }
 }

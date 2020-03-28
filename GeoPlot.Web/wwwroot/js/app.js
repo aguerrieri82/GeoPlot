@@ -461,7 +461,7 @@ var WebApp;
                             var item = {
                                 x: (source.xAxis == "date" ? new Date(this._data.days[i].date) : i),
                                 y: this.getFactorValue({
-                                    dayNumberOrGroup: group,
+                                    dayNumberOrGroup: source.isDelta ? group : i,
                                     areaOrId: source.areaId,
                                     factorId: source.factorId,
                                     indicatorId: source.indicatorId,
@@ -757,11 +757,15 @@ var WebApp;
             TipViewModel.prototype.dontShowAgain = function () {
             };
             /****************************************/
+            TipViewModel.prototype.onActionExecuted = function () {
+            };
+            /****************************************/
             TipViewModel.prototype.executeAction = function () {
                 var _this = this;
                 if (this.value.showAction)
                     this.value.showAction();
                 setTimeout(function () { return _this.startPulse(); });
+                this.onActionExecuted();
             };
             /****************************************/
             TipViewModel.prototype.startPulse = function () {
@@ -931,7 +935,7 @@ var WebApp;
                     scaleChanged: {
                         order: 9,
                         featureName: "Grafico",
-                        html: "Puo cambiare da scala logaritmica a scala lineare.",
+                        html: "Puoi cambiare da scala logaritmica a scala lineare.",
                         elementSelector: ".log-scale",
                         showAfter: 210,
                         showAction: function () {
@@ -1043,7 +1047,7 @@ var WebApp;
                 this.totalDays(this._data.days.length - 1);
                 this.dayNumber.subscribe(function (value) {
                     if (value != _this._data.days.length - 1)
-                        _this._preferences.actions.dayChanged++;
+                        _this.markAction("dayChanged");
                     _this.updateDayData();
                     _this._specialDates.current.date = new Date(_this._data.days[value].date);
                     _this.updateChart();
@@ -1062,7 +1066,7 @@ var WebApp;
                     if (!_this._daysData)
                         _this.updateTopAreas();
                     _this._topAreasVisible = true;
-                    _this._preferences.actions.topAreasOpened++;
+                    _this.markAction("topAreasOpened");
                 };
                 topCasesView.options.onCloseEnd = function () {
                     _this._topAreasVisible = false;
@@ -1078,14 +1082,14 @@ var WebApp;
                         return;
                     _this.updateIndicator();
                     if (value.id != "totalPositive")
-                        _this._preferences.actions.indicatorChanged++;
+                        _this.markAction("indicatorChanged");
                 });
                 this.selectedFactor.subscribe(function (value) {
                     if (!value)
                         return;
                     _this.updateIndicator();
                     if (value.id != "none")
-                        _this._preferences.actions.factorChanged++;
+                        _this.markAction("factorChanged");
                     setTimeout(function () { return M.FormSelect.init(document.querySelectorAll(".row-chart-group select")); });
                 });
                 this.autoMaxFactor.subscribe(function (value) {
@@ -1098,7 +1102,7 @@ var WebApp;
                 this.maxFactor.subscribe(function () {
                     if (!_this.autoMaxFactor()) {
                         _this.updateMap();
-                        _this._preferences.actions.maxFactorChanged++;
+                        _this.markAction("maxFactorChanged");
                     }
                     _this.updateUrl();
                 });
@@ -1106,13 +1110,13 @@ var WebApp;
                     _this.computeStartDayForGroup();
                     _this.updateIndicator();
                     if (value)
-                        _this._preferences.actions.deltaSelected++;
+                        _this.markAction("deltaSelected");
                 });
                 this.isLogScale.subscribe(function (value) {
                     _this.updateChart();
                     _this.updateUrl();
                     if (value)
-                        _this._preferences.actions.scaleChanged++;
+                        _this.markAction("scaleChanged");
                 });
                 this.isZoomChart.subscribe(function (value) {
                     _this.updateChart();
@@ -1122,7 +1126,7 @@ var WebApp;
                     _this.updateChart();
                     _this.updateUrl();
                     if (value > 1)
-                        _this._preferences.actions.groupChanged++;
+                        _this.markAction("groupChanged");
                 });
                 this.startDay.subscribe(function (value) {
                     _this.updateChart();
@@ -1143,6 +1147,25 @@ var WebApp;
                     window.addEventListener("beforeunload", function () { return _this.savePreferences(); });
                 //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
             }
+            /****************************************/
+            GeoPlotPage.prototype.markAction = function (actionId, label) {
+                this._preferences.actions[actionId]++;
+                this.savePreferences();
+                ga("send", "event", {
+                    eventCategory: "GeoPlot",
+                    eventAction: actionId,
+                    eventValue: this._preferences.actions[actionId],
+                    eventLabel: label
+                });
+            };
+            /****************************************/
+            GeoPlotPage.prototype.markTip = function (tipId, action) {
+                ga("send", "event", {
+                    eventCategory: "GeoPlot/Tip",
+                    eventAction: action,
+                    eventLabel: tipId
+                });
+            };
             /****************************************/
             GeoPlotPage.prototype.engageUser = function () {
                 var _this = this;
@@ -1167,15 +1190,20 @@ var WebApp;
                     return false;
                 var tip = this._tips[tipId];
                 var model = new TipViewModel(tip);
+                model.onActionExecuted = function () {
+                    _this.markTip(tipId, "how");
+                };
                 model.dontShowAgain = function () {
                     _this._preferences.showTips = false;
                     _this.savePreferences();
                     model.close();
+                    _this.markTip(tipId, "dontShowAgain");
                 };
                 model.understood = function () {
                     _this._preferences.actions[tipId]++;
                     _this.savePreferences();
                     model.close();
+                    _this.markTip(tipId, "understood");
                 };
                 model.onClose = function () {
                     //this.tip(null);
@@ -1188,6 +1216,7 @@ var WebApp;
                         model.close();
                         _this._preferences.actions[tipId]++;
                         _this.showTip(nextTip.key);
+                        _this.markTip(tipId, "next");
                     };
                 }
                 else
@@ -1406,7 +1435,7 @@ var WebApp;
                         }
                     });
                 }); });
-                this._preferences.actions.chartActionExecuted++;
+                this.markAction("chartActionExecuted", "copy");
             };
             /****************************************/
             GeoPlotPage.prototype.copySerie = function () {
@@ -1419,7 +1448,7 @@ var WebApp;
                             text += WebApp.DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + WebApp.MathUtils.round(data[i].y, 1) + "\n";
                         WebApp.DomUtils.copyText(text);
                         M.toast({ html: $string("$(msg-serie-copied)") });
-                        this._preferences.actions.chartActionExecuted++;
+                        this.markAction("chartActionExecuted", "copySerie");
                         return [2 /*return*/];
                     });
                 });
@@ -1448,6 +1477,7 @@ var WebApp;
                         obj.values = this._calculator.getSerie(obj.serie);
                         WebApp.DomUtils.copyText(JSON.stringify(obj));
                         M.toast({ html: $string("$(msg-serie-copied)") });
+                        this.markAction("chartActionExecuted", "copySerieForStudio");
                         return [2 /*return*/];
                     });
                 });
@@ -1466,7 +1496,7 @@ var WebApp;
             /****************************************/
             GeoPlotPage.prototype.setViewMode = function (mode) {
                 if (mode != "region")
-                    this._preferences.actions.viewChanged++;
+                    this.markAction("viewChanged");
                 this.viewMode(mode);
                 var districtGroup = document.getElementById("group_district");
                 if (mode == "district")
@@ -1575,7 +1605,7 @@ var WebApp;
                     if (item.parentElement.classList.contains(this.viewMode()))
                         this.selectedArea = area;
                 }
-                this._preferences.actions.areaSelected++;
+                this.markAction("areaSelected");
             };
             /****************************************/
             GeoPlotPage.prototype.nextFrame = function () {
@@ -1620,7 +1650,7 @@ var WebApp;
                         var item = new IndicatorViewModel();
                         item.indicator = indicator;
                         item.select = function () {
-                            _this._preferences.actions.indicatorSelected++;
+                            _this.markAction("indicatorSelected");
                             _this.selectedIndicator(indicator);
                             setTimeout(function () {
                                 return M.FormSelect.init(document.querySelectorAll(".row-indicator select"));

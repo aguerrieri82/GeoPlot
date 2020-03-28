@@ -214,7 +214,7 @@
                         const item: IFunctionPoint<TX> = {
                             x: <any>(source.xAxis == "date" ? new Date(this._data.days[i].date) : i),
                             y: this.getFactorValue({ 
-                                dayNumberOrGroup: group,
+                                dayNumberOrGroup: source.isDelta ? group : i,
                                 areaOrId: source.areaId,
                                 factorId: source.factorId,
                                 indicatorId: source.indicatorId,

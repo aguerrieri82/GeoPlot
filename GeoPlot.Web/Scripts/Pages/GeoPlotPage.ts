@@ -145,11 +145,18 @@
         }
 
         /****************************************/
+            
+        onActionExecuted() {
+
+        }
+
+        /****************************************/
 
         executeAction() {
             if (this.value.showAction)
                 this.value.showAction();
             setTimeout(() => this.startPulse());
+            this.onActionExecuted();
         }
 
         /****************************************/
@@ -354,7 +361,7 @@
             scaleChanged: {
                 order: 9,
                 featureName: "Grafico",
-                html: "Puo cambiare da scala logaritmica a scala lineare.",
+                html: "Puoi cambiare da scala logaritmica a scala lineare.",
                 elementSelector: ".log-scale",
                 showAfter: 210,
                 showAction: () => {
@@ -450,7 +457,7 @@
 
             this.dayNumber.subscribe(value => {
                 if (value != this._data.days.length - 1)
-                    this._preferences.actions.dayChanged++;
+                    this.markAction("dayChanged");
                 this.updateDayData();
                 this._specialDates.current.date = new Date(this._data.days[value].date);
                 this.updateChart();
@@ -477,7 +484,7 @@
                 if (!this._daysData)
                     this.updateTopAreas();
                 this._topAreasVisible = true;
-                this._preferences.actions.topAreasOpened++;
+                this.markAction("topAreasOpened");
             }
 
             topCasesView.options.onCloseEnd = () => {
@@ -498,7 +505,7 @@
                     return;
                 this.updateIndicator();
                 if (value.id != "totalPositive")
-                    this._preferences.actions.indicatorChanged++;
+                    this.markAction("indicatorChanged");
             });
 
             this.selectedFactor.subscribe(value => {
@@ -506,7 +513,7 @@
                     return;
                 this.updateIndicator();
                 if (value.id != "none")
-                    this._preferences.actions.factorChanged++;
+                    this.markAction("factorChanged");
                 setTimeout(() => M.FormSelect.init(document.querySelectorAll(".row-chart-group select")));
             });
 
@@ -521,7 +528,7 @@
             this.maxFactor.subscribe(() => {
                 if (!this.autoMaxFactor()) {
                     this.updateMap();
-                    this._preferences.actions.maxFactorChanged++;
+                    this.markAction("maxFactorChanged");
                 }
                 this.updateUrl();
             });
@@ -530,7 +537,7 @@
                 this.computeStartDayForGroup();
                 this.updateIndicator();
                 if (value)
-                    this._preferences.actions.deltaSelected++;
+                    this.markAction("deltaSelected");
 
             });
 
@@ -538,7 +545,7 @@
                 this.updateChart();
                 this.updateUrl();
                 if (value)
-                    this._preferences.actions.scaleChanged++;
+                    this.markAction("scaleChanged");
             });
 
             this.isZoomChart.subscribe(value => {
@@ -550,7 +557,7 @@
                 this.updateChart();
                 this.updateUrl();
                 if (value > 1)
-                    this._preferences.actions.groupChanged++;
+                    this.markAction("groupChanged");
             });
 
             this.startDay.subscribe(value => {
@@ -579,6 +586,32 @@
                 window.addEventListener("beforeunload", () => this.savePreferences());
 
             //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
+        }
+
+        /****************************************/
+
+        protected markAction(actionId: keyof IViewActions<number>, label?: string) {
+
+            this._preferences.actions[actionId]++;
+            this.savePreferences();
+
+            ga("send", "event", {
+                eventCategory: "GeoPlot",
+                eventAction: actionId,
+                eventValue: this._preferences.actions[actionId],
+                eventLabel: label
+            });
+        }
+
+        /****************************************/
+
+        protected markTip(tipId: keyof IViewActions<number>, action: string) {
+
+            ga("send", "event", {
+                eventCategory: "GeoPlot/Tip",
+                eventAction: action,
+                eventLabel: tipId
+            });
         }
 
         /****************************************/
@@ -616,16 +649,22 @@
 
             const model = new TipViewModel(tip);
 
+            model.onActionExecuted = () => {
+                this.markTip(tipId, "how");
+            }
+
             model.dontShowAgain = () => {
                 this._preferences.showTips = false;
                 this.savePreferences();
                 model.close();
+                this.markTip(tipId, "dontShowAgain");
             }
 
             model.understood = () => {
                 this._preferences.actions[tipId]++;
                 this.savePreferences();
                 model.close();
+                this.markTip(tipId, "understood");
             };
 
             model.onClose = () => {
@@ -641,6 +680,7 @@
                     model.close();
                     this._preferences.actions[tipId]++;
                     this.showTip(nextTip.key);
+                    this.markTip(tipId, "next");
                 }
             }
             else
@@ -864,7 +904,7 @@
                     M.toast({ html: $string("$(msg-no-copy)") })
                 }
             });
-            this._preferences.actions.chartActionExecuted++;
+            this.markAction("chartActionExecuted", "copy");
         }
 
         /****************************************/
@@ -879,7 +919,7 @@
             DomUtils.copyText(text);
 
             M.toast({ html: $string("$(msg-serie-copied)")})
-            this._preferences.actions.chartActionExecuted++;
+            this.markAction("chartActionExecuted", "copySerie");
         }
 
         /****************************************/
@@ -908,6 +948,8 @@
             DomUtils.copyText(JSON.stringify(obj));
 
             M.toast({ html: $string("$(msg-serie-copied)") })
+
+            this.markAction("chartActionExecuted", "copySerieForStudio");
         }
 
         /****************************************/
@@ -930,7 +972,7 @@
         setViewMode(mode: ViewMode) {
 
             if (mode != "region")
-                this._preferences.actions.viewChanged++;
+                this.markAction("viewChanged");
             this.viewMode(mode);
 
             const districtGroup = document.getElementById("group_district");
@@ -1064,7 +1106,7 @@
                     this.selectedArea = area;
             }
 
-            this._preferences.actions.areaSelected++;
+            this.markAction("areaSelected");
         }
 
         /****************************************/
@@ -1124,7 +1166,7 @@
                     let item = new IndicatorViewModel();
                     item.indicator = indicator;
                     item.select = () => {
-                        this._preferences.actions.indicatorSelected++;
+                        this.markAction("indicatorSelected");
                         this.selectedIndicator(indicator);
                         setTimeout(() =>
                             M.FormSelect.init(document.querySelectorAll(".row-indicator select")));

@@ -2,7 +2,7 @@
 - raggruppamento
 - sommario indicatori proiettati
 - data al posto del numero giorno
-- copia incolla serie / progetto
 - storage su server dello stduio
 - incollare dal excel
+- tool-tip bug fix
 

@@ -37,7 +37,7 @@ namespace GeoPlot.Web.Controllers
         {
             HttpContext.Response.Cookies.Append("lang", id, new CookieOptions()
             {
-                Expires = new DateTimeOffset().AddYears(2),
+                Expires = DateTimeOffset.Now.AddYears(2),
                 IsEssential = true
             });
 
