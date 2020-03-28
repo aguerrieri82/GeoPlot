@@ -1,14 +1,3 @@
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -45,6 +34,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = function (d, b) {
         extendStatics = Object.setPrototypeOf ||
@@ -58,6 +58,60 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        var Api;
+        (function (Api) {
+            function saveState(id, state) {
+                return __awaiter(this, void 0, void 0, function () {
+                    var result;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, WebApp.Http.postJsonAsync("~/SaveState/" + id, state)];
+                            case 1:
+                                result = _a.sent();
+                                if (!result.isSuccess)
+                                    throw result.error;
+                                return [2 /*return*/, result.data];
+                        }
+                    });
+                });
+            }
+            Api.saveState = saveState;
+            /****************************************/
+            function loadState(id) {
+                return __awaiter(this, void 0, void 0, function () {
+                    var result;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, WebApp.Http.getJsonAsync("~/LoadState/" + id)];
+                            case 1:
+                                result = _a.sent();
+                                if (!result.isSuccess)
+                                    throw result.error;
+                                return [2 /*return*/, result.data];
+                        }
+                    });
+                });
+            }
+            Api.loadState = loadState;
+            /****************************************/
+            function loadStudioData() {
+                return __awaiter(this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0: return [4 /*yield*/, WebApp.Http.getJsonAsync("~/StudioData")];
+                            case 1: return [2 /*return*/, _a.sent()];
+                        }
+                    });
+                });
+            }
+            Api.loadStudioData = loadStudioData;
+        })(Api = GeoPlot.Api || (GeoPlot.Api = {}));
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
     var GeoPlot;
@@ -1478,7 +1532,7 @@ var WebApp;
                         };
                         obj.values = this._calculator.getSerie(obj.serie);
                         WebApp.DomUtils.copyText(JSON.stringify(obj));
-                        M.toast({ html: $string("$(msg-serie-copied)") });
+                        M.toast({ html: $string("$(msg-serie-copied-studio)") });
                         this.markAction("chartActionExecuted", "copySerieForStudio");
                         return [2 /*return*/];
                     });
@@ -3411,12 +3465,13 @@ var WebApp;
         GeoPlot.TreeViewModel = TreeViewModel;
         /****************************************/
         var StudioPage = /** @class */ (function () {
-            function StudioPage() {
+            function StudioPage(projectId) {
                 var _this = this;
                 /****************************************/
                 this.items = new TreeViewModel();
                 this.maxX = ko.observable();
                 this.maxY = ko.observable();
+                this._projectId = projectId;
                 this._graphCtx = new GraphContext();
                 this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                     //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
@@ -3446,6 +3501,11 @@ var WebApp;
                         action.icon = "settings";
                     action.execute = function () { return _this.showOptions(); };
                 }));
+                actions.push(WebApp.apply(new ActionViewModel(), function (action) {
+                    action.text = $string("$(share) Studio"),
+                        action.icon = "share";
+                    action.execute = function () { return _this.share(); };
+                }));
                 var root = new TreeNodeViewModel();
                 root.actions(actions);
                 this.items.setRoot(root);
@@ -3470,6 +3530,28 @@ var WebApp;
                     left: -maxX / 10,
                     right: maxX,
                     top: maxY
+                });
+            };
+            /****************************************/
+            StudioPage.prototype.share = function () {
+                return __awaiter(this, void 0, void 0, function () {
+                    var projectId, url;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                projectId = WebApp.StringUtils.uuidv4();
+                                M.toast({ html: $string("$(msg-operation-in-progress)") });
+                                return [4 /*yield*/, GeoPlot.Api.saveState(projectId, this.getState())];
+                            case 1:
+                                _a.sent();
+                                url = WebApp.Uri.absolute("~/" + $language.split("-")[0] + "/Studio/" + projectId);
+                                return [4 /*yield*/, WebApp.DomUtils.copyText(url)];
+                            case 2:
+                                _a.sent();
+                                M.toast({ html: $string("$(msg-shared)") });
+                                return [2 /*return*/];
+                        }
+                    });
                 });
             };
             /****************************************/
@@ -3544,14 +3626,47 @@ var WebApp;
             };
             /****************************************/
             StudioPage.prototype.loadState = function () {
-                var json = localStorage.getItem("studio");
-                if (json)
-                    this.setState(JSON.parse(json));
+                return __awaiter(this, void 0, void 0, function () {
+                    var result, json;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                if (!this._projectId) return [3 /*break*/, 2];
+                                return [4 /*yield*/, GeoPlot.Api.loadState(this._projectId)];
+                            case 1:
+                                result = _a.sent();
+                                this.setState(result);
+                                return [3 /*break*/, 3];
+                            case 2:
+                                json = localStorage.getItem("studio");
+                                if (json)
+                                    this.setState(JSON.parse(json));
+                                _a.label = 3;
+                            case 3: return [2 /*return*/];
+                        }
+                    });
+                });
             };
             /****************************************/
             StudioPage.prototype.saveState = function () {
-                localStorage.setItem("studio", JSON.stringify(this.getState()));
-                M.toast({ html: $string("$(msg-saved)") });
+                return __awaiter(this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                if (!this._projectId) return [3 /*break*/, 2];
+                                return [4 /*yield*/, GeoPlot.Api.saveState(this._projectId, this.getState())];
+                            case 1:
+                                _a.sent();
+                                M.toast({ html: $string("$(msg-saved)") });
+                                return [3 /*break*/, 3];
+                            case 2:
+                                localStorage.setItem("studio", JSON.stringify(this.getState()));
+                                M.toast({ html: $string("$(msg-saved-device)") });
+                                _a.label = 3;
+                            case 3: return [2 /*return*/];
+                        }
+                    });
+                });
             };
             /****************************************/
             StudioPage.prototype.demo = function () {
@@ -3636,8 +3751,12 @@ var WebApp;
             });
             /****************************************/
             StudioPage.prototype.init = function () {
-                this.loadState();
-                //this.demo();
+                return __awaiter(this, void 0, void 0, function () {
+                    return __generator(this, function (_a) {
+                        this.loadState();
+                        return [2 /*return*/];
+                    });
+                });
             };
             return StudioPage;
         }());

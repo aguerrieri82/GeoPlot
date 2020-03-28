@@ -14,6 +14,9 @@ using System.Net.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using GeoPlot.Web.Entities;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace GeoPlot.Web.Controllers
 {
@@ -64,9 +67,49 @@ namespace GeoPlot.Web.Controllers
             return View(model);
         }
 
-        public IActionResult Studio()
+        public IActionResult Studio(Guid? id)
         {
+            ViewBag.ProjectId = id;
             return View();
+        }
+
+        public async Task<IActionResult> LoadState(Guid id)
+        {
+            var result = new ApiResult<object>();
+            try
+            {
+                var json = await System.IO.File.ReadAllTextAsync(_env.WebRootPath + "/states/" + id + ".json");
+                var token = JsonConvert.DeserializeObject(json);
+                result.Data = token;
+                result.IsSuccess = true;
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.Error = ex.Message;
+            }
+            return Json(result);
+        }
+
+        [HttpPost]
+        [RequestSizeLimit(2*1024*1024)]
+        public async Task<IActionResult> SaveState(Guid id)
+        {
+            var reader = new System.IO.StreamReader(HttpContext.Request.Body);
+            var json = await reader.ReadToEndAsync();
+            var result = new ApiResult<bool>();
+            try
+            {
+                await System.IO.File.WriteAllTextAsync(_env.WebRootPath + "/states/" + id + ".json", json);
+                result.Data = true;
+                result.IsSuccess = true;
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.Error = ex.Message;
+            }
+            return Json(result);
         }
 
         public async Task<IActionResult> StudioData()

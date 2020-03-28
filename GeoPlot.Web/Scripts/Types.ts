@@ -107,6 +107,16 @@
         x: TX;
         y: number;
     }
+
+
+    /****************************************/
+
+    export interface IApiResult<T> {
+        error: string;
+        data: T;
+        isSuccess: boolean;
+    }
+
 }
 
 

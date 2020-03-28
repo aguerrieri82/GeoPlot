@@ -1806,7 +1806,7 @@
 
     /****************************************/
 
-    interface IStudioViewModel {
+    export interface IStudioViewModel {
         data: IDayAreaDataSet<TData>;
         geo: IGeoAreaSet;
     }
@@ -1817,8 +1817,11 @@
     export class StudioPage {
 
         private _graphCtx: GraphContext;
+        private _projectId: Guid;
 
-        constructor() {
+        constructor(projectId: Guid) {
+
+            this._projectId = projectId;
 
             this._graphCtx = new GraphContext();
             this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
@@ -1849,6 +1852,11 @@
                 action.text = $string("$(options)"),
                 action.icon = "settings";
                 action.execute = () => this.showOptions();
+            }));
+            actions.push(apply(new ActionViewModel(), action => {
+                action.text = $string("$(share) Studio"),
+                action.icon = "share";
+                action.execute = () => this.share();
             }));
 
             const root = new TreeNodeViewModel<any>();
@@ -1883,6 +1891,18 @@
                 right: maxX,
                 top: maxY
             });
+        }
+
+        /****************************************/
+
+        async share() {
+            const projectId = StringUtils.uuidv4();
+
+            M.toast({ html: $string("$(msg-operation-in-progress)") });            
+            await Api.saveState(projectId, this.getState());
+            const url = Uri.absolute("~/" + $language.split("-")[0] + "/Studio/" + projectId);
+            await DomUtils.copyText(url);
+            M.toast({ html: $string("$(msg-shared)") });
         }
 
         /****************************************/
@@ -1978,17 +1998,30 @@
 
         /****************************************/
 
-        loadState() {
-            const json = localStorage.getItem("studio");
-            if (json)
-                this.setState(JSON.parse(json));
+        async loadState() {
+            if (this._projectId) {
+                let result = await Api.loadState<IPageState>(this._projectId);
+                this.setState(result);
+            }
+            else {
+                const json = localStorage.getItem("studio");
+                if (json)
+                    this.setState(JSON.parse(json));
+            }
         }
 
         /****************************************/
 
-        saveState() {
-            localStorage.setItem("studio", JSON.stringify(this.getState()));
-            M.toast({html: $string("$(msg-saved)")});
+        async saveState() {
+
+            if (this._projectId) {
+                await Api.saveState(this._projectId, this.getState());
+                M.toast({ html: $string("$(msg-saved)") });
+            }
+            else {
+                localStorage.setItem("studio", JSON.stringify(this.getState()));
+                M.toast({ html: $string("$(msg-saved-device)") });
+            }
         }
 
         /****************************************/
@@ -2053,7 +2086,7 @@
 
         /****************************************/
 
-        protected init() {
+        async init() {
             this.loadState();
             //this.demo();
         }

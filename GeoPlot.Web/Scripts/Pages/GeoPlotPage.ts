@@ -951,7 +951,7 @@
 
             DomUtils.copyText(JSON.stringify(obj));
 
-            M.toast({ html: $string("$(msg-serie-copied)") })
+            M.toast({ html: $string("$(msg-serie-copied-studio)") })
 
             this.markAction("chartActionExecuted", "copySerieForStudio");
         }

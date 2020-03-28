@@ -30,9 +30,11 @@ namespace GeoPlot.Web
                 options.Filters.Add(new AppendVersionFilter());
                 options.Filters.AddService<LanguageFilter>();
             }).AddNewtonsoftJson();
+
 #if DEBUG
             mvcOptions.AddRazorRuntimeCompilation();
 #endif
+
 
             services.Configure<CookiePolicyOptions>(options =>
             {

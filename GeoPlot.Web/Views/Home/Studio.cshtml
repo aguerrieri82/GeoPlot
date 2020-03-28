@@ -175,6 +175,6 @@
     <script>
         WebApp.app.baseUrl = '@Url.Content("~/")';
         WebApp.app.initServices();
-        ko.applyBindings(new WebApp.GeoPlot.StudioPage());
+        ko.applyBindings(new WebApp.GeoPlot.StudioPage( @(Html.Json((Guid?)ViewBag.ProjectId)) ));
     </script>
 }
