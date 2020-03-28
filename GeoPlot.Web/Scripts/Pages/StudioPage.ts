@@ -13,7 +13,7 @@
 
     export interface ISerieStudioData extends IStudioData {
         type: "serie";
-        serie: ISerieSource;
+        serie: IDayAreaSerieSource;
         title: string;
         values?: IFunctionPoint<number>[];
         color?: string;
@@ -1061,7 +1061,7 @@
     /****************************************/
 
     interface IStudioSerieConfig extends IItemConfig {
-        source?: ISerieSource;
+        source?: IDayAreaSerieSource;
         values?: IFunctionPoint<number>[];
         offsetX?: number;
         children?: IStudioRegressionConfig[];
@@ -1334,12 +1334,13 @@
 
             if (!this._graphCtx.serieCalculator) {
                 M.toast({ html: $string("$(msg-downloading-data)") })
-                const model = await Http.getJsonAsync<IStudioViewModel>("~/StudioData");
+                const model = await Api.loadStudioData();
                 this._graphCtx.serieCalculator = new IndicatorCalculator(model.data, InfectionDataSet, model.geo);
             }
 
             this.values = this._graphCtx.serieCalculator.getSerie(this.source);
             this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+            this.children.foreach(a => a.onParentChanged());
 
             M.toast({html: $string("$(msg-update-complete)")})
         }
@@ -1364,7 +1365,7 @@
 
         color = ko.observable<string>();
         offsetX = ko.observable<number>(0);
-        source: ISerieSource;
+        source: IDayAreaSerieSource;
         values: IFunctionPoint<number>[];
     }
 
@@ -1832,7 +1833,7 @@
                 //lockViewport: false,
                 restrictedFunctions: true,
                 //restrictGridToFirstQuadrant: true,
-                //administerSecretFolders: true,
+                administerSecretFolders: true,
                 authorIDE: true,
                 advancedStyling: true
             });
@@ -1897,8 +1898,6 @@
 
         async share() {
             const projectId = StringUtils.uuidv4();
-
-            M.toast({ html: $string("$(msg-operation-in-progress)") });            
             await Api.saveState(projectId, this.getState());
             const url = Uri.absolute("~/" + $language.split("-")[0] + "/Studio/" + projectId);
             await DomUtils.copyText(url);

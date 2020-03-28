@@ -1,12 +1,4 @@
-﻿declare var $language: string;
-
-var $numberFormat = new Intl.NumberFormat($language, {});
-
-function formatNumber(value: number) {
-    if (!value)
-        return "";
-    return $numberFormat.format(value);
-}
+﻿
 
 /****************************************/
 

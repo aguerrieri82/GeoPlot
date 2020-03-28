@@ -1,4 +1,4 @@
-﻿namespace WebApp.GeoPlot {
+﻿namespace WebApp {
 
     type Color = string;
 

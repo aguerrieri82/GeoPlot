@@ -106,6 +106,29 @@ namespace WebApp.GeoPlot {
                 colorDark: "#222",
                 compute: new ConstIndicatorFunction((v, a) => a.demography.over65)
             },
+            {
+                id: "extimated-death",
+                name: $string("Morti stimati"),
+                validFor: ["country"],
+                colorLight: "#f44336",
+                colorDark: "#b71c1c",
+                compute: new CombineIndicatorFunction({
+                    totalPositive: new SimpleIndicatorFunction(a => a.totalPositive),
+                    toatlTests: new SimpleIndicatorFunction(a => a.toatlTests),
+                    dailyDeath: new ConstIndicatorFunction((v, a) => 1450)
+                }, values => Math.round((values.totalPositive / values.toatlTests) * values.dailyDeath))
+            },
+            {
+                id: "healed-death",
+                name: $string("$(death) + $(healed)"),
+                validFor: ["country", "region"],
+                colorLight: "#4caf50",
+                colorDark: "#1b5e20",
+                compute: new CombineIndicatorFunction({
+                    totalHealed: new SimpleIndicatorFunction(a => a.totalHealed),
+                    totalDeath: new SimpleIndicatorFunction(a => a.totalDeath)
+                }, values => values.totalHealed + values.totalDeath)
+            }
         ],
         factors: [
             {
@@ -166,7 +189,7 @@ namespace WebApp.GeoPlot {
                 format: a => MathUtils.round(a, 1) + "%",
                 reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
                 description: $string("% [indicator] $(over-tested)")
-            }
+            },
         ]
     };
 }

@@ -598,12 +598,11 @@
             if (!window["gtag"])
                 return;
 
-            gtag("event", actionId, {
+            safeCall(() => gtag("event", actionId, {
                 event_category: "GeoPlot",
                 event_label: label,
                 value: this._preferences.actions[actionId]
-            });
-
+            }));
         }
 
         /****************************************/
@@ -612,10 +611,10 @@
             if (!window["gtag"])
                 return;
 
-            gtag("event", action, {
+            safeCall(()=> gtag("event", action, {
                 event_category: "GeoPlot/Tip",
                 event_label: tipId
-            });
+            }));
         }
 
         /****************************************/
@@ -1193,14 +1192,14 @@
             let desc = "";
 
             if (this.isDayDelta())
-                desc = "Nuovi ";
+                desc = "$(new) ";
 
             desc += this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name);
             if (this.currentArea())
                 desc += " - " + this.currentArea().value.name;
 
             if (this._execludedArea.size > 0) {
-                desc += " - Escluso (";
+                desc += " - $(except) (";
                 let i = 0;
                 for (let key of this._execludedArea.keys()) {
                     if (i > 0)
@@ -1211,7 +1210,7 @@
                 desc += ")";
             }
 
-            this.factorDescription(desc);
+            this.factorDescription($string(desc));
         }
 
         /****************************************/

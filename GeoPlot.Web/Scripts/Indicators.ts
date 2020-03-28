@@ -42,6 +42,28 @@
         }
     }
 
+    /****************************************/
+
+    export class CombineIndicatorFunction<TData, TDic extends IDictionary<IIndicatorFunction<TData>>> implements IIndicatorFunction<TData> {
+
+        private readonly _value: (values: IDictionary<number>) => number
+        private readonly _indicators: IDictionary<IIndicatorFunction<TData>>;
+
+        constructor(indicators: TDic, value: (values: IDictionary<number>)=> number) {
+            this._value = value;
+            this._indicators = indicators;
+        }
+
+        /****************************************/
+
+        value(main: TData, delta: TData, exMain: TData[], exDelta: TData[], area: IGeoArea): number {
+            const value: IDictionary<number> = {};
+
+            for (var key in this._indicators) 
+                value[key] = this._indicators[key].value(main, delta, exMain, exDelta, area);
+            return this._value(value);
+        }
+    }
 
     /****************************************/
 
@@ -200,7 +222,7 @@
 
         /****************************************/
 
-        getSerie<TX extends Date|number>(source: ISerieSource) : IFunctionPoint<TX>[] {
+        getSerie<TX extends Date|number>(source: IDayAreaSerieSource) : IFunctionPoint<TX>[] {
 
             const result: IFunctionPoint<TX>[] = [];
             if (source.groupSize > 1) {

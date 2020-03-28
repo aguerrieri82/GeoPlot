@@ -19,7 +19,7 @@
             return result.data;
         }
 
-    /****************************************/
+        /****************************************/
 
         export async function loadStudioData() {
             return await Http.getJsonAsync<IStudioViewModel>("~/StudioData");

@@ -64,6 +64,7 @@
     export interface IIndicator<TData> {
         id: keyof TData|string;
         name: string;
+        description?: string;
         validFor?: ViewMode[];
         colorLight?: string;
         colorDark?: string;
@@ -80,6 +81,8 @@
         description: string;
     }
 
+    /****************************************/
+
     export interface IDataSet<TData> {
         name: string;
         indicators: IIndicator<TData>[];
@@ -88,7 +91,7 @@
 
     /****************************************/
 
-    export interface ISerieSource {
+    export interface IDayAreaSerieSource {
         areaId: string;
         exeludedAreaIds?: string[];
         indicatorId: string;
@@ -107,7 +110,6 @@
         x: TX;
         y: number;
     }
-
 
     /****************************************/
 
