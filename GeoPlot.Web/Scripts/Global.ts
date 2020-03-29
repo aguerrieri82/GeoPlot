@@ -54,3 +54,13 @@ if (window["Chart"]) {
         }
     });
 }
+
+/****************************************/
+/* String
+/****************************************/
+
+declare const $language: string;
+
+declare function formatNumber(value: number): string;
+
+declare function $string(format: string): string;

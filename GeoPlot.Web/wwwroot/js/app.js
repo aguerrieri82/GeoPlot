@@ -432,6 +432,336 @@ var WebApp;
         })(GeoAreaType = GeoPlot.GeoAreaType || (GeoPlot.GeoAreaType = {}));
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        var SplitEnumerator = /** @class */ (function () {
+            function SplitEnumerator(value, separator, startIndex) {
+                if (startIndex === void 0) { startIndex = 0; }
+                this._value = value;
+                this._separator = separator;
+                this._startIndex = startIndex;
+            }
+            Object.defineProperty(SplitEnumerator.prototype, "current", {
+                /****************************************/
+                get: function () {
+                    if (!this._current)
+                        this._current = this._value.substring(this._currentStartIndex, this._curIndex);
+                    return this._current;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            /****************************************/
+            SplitEnumerator.prototype.moveNext = function () {
+                if (this._curIndex == this._value.length)
+                    return false;
+                this._currentStartIndex = this._curIndex;
+                var index = this._value.indexOf(this._separator, this._curIndex);
+                if (index == -1) {
+                    this._curIndex = this._value.length;
+                }
+                else
+                    this._curIndex = index + this._separator.length;
+                this._current = null;
+                return true;
+            };
+            /****************************************/
+            SplitEnumerator.prototype.reset = function () {
+                this._curIndex = this._startIndex;
+                this._currentStartIndex = this._curIndex;
+                this._current = null;
+            };
+            return SplitEnumerator;
+        }());
+        /****************************************/
+        var BaseDataAdapter = /** @class */ (function () {
+            function BaseDataAdapter(options) {
+            }
+            return BaseDataAdapter;
+        }());
+        /****************************************/
+        var TextTableDataAdapter = /** @class */ (function (_super) {
+            __extends(TextTableDataAdapter, _super);
+            function TextTableDataAdapter(options) {
+                var _this = _super.call(this, options) || this;
+                _this._options = options;
+                return _this;
+            }
+            /****************************************/
+            TextTableDataAdapter.prototype.createIdentifier = function (value) {
+                var state = 0;
+                var result = "";
+                for (var i = 0; i < value.length; i++) {
+                    var c = value[i];
+                    switch (state) {
+                        case 0:
+                            result += c.toLowerCase();
+                            state = 1;
+                            break;
+                        case 1:
+                            if (c == " " || c == "-" || c == "_")
+                                state = 2;
+                            else
+                                result += c;
+                            break;
+                        case 2:
+                            result += c.toUpperCase();
+                            state = 1;
+                            break;
+                    }
+                }
+                return result;
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.extractHeader = function (text) {
+                var _this = this;
+                var firstRow = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator)).first();
+                var cols = firstRow.split(this._options.columnSeparator);
+                var headers;
+                if (this._options.hasHeader !== false) {
+                    var rowAnal = [];
+                    this.analyzeRow(cols, rowAnal);
+                    var stringCount = WebApp.linq(rowAnal).sum(function (a) { return a.stringCount; });
+                    var emptyCount = WebApp.linq(rowAnal).sum(function (a) { return a.emptyCount; });
+                    if (stringCount > 0 && stringCount + emptyCount == cols.length) {
+                        this._options.hasHeader = true;
+                        headers = WebApp.linq(cols).select(function (a, i) {
+                            if (a == "")
+                                return "col" + i;
+                            return _this.createIdentifier(a);
+                        }).toArray();
+                    }
+                }
+                if (!headers) {
+                    this._options.hasHeader = false;
+                    headers = WebApp.linq(cols).select(function (a, i) { return "col" + i; }).toArray();
+                }
+                if (!this._options.columnsIds)
+                    this._options.columnsIds = headers;
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.extractRowSeparator = function (text) {
+                var e_4, _a;
+                if (this._options.rowSeparator)
+                    return;
+                var items = ["\r\n", "\n"];
+                try {
+                    for (var items_1 = __values(items), items_1_1 = items_1.next(); !items_1_1.done; items_1_1 = items_1.next()) {
+                        var item = items_1_1.value;
+                        if (text.indexOf(item) != -1) {
+                            this._options.rowSeparator = item;
+                            return;
+                        }
+                    }
+                }
+                catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                finally {
+                    try {
+                        if (items_1_1 && !items_1_1.done && (_a = items_1.return)) _a.call(items_1);
+                    }
+                    finally { if (e_4) throw e_4.error; }
+                }
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.extractColumnSeparator = function (text) {
+                var e_5, _a, e_6, _b;
+                if (this._options.columnSeparator)
+                    return;
+                var items = ["\t", ";", ",", " "];
+                var stats = {};
+                var rows = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator)).take(10);
+                try {
+                    for (var rows_1 = __values(rows), rows_1_1 = rows_1.next(); !rows_1_1.done; rows_1_1 = rows_1.next()) {
+                        var row = rows_1_1.value;
+                        try {
+                            for (var items_2 = (e_6 = void 0, __values(items)), items_2_1 = items_2.next(); !items_2_1.done; items_2_1 = items_2.next()) {
+                                var item = items_2_1.value;
+                                if (stats[item] === false)
+                                    continue;
+                                var cols = WebApp.linq(new SplitEnumerator(row, item)).count();
+                                if (cols > 1 && !(item in stats))
+                                    stats[item] = cols;
+                                else {
+                                    if (stats[item] != cols)
+                                        stats[item] = false;
+                                }
+                            }
+                        }
+                        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                        finally {
+                            try {
+                                if (items_2_1 && !items_2_1.done && (_b = items_2.return)) _b.call(items_2);
+                            }
+                            finally { if (e_6) throw e_6.error; }
+                        }
+                    }
+                }
+                catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                finally {
+                    try {
+                        if (rows_1_1 && !rows_1_1.done && (_a = rows_1.return)) _a.call(rows_1);
+                    }
+                    finally { if (e_5) throw e_5.error; }
+                }
+                for (var key in stats) {
+                    if (stats[key] !== false) {
+                        this._options.columnSeparator = key;
+                        return;
+                    }
+                }
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.analyzeRow = function (cols, result) {
+                if (result.length == 0) {
+                    for (var i = 0; i < cols.length; i++) {
+                        result.push({
+                            values: {},
+                            booleanCount: 0,
+                            dateCount: 0,
+                            emptyCount: 0,
+                            numberCount: 0,
+                            stringCount: 0
+                        });
+                    }
+                }
+                for (var i = 0; i < cols.length; i++)
+                    this.analyzeColumn(cols[i], result[i]);
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.analyzeColumn = function (value, result) {
+                value in result.values ? result.values[value]++ : result.values[value] = 1;
+                if (value == "")
+                    result.emptyCount++;
+                else if (!isNaN(value))
+                    result.numberCount++;
+                else if (Date.parse(value))
+                    result.dateCount++;
+                else if (value == "true" || value == "false")
+                    result.booleanCount++;
+                else
+                    result.stringCount++;
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.createParser = function (anal) {
+                if (anal.numberCount > 0 && anal.stringCount == 0)
+                    return function (a) { return !a ? null : parseFloat(a); };
+                if (anal.booleanCount > 0 && anal.stringCount == 0)
+                    return function (a) { return a == "true"; };
+                if (anal.dateCount > 0 && anal.stringCount == 0)
+                    return function (a) { return !a ? null : new Date(a); };
+                if (anal.stringCount > 0)
+                    return function (a) {
+                        if (!a)
+                            return "";
+                        if (a.startsWith("\"") && a.endsWith("\""))
+                            return a.substr(1, a.length - 2);
+                        return a;
+                    };
+                return function (a) { return null; };
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.analyze = function (text) {
+                var _this = this;
+                //Separators
+                this.extractRowSeparator(text);
+                this.extractColumnSeparator(text);
+                //Header
+                this.extractHeader(text);
+                //Rows
+                var rows = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator));
+                if (this._options.hasHeader)
+                    rows = rows.skip(1);
+                //col analysis
+                var colAnalysis = [];
+                rows.foreach(function (row) {
+                    return _this.analyzeRow(row.split(_this._options.columnSeparator), colAnalysis);
+                });
+                //Parser
+                if (!this._options.columnsParser) {
+                    this._options.columnsParser = {};
+                    colAnalysis.forEach(function (a, i) {
+                        return _this._options.columnsParser[_this._options.columnsIds[i]] = _this.createParser(a);
+                    });
+                }
+                //X-axis
+                if (!this._options.xColumn)
+                    this._options.xColumn = this._options.columnsIds[0];
+                //Y-axis
+                if (!this._options.serieColumns) {
+                    this._options.serieColumns = [];
+                    colAnalysis.forEach(function (col, i) {
+                        if (col.numberCount > 0 && col.stringCount == 0)
+                            _this._options.serieColumns.push(_this._options.columnsIds[i]);
+                    });
+                }
+                //groups
+                if (!this._options.groupColumns) {
+                    this._options.groupColumns = [];
+                    colAnalysis.forEach(function (col, i) {
+                        if (col.stringCount > 0) {
+                            var values = WebApp.linq(col.values);
+                            if (values.count() > 1 && values.any(function (a) { return a.value > 1; }))
+                                _this._options.groupColumns.push(_this._options.columnsIds[i]);
+                        }
+                    });
+                }
+                return colAnalysis;
+            };
+            /****************************************/
+            TextTableDataAdapter.prototype.parse = function (text) {
+                var e_7, _a;
+                this.analyze(text);
+                var result = [];
+                var rows = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator));
+                if (this._options.hasHeader)
+                    rows = rows.skip(1);
+                try {
+                    for (var rows_2 = __values(rows), rows_2_1 = rows_2.next(); !rows_2_1.done; rows_2_1 = rows_2.next()) {
+                        var row = rows_2_1.value;
+                        var cols = row.split(this._options.columnSeparator);
+                        var item = {};
+                        for (var i = 0; i < cols.length; i++)
+                            item[this._options.columnsIds[i]] = this._options.columnsParser[this._options.columnsIds[i]](cols[i]);
+                        result.push(item);
+                    }
+                }
+                catch (e_7_1) { e_7 = { error: e_7_1 }; }
+                finally {
+                    try {
+                        if (rows_2_1 && !rows_2_1.done && (_a = rows_2.return)) _a.call(rows_2);
+                    }
+                    finally { if (e_7) throw e_7.error; }
+                }
+                return result;
+            };
+            return TextTableDataAdapter;
+        }(BaseDataAdapter));
+        GeoPlot.TextTableDataAdapter = TextTableDataAdapter;
+        /****************************************/
+        var JsonDataAdapter = /** @class */ (function (_super) {
+            __extends(JsonDataAdapter, _super);
+            function JsonDataAdapter(options) {
+                return _super.call(this, options) || this;
+            }
+            /****************************************/
+            JsonDataAdapter.prototype.parse = function (text) {
+                return null;
+            };
+            return JsonDataAdapter;
+        }(BaseDataAdapter));
+        /****************************************/
+        /* DataImportControl
+        /****************************************/
+        var DataImportControl = /** @class */ (function () {
+            function DataImportControl() {
+            }
+            return DataImportControl;
+        }());
+        GeoPlot.DataImportControl = DataImportControl;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
 /// <reference path="../indicators.ts" />
 var WebApp;
 (function (WebApp) {
@@ -799,7 +1129,6 @@ var WebApp;
     }());
     WebApp.Graphics = Graphics;
 })(WebApp || (WebApp = {}));
-var $numberFormat = new Intl.NumberFormat($language, {});
 var WebApp;
 (function (WebApp) {
     /****************************************/
@@ -1204,6 +1533,14 @@ var WebApp;
                         width: 1,
                         visible: true,
                         label: "DPCM 22 Marzo (chiusura ulteriore attività)"
+                    },
+                    "dpcm25": {
+                        date: new Date(2020, 2, 24),
+                        color: "#000",
+                        dash: [5, 5],
+                        width: 1,
+                        visible: true,
+                        label: "DPCM 25 Marzo (maggiori sanzioni)"
                     }
                 };
                 /****************************************/
@@ -1352,7 +1689,7 @@ var WebApp;
             };
             /****************************************/
             GeoPlotPage.prototype.loadState = function (state) {
-                var e_4, _a;
+                var e_8, _a;
                 if (!state.view)
                     state.view = "region";
                 var viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
@@ -1381,12 +1718,12 @@ var WebApp;
                             this._execludedArea.set(areaId, this._geo.areas[areaId.toLowerCase()]);
                         }
                     }
-                    catch (e_4_1) { e_4 = { error: e_4_1 }; }
+                    catch (e_8_1) { e_8 = { error: e_8_1 }; }
                     finally {
                         try {
                             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
-                        finally { if (e_4) throw e_4.error; }
+                        finally { if (e_8) throw e_8.error; }
                     }
                 }
                 if (state.indicator)
@@ -1750,7 +2087,7 @@ var WebApp;
             };
             /****************************************/
             GeoPlotPage.prototype.updateAreaIndicators = function () {
-                var e_5, _a, e_6, _b;
+                var e_9, _a, e_10, _b;
                 var _this = this;
                 if (!this.currentArea())
                     return;
@@ -1774,12 +2111,12 @@ var WebApp;
                             _loop_1(indicator);
                         }
                     }
-                    catch (e_5_1) { e_5 = { error: e_5_1 }; }
+                    catch (e_9_1) { e_9 = { error: e_9_1 }; }
                     finally {
                         try {
                             if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                         }
-                        finally { if (e_5) throw e_5.error; }
+                        finally { if (e_9) throw e_9.error; }
                     }
                     this.currentArea().indicators(items);
                 }
@@ -1790,17 +2127,17 @@ var WebApp;
                         item.value(this.getIndicatorValue(this.dayNumber(), areaId, item.indicator.id));
                     }
                 }
-                catch (e_6_1) { e_6 = { error: e_6_1 }; }
+                catch (e_10_1) { e_10 = { error: e_10_1 }; }
                 finally {
                     try {
                         if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                     }
-                    finally { if (e_6) throw e_6.error; }
+                    finally { if (e_10) throw e_10.error; }
                 }
             };
             /****************************************/
             GeoPlotPage.prototype.updateFactorDescription = function () {
-                var e_7, _a;
+                var e_11, _a;
                 var desc = "";
                 if (this.isDayDelta())
                     desc = "$(new) ";
@@ -1819,12 +2156,12 @@ var WebApp;
                             i++;
                         }
                     }
-                    catch (e_7_1) { e_7 = { error: e_7_1 }; }
+                    catch (e_11_1) { e_11 = { error: e_11_1 }; }
                     finally {
                         try {
                             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
-                        finally { if (e_7) throw e_7.error; }
+                        finally { if (e_11) throw e_11.error; }
                     }
                     desc += ")";
                 }
@@ -2123,26 +2460,26 @@ var WebApp;
                 this.vars = {};
             }
             GraphContext.prototype.setExpressions = function (values) {
-                var e_8, _a, e_9, _b, e_10, _c, e_11, _d;
+                var e_12, _a, e_13, _b, e_14, _c, e_15, _d;
                 var state = this.calculator.getState();
                 var _loop_3 = function (value) {
-                    var e_12, _a;
+                    var e_16, _a;
                     var curExp = WebApp.linq(state.expressions.list).first(function (a) { return a.id == value.id; });
                     if (!curExp)
                         state.expressions.list.push(value);
                     else {
                         try {
-                            for (var _b = (e_12 = void 0, __values(Object.getOwnPropertyNames(value))), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            for (var _b = (e_16 = void 0, __values(Object.getOwnPropertyNames(value))), _c = _b.next(); !_c.done; _c = _b.next()) {
                                 var prop = _c.value;
                                 curExp[prop] = value[prop];
                             }
                         }
-                        catch (e_12_1) { e_12 = { error: e_12_1 }; }
+                        catch (e_16_1) { e_16 = { error: e_16_1 }; }
                         finally {
                             try {
                                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
-                            finally { if (e_12) throw e_12.error; }
+                            finally { if (e_16) throw e_16.error; }
                         }
                     }
                 };
@@ -2152,12 +2489,12 @@ var WebApp;
                         _loop_3(value);
                     }
                 }
-                catch (e_8_1) { e_8 = { error: e_8_1 }; }
+                catch (e_12_1) { e_12 = { error: e_12_1 }; }
                 finally {
                     try {
                         if (values_1_1 && !values_1_1.done && (_a = values_1.return)) _a.call(values_1);
                     }
-                    finally { if (e_8) throw e_8.error; }
+                    finally { if (e_12) throw e_12.error; }
                 }
                 var groups = WebApp.linq(state.expressions.list).where(function (a) { return a.type != "folder"; }).groupBy(function (a) { return a.folderId ? a.folderId : ""; }).toDictionary(function (a) { return a.key; }, function (a) { return a.values.toArray(); });
                 var newList = [];
@@ -2165,44 +2502,44 @@ var WebApp;
                     for (var _e = __values(WebApp.linq(state.expressions.list).where(function (a) { return a.type == "folder"; })), _f = _e.next(); !_f.done; _f = _e.next()) {
                         var folder = _f.value;
                         newList.push(folder);
-                        var items_3 = groups[folder.id];
-                        if (items_3)
+                        var items_5 = groups[folder.id];
+                        if (items_5)
                             try {
-                                for (var items_1 = (e_10 = void 0, __values(items_3)), items_1_1 = items_1.next(); !items_1_1.done; items_1_1 = items_1.next()) {
-                                    var item = items_1_1.value;
+                                for (var items_3 = (e_14 = void 0, __values(items_5)), items_3_1 = items_3.next(); !items_3_1.done; items_3_1 = items_3.next()) {
+                                    var item = items_3_1.value;
                                     newList.push(item);
                                 }
                             }
-                            catch (e_10_1) { e_10 = { error: e_10_1 }; }
+                            catch (e_14_1) { e_14 = { error: e_14_1 }; }
                             finally {
                                 try {
-                                    if (items_1_1 && !items_1_1.done && (_c = items_1.return)) _c.call(items_1);
+                                    if (items_3_1 && !items_3_1.done && (_c = items_3.return)) _c.call(items_3);
                                 }
-                                finally { if (e_10) throw e_10.error; }
+                                finally { if (e_14) throw e_14.error; }
                             }
                     }
                 }
-                catch (e_9_1) { e_9 = { error: e_9_1 }; }
+                catch (e_13_1) { e_13 = { error: e_13_1 }; }
                 finally {
                     try {
                         if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                     }
-                    finally { if (e_9) throw e_9.error; }
+                    finally { if (e_13) throw e_13.error; }
                 }
                 var items = groups[""];
                 if (items)
                     try {
-                        for (var items_2 = __values(items), items_2_1 = items_2.next(); !items_2_1.done; items_2_1 = items_2.next()) {
-                            var item = items_2_1.value;
+                        for (var items_4 = __values(items), items_4_1 = items_4.next(); !items_4_1.done; items_4_1 = items_4.next()) {
+                            var item = items_4_1.value;
                             newList.push(item);
                         }
                     }
-                    catch (e_11_1) { e_11 = { error: e_11_1 }; }
+                    catch (e_15_1) { e_15 = { error: e_15_1 }; }
                     finally {
                         try {
-                            if (items_2_1 && !items_2_1.done && (_d = items_2.return)) _d.call(items_2);
+                            if (items_4_1 && !items_4_1.done && (_d = items_4.return)) _d.call(items_4);
                         }
-                        finally { if (e_11) throw e_11.error; }
+                        finally { if (e_15) throw e_15.error; }
                     }
                 state.expressions.list = newList;
                 this.calculator.setState(state);
@@ -2620,7 +2957,7 @@ var WebApp;
             }
             /****************************************/
             StudioSerieRegression.prototype.addFunction = function (value) {
-                var e_13, _a;
+                var e_17, _a;
                 var _this = this;
                 var model = new RegressionFunctionViewModel();
                 model.value = value;
@@ -2659,12 +2996,12 @@ var WebApp;
                         _loop_4(item);
                     }
                 }
-                catch (e_13_1) { e_13 = { error: e_13_1 }; }
+                catch (e_17_1) { e_17 = { error: e_17_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_13) throw e_13.error; }
+                    finally { if (e_17) throw e_17.error; }
                 }
                 model.vars(vars);
                 this.functions.push(model);
@@ -2680,7 +3017,7 @@ var WebApp;
             };
             /****************************************/
             StudioSerieRegression.prototype.updateRegressionVars = function () {
-                var e_14, _a;
+                var e_18, _a;
                 var model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
                 if (model && model.regressionParameters) {
                     try {
@@ -2695,12 +3032,12 @@ var WebApp;
                             }
                         }
                     }
-                    catch (e_14_1) { e_14 = { error: e_14_1 }; }
+                    catch (e_18_1) { e_18 = { error: e_18_1 }; }
                     finally {
                         try {
                             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
-                        finally { if (e_14) throw e_14.error; }
+                        finally { if (e_18) throw e_18.error; }
                     }
                 }
             };
@@ -2716,7 +3053,7 @@ var WebApp;
             };
             /****************************************/
             StudioSerieRegression.prototype.setStateWork = function (state) {
-                var e_15, _a;
+                var e_19, _a;
                 if (state.function) {
                     var func = WebApp.linq(this.functions).first(function (a) { return a.value.type == state.function.type; });
                     if (func) {
@@ -2736,12 +3073,12 @@ var WebApp;
                                 _loop_5(item);
                             }
                         }
-                        catch (e_15_1) { e_15 = { error: e_15_1 }; }
+                        catch (e_19_1) { e_19 = { error: e_19_1 }; }
                         finally {
                             try {
                                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
-                            finally { if (e_15) throw e_15.error; }
+                            finally { if (e_19) throw e_19.error; }
                         }
                         this.selectedFunction(func);
                     }
@@ -2751,7 +3088,7 @@ var WebApp;
             };
             /****************************************/
             StudioSerieRegression.prototype.getState = function () {
-                var e_16, _a;
+                var e_20, _a;
                 var state = _super.prototype.getState.call(this);
                 state.function = this.selectedFunction().value;
                 state.showIntegration = this.showIntegration();
@@ -2765,12 +3102,12 @@ var WebApp;
                         item.value.autoCompute = item.autoCompute();
                     }
                 }
-                catch (e_16_1) { e_16 = { error: e_16_1 }; }
+                catch (e_20_1) { e_20 = { error: e_20_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_16) throw e_16.error; }
+                    finally { if (e_20) throw e_20.error; }
                 }
                 return state;
             };
@@ -2810,7 +3147,7 @@ var WebApp;
             };
             /****************************************/
             StudioSerieRegression.prototype.getExpressions = function () {
-                var e_17, _a, e_18, _b;
+                var e_21, _a, e_22, _b;
                 var values = [];
                 values.push({
                     type: "folder",
@@ -2836,12 +3173,12 @@ var WebApp;
                             this._varsMap[item.name] = null;
                     }
                 }
-                catch (e_17_1) { e_17 = { error: e_17_1 }; }
+                catch (e_21_1) { e_21 = { error: e_21_1 }; }
                 finally {
                     try {
                         if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                     }
-                    finally { if (e_17) throw e_17.error; }
+                    finally { if (e_21) throw e_21.error; }
                 }
                 this._graphCtx.generateVars(this._varsMap);
                 this._varsMap["x"] = this.getVar("xp");
@@ -2954,12 +3291,12 @@ var WebApp;
                         }
                     }
                 }
-                catch (e_18_1) { e_18 = { error: e_18_1 }; }
+                catch (e_22_1) { e_22 = { error: e_22_1 }; }
                 finally {
                     try {
                         if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                     }
-                    finally { if (e_18) throw e_18.error; }
+                    finally { if (e_22) throw e_22.error; }
                 }
                 return values;
             };
@@ -3454,7 +3791,7 @@ var WebApp;
             };
             /****************************************/
             TreeNodeViewModel.prototype.attach = function (treeView, parent) {
-                var e_19, _a;
+                var e_23, _a;
                 this._treeView = treeView;
                 this._parentNode = parent;
                 try {
@@ -3463,12 +3800,12 @@ var WebApp;
                         childNode.attach(treeView);
                     }
                 }
-                catch (e_19_1) { e_19 = { error: e_19_1 }; }
+                catch (e_23_1) { e_23 = { error: e_23_1 }; }
                 finally {
                     try {
                         if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                     }
-                    finally { if (e_19) throw e_19.error; }
+                    finally { if (e_23) throw e_23.error; }
                 }
             };
             Object.defineProperty(TreeNodeViewModel.prototype, "parentNode", {
@@ -3766,8 +4103,8 @@ var WebApp;
                 /****************************************/
                 get: function () {
                     function items() {
-                        var _a, _b, node, e_20_1;
-                        var e_20, _c;
+                        var _a, _b, node, e_24_1;
+                        var e_24, _c;
                         return __generator(this, function (_d) {
                             switch (_d.label) {
                                 case 0:
@@ -3786,14 +4123,14 @@ var WebApp;
                                     return [3 /*break*/, 1];
                                 case 4: return [3 /*break*/, 7];
                                 case 5:
-                                    e_20_1 = _d.sent();
-                                    e_20 = { error: e_20_1 };
+                                    e_24_1 = _d.sent();
+                                    e_24 = { error: e_24_1 };
                                     return [3 /*break*/, 7];
                                 case 6:
                                     try {
                                         if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
                                     }
-                                    finally { if (e_20) throw e_20.error; }
+                                    finally { if (e_24) throw e_24.error; }
                                     return [7 /*endfinally*/];
                                 case 7: return [2 /*return*/];
                             }
@@ -3810,6 +4147,23 @@ var WebApp;
                     return __generator(this, function (_a) {
                         this.loadState();
                         return [2 /*return*/];
+                    });
+                });
+            };
+            /****************************************/
+            StudioPage.prototype.test = function () {
+                return __awaiter(this, void 0, void 0, function () {
+                    var adapter, text;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                adapter = new GeoPlot.TextTableDataAdapter({});
+                                return [4 /*yield*/, WebApp.Http.getStringAsync("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv")];
+                            case 1:
+                                text = _a.sent();
+                                adapter.parse(text);
+                                return [2 /*return*/];
+                        }
                     });
                 });
             };

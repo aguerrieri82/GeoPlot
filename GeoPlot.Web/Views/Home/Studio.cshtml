@@ -15,6 +15,7 @@
                 </div>
             </header>
             <div class="content">
+
                 <div class="help" data-bind="visible: items.root().nodes().length == 0">
                     <p>
                         <string>$(msg-no-projects-1)</string>
@@ -25,6 +26,7 @@
                     </p>
                 </div>
                 <div class="tree-view">
+                    <a href="#!" data-bind="click: test">Test</a>
                     <ul data-bind="template: {foreach: items.root().nodes, name: 'TreeItemTemplate'}">
                     </ul>
                 </div>

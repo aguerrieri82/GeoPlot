@@ -321,6 +321,14 @@
                 width: 1,
                 visible: true,
                 label: "DPCM 22 Marzo (chiusura ulteriore attività)"
+            },
+            "dpcm25": {
+                date: new Date(2020, 2, 24),
+                color: "#000",
+                dash: [5, 5],
+                width: 1,
+                visible: true,
+                label: "DPCM 25 Marzo (maggiori sanzioni)"
             }
         };
 

@@ -2093,6 +2093,15 @@
 
         /****************************************/
 
+        async test() {
+            var adapter = new TextTableDataAdapter({});
+            var text = await Http.getStringAsync("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv");
+            adapter.parse(text);
+
+        }
+
+        /****************************************/
+
         items = new TreeViewModel<ITreeItem>();
 
         maxX = ko.observable<number>();
