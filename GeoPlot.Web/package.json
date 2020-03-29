@@ -3,9 +3,18 @@
   "name": "asp.net",
   "private": true,
   "devDependencies": {
-    "@types/knockout": "3.4.66",
     "@types/chart.js": "2.9.15",
+    "@types/google.analytics": "0.0.40",
+    "@types/knockout": "3.4.66",
     "@types/materialize-css": "1.0.7",
-    "@types/google.analytics": "0.0.40"
+    "del": "^5.1.0",
+    "gulp": "^4.0.2",
+    "gulp-concat": "^2.6.1",
+    "gulp-htmlmin": "^5.0.1",
+    "gulp-uglify": "^3.0.2",
+    "gulp-terser": "1.2.0",
+    "gulp-cssmin": "0.2.0",
+    "source-map": "0.7.3",
+    "merge-stream": "^2.0.0"
   }
 }

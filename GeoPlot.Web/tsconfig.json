@@ -4,10 +4,10 @@
     "noEmitOnError": false,
     "removeComments": false,
     "sourceMap": true,
-    "target": "ES5",
+    "target": "ES6",
     "downlevelIteration": true,
     "outFile": "wwwroot/js/app.js",
-    "lib": [ "es5", "es2015.promise", "dom", "es2015.iterable", "es2017.string", "ES2020" ]
+    "lib": [ "ES6",  "dom", "es2017.string" ]
   },
   "compileOnSave": true,
   "typeAcquisition": { "enable": true },

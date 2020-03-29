@@ -12,24 +12,10 @@
 
 
   <ItemGroup>
-    <Compile Remove="wwwroot\states\**" />
     <Content Remove="wwwroot\states\**" />
-    <EmbeddedResource Remove="wwwroot\states\**" />
-    <None Remove="wwwroot\states\**" />
-    <TypeScriptCompile Remove="wwwroot\states\**" />
   </ItemGroup>
 
 
-  <ItemGroup>
-    <None Remove="Scripts\Api.ts" />
-    <None Remove="Scripts\Bindings.ts" />
-    <None Remove="Scripts\Components\DataImport.ts" />
-    <None Remove="Scripts\Data\TipManager.ts" />
-    <None Remove="Scripts\Desmos.d.ts" />
-    <None Remove="Scripts\Pages\StudioPage.ts" />
-    <None Remove="Scripts\StringTable.ts" />
-    <None Remove="Scripts\TypeDefs\DOM\index.d.ts" />
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.0-preview.1.20124.5" />
     <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="3.8.3">
@@ -44,7 +30,5 @@
     <ProjectReference Include="..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj" />
     <ProjectReference Include="..\GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj" />
   </ItemGroup>
-
-
 
 </Project>

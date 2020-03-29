@@ -1,8 +1,16 @@
 [
   {
+    "minify": {"enabled": false},
     "outputFileName": "wwwroot/js/app.min.js",
     "inputFiles": [
       "wwwroot/js/app.js"
+    ]
+  },
+  {
+    "minify": { "enabled": false },
+    "outputFileName": "wwwroot/css/theme.min.css",
+    "inputFiles": [
+      "wwwroot/css/theme.css"
     ]
   }
 ]
