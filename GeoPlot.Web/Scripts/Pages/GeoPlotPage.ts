@@ -1268,7 +1268,7 @@
             for (const key in day.values) {
                 const element = document.getElementById(key.toUpperCase());
                 if (element) {
-                    element.style.fillOpacity = "1";
+                    //element.style.fillOpacity = "1";
                     element.style.removeProperty("fill");
                 }
             }
@@ -1306,7 +1306,7 @@
                         if (isNaN(factor)) {
                             if (element.classList.contains("valid"))
                                 element.classList.remove("valid");
-                            element.style.fillOpacity = "1";
+                            //element.style.fillOpacity = "1";
                             element.style.removeProperty("fill");
                         }
                         else {
@@ -1314,7 +1314,7 @@
                                 element.classList.add("valid");
                             const value = MathUtils.discretize(MathUtils.exponential(factor), 20);
                             //element.style.fillOpacity = value.toString();
-                            element.style.fill = gradient.valueAt(factor).toString();
+                            element.style.fill = gradient.valueAt(0.15 +(factor * 0.85)).toString();
 
                         }
                     }

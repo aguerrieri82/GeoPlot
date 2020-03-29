@@ -5,8 +5,7 @@
         new MenuViewModel() { Name = "$(studio)", Action = "Studio", Controller = "Home" , Icon = "insert_chart"}
     };
 }
-@inject IStringTable StringTable
-@inject RequestLanguage RequestLanguage
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -121,12 +120,9 @@
 
         M.Tooltip.init(document.querySelectorAll(".tooltipped"));
         M.Sidenav.init(document.getElementById("mobile-menu"));
-
-        $language = '@RequestLanguage.FullCode';
-
-        $stringTable = @(Html.Raw(StringTable.ToJson(RequestLanguage.Code)));
-
     </script>
+
+    @Html.StringTable()
 
     <environment include="Production">
         <script src="~/lib/webapp/webapp.core.min.js" asp-append-version="true"></script>

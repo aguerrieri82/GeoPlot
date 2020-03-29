@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.Coronavirus", "GeoP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp", "Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj", "{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eusoft.WebApp.Localization", "Eusoft\WebApp\src\Eusoft.WebApp.Localization\Eusoft.WebApp.Localization.csproj", "{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug (Sign)|Any CPU = Debug (Sign)|Any CPU
@@ -50,6 +52,12 @@ Global
 		{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}.Debug (Sign)|Any CPU.ActiveCfg = Debug|Any CPU
+		{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}.Debug (Sign)|Any CPU.Build.0 = Debug|Any CPU
+		{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

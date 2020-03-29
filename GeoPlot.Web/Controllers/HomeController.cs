@@ -36,19 +36,6 @@ namespace GeoPlot.Web.Controllers
             return RedirectToAction("Overview");
         }
 
-        public IActionResult SetLanguage(string id, string returnUrl)
-        {
-            HttpContext.Response.Cookies.Append("lang", id, new CookieOptions()
-            {
-                Expires = DateTimeOffset.Now.AddYears(2),
-                IsEssential = true
-            });
-
-            if (returnUrl != null)
-                return Redirect(returnUrl);
-
-            return RedirectToAction("Index", new { lang = id });
-        }
 
         //[ResponseCache(Duration = 3600, VaryByHeader ="X-App-Version")]
         public async Task<IActionResult> Overview(string state)

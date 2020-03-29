@@ -527,18 +527,18 @@ var WebApp;
                     colorLight: "#777",
                     colorDark: "#222",
                     compute: new GeoPlot.ConstIndicatorFunction(function (v, a) { return a.demography.over65; })
-                },
+                } /*,
                 {
                     id: "extimated-death",
                     name: $string("Morti stimati"),
                     validFor: ["country"],
                     colorLight: "#f44336",
                     colorDark: "#b71c1c",
-                    compute: new GeoPlot.CombineIndicatorFunction({
-                        totalPositive: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalPositive; }),
-                        toatlTests: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.toatlTests; }),
-                        dailyDeath: new GeoPlot.ConstIndicatorFunction(function (v, a) { return 1450; })
-                    }, function (values) { return Math.round((values.totalPositive / values.toatlTests) * values.dailyDeath); })
+                    compute: new CombineIndicatorFunction({
+                        totalPositive: new SimpleIndicatorFunction(a => a.totalPositive),
+                        toatlTests: new SimpleIndicatorFunction(a => a.toatlTests),
+                        dailyDeath: new ConstIndicatorFunction((v, a) => 1450)
+                    }, values => Math.round((values.totalPositive / values.toatlTests) * values.dailyDeath))
                 },
                 {
                     id: "healed-death",
@@ -546,11 +546,11 @@ var WebApp;
                     validFor: ["country", "region"],
                     colorLight: "#4caf50",
                     colorDark: "#1b5e20",
-                    compute: new GeoPlot.CombineIndicatorFunction({
-                        totalHealed: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalHealed; }),
-                        totalDeath: new GeoPlot.SimpleIndicatorFunction(function (a) { return a.totalDeath; })
-                    }, function (values) { return values.totalHealed + values.totalDeath; })
-                }
+                    compute: new CombineIndicatorFunction({
+                        totalHealed: new SimpleIndicatorFunction(a => a.totalHealed),
+                        totalDeath: new SimpleIndicatorFunction(a => a.totalDeath)
+                    }, values => values.totalHealed + values.totalDeath)
+                }*/
             ],
             factors: [
                 {
@@ -800,15 +800,6 @@ var WebApp;
     WebApp.Graphics = Graphics;
 })(WebApp || (WebApp = {}));
 var $numberFormat = new Intl.NumberFormat($language, {});
-function formatNumber(value) {
-    if (!value)
-        return "";
-    return $numberFormat.format(value);
-}
-function $string(format) {
-    var REP_EXP = /\$\(([^\)]+)\)/g;
-    return format.replace(REP_EXP, function (m, value) { return $stringTable[value]; });
-}
 var WebApp;
 (function (WebApp) {
     /****************************************/
@@ -2050,7 +2041,7 @@ var WebApp;
                 for (var key in day.values) {
                     var element = document.getElementById(key.toUpperCase());
                     if (element) {
-                        element.style.fillOpacity = "1";
+                        //element.style.fillOpacity = "1";
                         element.style.removeProperty("fill");
                     }
                 }
@@ -2076,7 +2067,7 @@ var WebApp;
                             if (isNaN(factor)) {
                                 if (element.classList.contains("valid"))
                                     element.classList.remove("valid");
-                                element.style.fillOpacity = "1";
+                                //element.style.fillOpacity = "1";
                                 element.style.removeProperty("fill");
                             }
                             else {
@@ -2084,7 +2075,7 @@ var WebApp;
                                     element.classList.add("valid");
                                 var value = WebApp.MathUtils.discretize(WebApp.MathUtils.exponential(factor), 20);
                                 //element.style.fillOpacity = value.toString();
-                                element.style.fill = gradient.valueAt(factor).toString();
+                                element.style.fill = gradient.valueAt(0.15 + (factor * 0.85)).toString();
                             }
                         }
                     }

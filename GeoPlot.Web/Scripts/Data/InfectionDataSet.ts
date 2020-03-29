@@ -105,7 +105,7 @@ namespace WebApp.GeoPlot {
                 colorLight: "#777",
                 colorDark: "#222",
                 compute: new ConstIndicatorFunction((v, a) => a.demography.over65)
-            },
+            }/*,
             {
                 id: "extimated-death",
                 name: $string("Morti stimati"),
@@ -128,7 +128,7 @@ namespace WebApp.GeoPlot {
                     totalHealed: new SimpleIndicatorFunction(a => a.totalHealed),
                     totalDeath: new SimpleIndicatorFunction(a => a.totalDeath)
                 }, values => values.totalHealed + values.totalDeath)
-            }
+            }*/
         ],
         factors: [
             {

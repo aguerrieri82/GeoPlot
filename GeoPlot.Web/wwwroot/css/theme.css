@@ -362,52 +362,47 @@ ul.collapsible li.active .collapsible-header i {
 svg.map {
   width: 50vh;
   max-width: 100%;
-  pointer-events: painted; }
-  svg.map .environment > circle {
-    stroke: #000;
-    stroke-width: 500;
-    fill-opacity: 0.7; }
-  svg.map .group .area {
-    fill: none; }
-    svg.map .group .area.region {
-      stroke: #000;
-      stroke-width: 0.2%; }
-    svg.map .group .area.district {
-      stroke: #999;
-      stroke-width: 0.05%; }
-  svg.map .group.active .area {
-    fill: white; }
-    svg.map .group.active .area.region {
-      stroke-width: 0.15%; }
-    svg.map .group.active .area.selected, svg.map .group.active .area:hover {
-      stroke: #F57F17;
-      stroke-width: 0.3%; }
+  pointer-events: painted;
+  /*
+    .environment {
+        > circle {
+            stroke: #000;
+            stroke-width: 500;
+            fill-opacity: 0.7;
+        }
+    }
 
-svg.map.experimental {
-  width: 50vh;
-  max-width: 100%;
-  pointer-events: painted; }
-  svg.map.experimental .environment > circle {
-    stroke: #000;
-    stroke-width: 500;
-    fill-opacity: 0.7; }
-  svg.map.experimental .group .area {
-    fill: none; }
-    svg.map.experimental .group .area.region {
-      stroke: #f0f0f0;
-      stroke-width: 4000; }
-    svg.map.experimental .group .area.district {
-      stroke: #f0f0f0;
-      stroke-width: 2000; }
-  svg.map.experimental .group.active .area {
-    fill: white; }
-    svg.map.experimental .group.active .area.region {
-      stroke-width: 4000;
-      stroke: #fff;
-      stroke-opacity: 0; }
-    svg.map.experimental .group.active .area.selected, svg.map.experimental .group.active .area:hover {
-      stroke: #F57F17;
-      stroke-width: 0.3%; }
+    .group {
+
+        .area {
+            fill: none;
+
+            &.region {
+                stroke: #000;
+                stroke-width: 0.2%;
+            }
+
+            &.district {
+                stroke: #999;
+                stroke-width: 0.05%;
+            }
+        }
+
+        &.active {
+            .area {
+                fill: white;
+
+                &.region {
+                    stroke-width: 0.15%;
+                }
+
+                &.selected, &:hover {
+                    stroke: #F57F17;
+                    stroke-width: 0.3%;
+                }
+            }
+        }
+    }*/ }
 
 /****************************************/
 /* StudioPage                           */

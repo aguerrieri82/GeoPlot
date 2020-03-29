@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using GeoPlot.Web.Services;
+using Eusoft.WebApp.Localization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -28,30 +28,24 @@ namespace GeoPlot.Web
             var mvcOptions = services.AddControllersWithViews(options =>
             {
                 options.Filters.Add(new AppendVersionFilter());
-                options.Filters.AddService<LanguageFilter>();
-            }).AddNewtonsoftJson();
+            })
+            .AddNewtonsoftJson()
+            .AddLanguageFilter(); 
 
 #if DEBUG
             mvcOptions.AddRazorRuntimeCompilation();
 #endif
 
-
             services.Configure<CookiePolicyOptions>(options =>
             {
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.Strict;
-            });
-
-            services.AddResponseCaching();
-            services.AddScoped<RequestLanguage>();
-            services.AddScoped<LanguageFilter>();
-
-            services.AddSingleton<IStringTable, JsonStringTable>(sp =>
-            {
-                var env = sp.GetService<IWebHostEnvironment>();
-                return new JsonStringTable(env.WebRootPath + "\\lang\\");
-            });
+            })
+            .AddResponseCaching()
+            .AddRequestLanguage()
+            .AddJsonStringTable();
         }
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -65,9 +59,7 @@ namespace GeoPlot.Web
             {
                 app.UseExceptionHandler("/Home/Error");
                 app.UseHsts();
-            }
-
-            
+            }            
 
             app.UseRequestLocalization("en-US");
 
