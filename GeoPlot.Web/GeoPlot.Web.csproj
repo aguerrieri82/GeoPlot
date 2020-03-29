@@ -23,6 +23,7 @@
   <ItemGroup>
     <None Remove="Scripts\Api.ts" />
     <None Remove="Scripts\Bindings.ts" />
+    <None Remove="Scripts\Data\TipManager.ts" />
     <None Remove="Scripts\Desmos.d.ts" />
     <None Remove="Scripts\Pages\StudioPage.ts" />
     <None Remove="Scripts\StringTable.ts" />

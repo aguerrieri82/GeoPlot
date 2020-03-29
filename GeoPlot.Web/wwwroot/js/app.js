@@ -811,6 +811,180 @@ function $string(format) {
 }
 var WebApp;
 (function (WebApp) {
+    /****************************************/
+    var TipViewModel = /** @class */ (function () {
+        function TipViewModel(value, closeAfter) {
+            this.isVisible = ko.observable(false);
+            this.isTransparent = ko.observable(false);
+            this.value = value;
+            this._closeAfter = closeAfter;
+        }
+        /****************************************/
+        TipViewModel.prototype.dontShowAgain = function () {
+        };
+        /****************************************/
+        TipViewModel.prototype.onActionExecuted = function () {
+        };
+        /****************************************/
+        TipViewModel.prototype.executeAction = function () {
+            var _this = this;
+            if (this.value.showAction)
+                this.value.showAction();
+            setTimeout(function () { return _this.startPulse(); });
+            this.onActionExecuted();
+        };
+        /****************************************/
+        TipViewModel.prototype.startPulse = function () {
+            this._element = document.querySelector(this.value.elementSelector);
+            if (!this._element)
+                return;
+            var relY = WebApp.DomUtils.centerElement(this._element);
+            WebApp.DomUtils.addClass(this._element, "pulse");
+            var tipElement = document.querySelector(".tip-container");
+            if (relY < (tipElement.clientTop + tipElement.clientHeight))
+                this.isTransparent(true);
+        };
+        /****************************************/
+        TipViewModel.prototype.stopPulse = function () {
+            if (!this._element)
+                return;
+            WebApp.DomUtils.removeClass(this._element, "pulse");
+            this.isTransparent(false);
+        };
+        /****************************************/
+        TipViewModel.prototype.next = function () {
+        };
+        /****************************************/
+        TipViewModel.prototype.understood = function () {
+        };
+        /****************************************/
+        TipViewModel.prototype.onClose = function () {
+        };
+        /****************************************/
+        TipViewModel.prototype.close = function () {
+            clearTimeout(this._closeTimeoutId);
+            this.stopPulse();
+            this.isVisible(false);
+            this.onClose();
+        };
+        /****************************************/
+        TipViewModel.prototype.show = function () {
+            var _this = this;
+            if (this._closeTimeoutId)
+                clearTimeout(this._closeTimeoutId);
+            this.isVisible(true);
+            if (this._closeAfter)
+                this._closeTimeoutId = setTimeout(function () { return _this.close(); }, this._closeAfter);
+        };
+        return TipViewModel;
+    }());
+    WebApp.TipViewModel = TipViewModel;
+    /****************************************/
+    var TipManager = /** @class */ (function () {
+        function TipManager(tips, getPreferences, savePreferences) {
+            this.tip = ko.observable();
+            this._getPreferences = getPreferences;
+            this._tips = tips;
+            this.savePreferences = savePreferences;
+        }
+        Object.defineProperty(TipManager.prototype, "preferences", {
+            /****************************************/
+            get: function () {
+                return this._getPreferences();
+            },
+            enumerable: true,
+            configurable: true
+        });
+        /****************************************/
+        TipManager.prototype.savePreferences = function () {
+        };
+        /****************************************/
+        TipManager.prototype.markAction = function (actionId, label) {
+            var _this = this;
+            this.preferences.actions[actionId]++;
+            this.savePreferences();
+            if (!window["gtag"])
+                return;
+            WebApp.safeCall(function () { return gtag("event", actionId, {
+                event_category: "GeoPlot",
+                event_label: label,
+                value: _this.preferences.actions[actionId]
+            }); });
+        };
+        /****************************************/
+        TipManager.prototype.markTip = function (tipId, action) {
+            if (!window["gtag"])
+                return;
+            WebApp.safeCall(function () { return gtag("event", action, {
+                event_category: "GeoPlot/Tip",
+                event_label: tipId
+            }); });
+        };
+        /****************************************/
+        TipManager.prototype.engageUser = function () {
+            var _this = this;
+            if (this.preferences.showTips != undefined && !this.preferences.showTips)
+                return;
+            var nextTip = WebApp.linq(this._tips).where(function (a) { return a.value.showAfter > 0 && _this.preferences.actions[a.key] == 0; }).first();
+            if (!this.showTip(nextTip.key, {
+                onClose: function () { return _this.engageUser(); },
+                timeout: nextTip.value.showAfter,
+            })) {
+                this.engageUser();
+            }
+        };
+        /****************************************/
+        TipManager.prototype.showTip = function (tipId, options) {
+            var _this = this;
+            if (this.preferences.showTips != undefined && !this.preferences.showTips)
+                return false;
+            if ((!options || !options.override) && this.tip() && this.tip().isVisible())
+                return false;
+            if ((!options || !options.force) && this.preferences.actions[tipId])
+                return false;
+            var tip = this._tips[tipId];
+            var model = new TipViewModel(tip);
+            model.onActionExecuted = function () {
+                _this.markTip(tipId, "how");
+            };
+            model.dontShowAgain = function () {
+                _this.preferences.showTips = false;
+                _this.savePreferences();
+                model.close();
+                _this.markTip(tipId, "dontShowAgain");
+            };
+            model.understood = function () {
+                _this.preferences.actions[tipId]++;
+                _this.savePreferences();
+                model.close();
+                _this.markTip(tipId, "understood");
+            };
+            model.onClose = function () {
+                //this.tip(null);
+                if (options && options.onClose)
+                    options.onClose();
+            };
+            var nextTip = WebApp.linq(this._tips).where(function (a) { return a.value.order > tip.order && _this.preferences.actions[a.key] == 0; }).first();
+            if (nextTip) {
+                model.next = function () {
+                    model.close();
+                    _this.preferences.actions[tipId]++;
+                    _this.showTip(nextTip.key);
+                    _this.markTip(tipId, "next");
+                };
+            }
+            else
+                model.next = null;
+            this.tip(model);
+            setTimeout(function () { return model.show(); }, options && options.timeout ? options.timeout * 1000 : 0);
+            return true;
+        };
+        return TipManager;
+    }());
+    WebApp.TipManager = TipManager;
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
         /****************************************/
@@ -834,73 +1008,6 @@ var WebApp;
             AreaViewModel.prototype.select = function () {
             };
             return AreaViewModel;
-        }());
-        /****************************************/
-        var TipViewModel = /** @class */ (function () {
-            function TipViewModel(value, closeAfter) {
-                this.isVisible = ko.observable(false);
-                this.isTransparent = ko.observable(false);
-                this.value = value;
-                this._closeAfter = closeAfter;
-            }
-            /****************************************/
-            TipViewModel.prototype.dontShowAgain = function () {
-            };
-            /****************************************/
-            TipViewModel.prototype.onActionExecuted = function () {
-            };
-            /****************************************/
-            TipViewModel.prototype.executeAction = function () {
-                var _this = this;
-                if (this.value.showAction)
-                    this.value.showAction();
-                setTimeout(function () { return _this.startPulse(); });
-                this.onActionExecuted();
-            };
-            /****************************************/
-            TipViewModel.prototype.startPulse = function () {
-                this._element = document.querySelector(this.value.elementSelector);
-                if (!this._element)
-                    return;
-                var relY = WebApp.DomUtils.centerElement(this._element);
-                WebApp.DomUtils.addClass(this._element, "pulse");
-                var tipElement = document.querySelector(".tip-container");
-                if (relY < (tipElement.clientTop + tipElement.clientHeight))
-                    this.isTransparent(true);
-            };
-            /****************************************/
-            TipViewModel.prototype.stopPulse = function () {
-                if (!this._element)
-                    return;
-                WebApp.DomUtils.removeClass(this._element, "pulse");
-                this.isTransparent(false);
-            };
-            /****************************************/
-            TipViewModel.prototype.next = function () {
-            };
-            /****************************************/
-            TipViewModel.prototype.understood = function () {
-            };
-            /****************************************/
-            TipViewModel.prototype.onClose = function () {
-            };
-            /****************************************/
-            TipViewModel.prototype.close = function () {
-                clearTimeout(this._closeTimeoutId);
-                this.stopPulse();
-                this.isVisible(false);
-                this.onClose();
-            };
-            /****************************************/
-            TipViewModel.prototype.show = function () {
-                var _this = this;
-                if (this._closeTimeoutId)
-                    clearTimeout(this._closeTimeoutId);
-                this.isVisible(true);
-                if (this._closeAfter)
-                    this._closeTimeoutId = setTimeout(function () { return _this.close(); }, this._closeAfter);
-            };
-            return TipViewModel;
         }());
         /****************************************/
         var GeoPlotPage = /** @class */ (function () {
@@ -1128,7 +1235,6 @@ var WebApp;
                 this.startDay = ko.observable(0);
                 this.isNoFactorSelected = ko.computed(function () { return _this.selectedFactor() && _this.selectedFactor().id == 'none'; });
                 this.groupDays = [1, 2, 3, 4, 5, 6, 7];
-                this.tip = ko.observable();
                 this.factorDescription = ko.observable();
                 this._data = model.data;
                 this._geo = model.geo;
@@ -1137,7 +1243,7 @@ var WebApp;
                 this.totalDays(this._data.days.length - 1);
                 this.dayNumber.subscribe(function (value) {
                     if (value != _this._data.days.length - 1)
-                        _this.markAction("dayChanged");
+                        _this.tipManager.markAction("dayChanged");
                     _this.updateDayData();
                     _this._specialDates.current.date = new Date(_this._data.days[value].date);
                     _this.updateChart();
@@ -1156,7 +1262,7 @@ var WebApp;
                     if (!_this._daysData)
                         _this.updateTopAreas();
                     _this._topAreasVisible = true;
-                    _this.markAction("topAreasOpened");
+                    _this.tipManager.markAction("topAreasOpened");
                 };
                 topCasesView.options.onCloseEnd = function () {
                     _this._topAreasVisible = false;
@@ -1172,14 +1278,14 @@ var WebApp;
                         return;
                     _this.updateIndicator();
                     if (value.id != "totalPositive")
-                        _this.markAction("indicatorChanged", value.id);
+                        _this.tipManager.markAction("indicatorChanged", value.id);
                 });
                 this.selectedFactor.subscribe(function (value) {
                     if (!value)
                         return;
                     _this.updateIndicator();
                     if (value.id != "none")
-                        _this.markAction("factorChanged", value.id);
+                        _this.tipManager.markAction("factorChanged", value.id);
                     setTimeout(function () { return M.FormSelect.init(document.querySelectorAll(".row-chart-group select")); });
                 });
                 this.autoMaxFactor.subscribe(function (value) {
@@ -1192,7 +1298,7 @@ var WebApp;
                 this.maxFactor.subscribe(function (value) {
                     if (!_this.autoMaxFactor()) {
                         _this.updateMap();
-                        _this.markAction("maxFactorChanged", value.toString());
+                        _this.tipManager.markAction("maxFactorChanged", value.toString());
                     }
                     _this.updateUrl();
                 });
@@ -1200,13 +1306,13 @@ var WebApp;
                     _this.computeStartDayForGroup();
                     _this.updateIndicator();
                     if (value)
-                        _this.markAction("deltaSelected");
+                        _this.tipManager.markAction("deltaSelected");
                 });
                 this.isLogScale.subscribe(function (value) {
                     _this.updateChart();
                     _this.updateUrl();
                     if (value)
-                        _this.markAction("scaleChanged");
+                        _this.tipManager.markAction("scaleChanged");
                 });
                 this.isZoomChart.subscribe(function (value) {
                     _this.updateChart();
@@ -1216,7 +1322,7 @@ var WebApp;
                     _this.updateChart();
                     _this.updateUrl();
                     if (value > 1)
-                        _this.markAction("groupChanged", value.toString());
+                        _this.tipManager.markAction("groupChanged", value.toString());
                 });
                 this.startDay.subscribe(function (value) {
                     _this.updateChart();
@@ -1226,7 +1332,8 @@ var WebApp;
                 var stateRaw = urlParams.get("state");
                 this._keepState = urlParams.get("keepState") == "true";
                 this.loadPreferences();
-                this.engageUser();
+                this.tipManager = new WebApp.TipManager(this._tips, function () { return _this._preferences; }, function () { return _this.savePreferences(); });
+                this.tipManager.engageUser();
                 var state;
                 if (stateRaw && this._keepState)
                     state = JSON.parse(atob(stateRaw));
@@ -1237,87 +1344,6 @@ var WebApp;
                     window.addEventListener("beforeunload", function () { return _this.savePreferences(); });
                 //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
             }
-            /****************************************/
-            GeoPlotPage.prototype.markAction = function (actionId, label) {
-                var _this = this;
-                this._preferences.actions[actionId]++;
-                this.savePreferences();
-                if (!window["gtag"])
-                    return;
-                WebApp.safeCall(function () { return gtag("event", actionId, {
-                    event_category: "GeoPlot",
-                    event_label: label,
-                    value: _this._preferences.actions[actionId]
-                }); });
-            };
-            /****************************************/
-            GeoPlotPage.prototype.markTip = function (tipId, action) {
-                if (!window["gtag"])
-                    return;
-                WebApp.safeCall(function () { return gtag("event", action, {
-                    event_category: "GeoPlot/Tip",
-                    event_label: tipId
-                }); });
-            };
-            /****************************************/
-            GeoPlotPage.prototype.engageUser = function () {
-                var _this = this;
-                if (this._preferences.showTips != undefined && !this._preferences.showTips)
-                    return;
-                var nextTip = WebApp.linq(this._tips).where(function (a) { return a.value.showAfter > 0 && _this._preferences.actions[a.key] == 0; }).first();
-                if (!this.showTip(nextTip.key, {
-                    onClose: function () { return _this.engageUser(); },
-                    timeout: nextTip.value.showAfter,
-                })) {
-                    this.engageUser();
-                }
-            };
-            /****************************************/
-            GeoPlotPage.prototype.showTip = function (tipId, options) {
-                var _this = this;
-                if (this._preferences.showTips != undefined && !this._preferences.showTips)
-                    return false;
-                if ((!options || !options.override) && this.tip() && this.tip().isVisible())
-                    return false;
-                if ((!options || !options.force) && this._preferences.actions[tipId])
-                    return false;
-                var tip = this._tips[tipId];
-                var model = new TipViewModel(tip);
-                model.onActionExecuted = function () {
-                    _this.markTip(tipId, "how");
-                };
-                model.dontShowAgain = function () {
-                    _this._preferences.showTips = false;
-                    _this.savePreferences();
-                    model.close();
-                    _this.markTip(tipId, "dontShowAgain");
-                };
-                model.understood = function () {
-                    _this._preferences.actions[tipId]++;
-                    _this.savePreferences();
-                    model.close();
-                    _this.markTip(tipId, "understood");
-                };
-                model.onClose = function () {
-                    //this.tip(null);
-                    if (options && options.onClose)
-                        options.onClose();
-                };
-                var nextTip = WebApp.linq(this._tips).where(function (a) { return a.value.order > tip.order && _this._preferences.actions[a.key] == 0; }).first();
-                if (nextTip) {
-                    model.next = function () {
-                        model.close();
-                        _this._preferences.actions[tipId]++;
-                        _this.showTip(nextTip.key);
-                        _this.markTip(tipId, "next");
-                    };
-                }
-                else
-                    model.next = null;
-                this.tip(model);
-                setTimeout(function () { return model.show(); }, options && options.timeout ? options.timeout * 1000 : 0);
-                return true;
-            };
             /****************************************/
             GeoPlotPage.prototype.isDefaultState = function (state) {
                 return (!state.day || state.day == this._data.days.length - 1) &&
@@ -1528,7 +1554,7 @@ var WebApp;
                         }
                     });
                 }); });
-                this.markAction("chartActionExecuted", "copy");
+                this.tipManager.markAction("chartActionExecuted", "copy");
             };
             /****************************************/
             GeoPlotPage.prototype.copySerie = function () {
@@ -1541,7 +1567,7 @@ var WebApp;
                             text += WebApp.DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + WebApp.MathUtils.round(data[i].y, 1) + "\n";
                         WebApp.DomUtils.copyText(text);
                         M.toast({ html: $string("$(msg-serie-copied)") });
-                        this.markAction("chartActionExecuted", "copySerie");
+                        this.tipManager.markAction("chartActionExecuted", "copySerie");
                         return [2 /*return*/];
                     });
                 });
@@ -1570,7 +1596,7 @@ var WebApp;
                         obj.values = this._calculator.getSerie(obj.serie);
                         WebApp.DomUtils.copyText(JSON.stringify(obj));
                         M.toast({ html: $string("$(msg-serie-copied-studio)") });
-                        this.markAction("chartActionExecuted", "copySerieForStudio");
+                        this.tipManager.markAction("chartActionExecuted", "copySerieForStudio");
                         return [2 /*return*/];
                     });
                 });
@@ -1589,7 +1615,7 @@ var WebApp;
             /****************************************/
             GeoPlotPage.prototype.setViewMode = function (mode) {
                 if (mode != "region")
-                    this.markAction("viewChanged", mode);
+                    this.tipManager.markAction("viewChanged", mode);
                 this.viewMode(mode);
                 var districtGroup = document.getElementById("group_district");
                 if (mode == "district")
@@ -1604,7 +1630,7 @@ var WebApp;
                 this.updateDayData();
                 if (this.viewMode() == "country") {
                     this.selectedArea = this._geo.areas["it"];
-                    this.showTip("regionExcluded", { timeout: 5 });
+                    this.tipManager.showTip("regionExcluded", { timeout: 5 });
                 }
                 else {
                     if (this._topAreasVisible)
@@ -1698,7 +1724,7 @@ var WebApp;
                     if (item.parentElement.classList.contains(this.viewMode()))
                         this.selectedArea = area;
                 }
-                this.markAction("areaSelected", area.name);
+                this.tipManager.markAction("areaSelected", area.name);
             };
             /****************************************/
             GeoPlotPage.prototype.nextFrame = function () {
@@ -1743,7 +1769,7 @@ var WebApp;
                         var item = new IndicatorViewModel();
                         item.indicator = indicator;
                         item.select = function () {
-                            _this.markAction("indicatorSelected", item.indicator.id);
+                            _this.tipManager.markAction("indicatorSelected", item.indicator.id);
                             _this.selectedIndicator(indicator);
                             setTimeout(function () {
                                 return M.FormSelect.init(document.querySelectorAll(".row-indicator select"));
@@ -3548,8 +3574,8 @@ var WebApp;
                 root.actions(actions);
                 this.items.setRoot(root);
                 document.body.addEventListener("paste", function (ev) {
-                    ev.preventDefault();
-                    _this.onPaste(ev.clipboardData);
+                    if (_this.onPaste(ev.clipboardData))
+                        ev.preventDefault();
                 });
                 document.body.addEventListener("keydown", function (ev) {
                     _this.onKeyDown(ev);
@@ -3738,6 +3764,7 @@ var WebApp;
                             var reg = serie.addRegression(null, false);
                             reg.updateGraph();
                             reg.node.isSelected(true);
+                            return true;
                         }
                     }
                 }

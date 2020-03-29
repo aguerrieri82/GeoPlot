@@ -46,10 +46,10 @@
 
     export class CombineIndicatorFunction<TData, TDic extends IDictionary<IIndicatorFunction<TData>>> implements IIndicatorFunction<TData> {
 
-        private readonly _value: (values: IDictionary<number>) => number
-        private readonly _indicators: IDictionary<IIndicatorFunction<TData>>;
+        private readonly _value: (values: DictionaryOf<TDic, number>) => number
+        private readonly _indicators: TDic;
 
-        constructor(indicators: TDic, value: (values: IDictionary<number>)=> number) {
+        constructor(indicators: TDic, value: (values: DictionaryOf<TDic, number>) => number) {
             this._value = value;
             this._indicators = indicators;
         }
@@ -57,10 +57,12 @@
         /****************************************/
 
         value(main: TData, delta: TData, exMain: TData[], exDelta: TData[], area: IGeoArea): number {
-            const value: IDictionary<number> = {};
 
+            const value: DictionaryOf<TDic, number> = <any>{};
+            
             for (var key in this._indicators) 
                 value[key] = this._indicators[key].value(main, delta, exMain, exDelta, area);
+
             return this._value(value);
         }
     }

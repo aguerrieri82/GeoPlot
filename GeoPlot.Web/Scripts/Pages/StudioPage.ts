@@ -1865,8 +1865,8 @@
             this.items.setRoot(root);
 
             document.body.addEventListener("paste", ev => {
-                ev.preventDefault();
-                this.onPaste(ev.clipboardData);
+                if (this.onPaste(ev.clipboardData))
+                    ev.preventDefault();
             });
 
             document.body.addEventListener("keydown", ev => {
@@ -2046,7 +2046,7 @@
 
         /****************************************/
 
-        protected onPaste(data: DataTransfer) {
+        protected onPaste(data: DataTransfer) : boolean {
 
             let project = this.getSelectedProject();
             if (!project && !this.projects.any())
@@ -2064,6 +2064,7 @@
                         const reg = serie.addRegression(null, false);
                         reg.updateGraph();
                         reg.node.isSelected(true);
+                        return true;
                     }
                 }
             }

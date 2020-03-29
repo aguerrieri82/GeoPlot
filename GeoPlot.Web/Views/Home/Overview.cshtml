@@ -79,7 +79,6 @@
                                     fill: #9c27b0;
                                     background-color: #9c27b0;
                                 }
-
                             </style>
                             @foreach (var areaType in typeOrder)
                             {
@@ -349,26 +348,12 @@
             </li>
         </ul>
     </section>
-    <!--ko with: tip-->
-    <div class="tip-container">
-        <div class="tip z-depth-3" data-bind="css: {visible: isVisible, 'transparent-element': isTransparent}">
-            <div class="main">
-                <i class="material-icons yellow-text text-darken-1">lightbulb_outline</i>
-                <div>
-                    <h5 class="title" string="$(do-u-know)"></h5>
-                    <div class="body" data-bind="html: value.html"></div>
-                    <a class="not-show" href="#!" data-bind="click: dontShowAgain" string="$(msg-no-suggestions)"></a>
-                </div>
-            </div>
-            <ul class="actions">
-                <li data-bind="visible: next != null"><a class="waves-effect waves-light" href="#!" data-bind="click: next" string="$(btn-next)"></a></li>
-                <li><a class="waves-effect waves-light" href="#!" data-bind="click: executeAction" string="$(btn-how)"></a></li>
-                <li><a class="waves-effect waves-light" href="#!" data-bind="click: understood" string="$(btn-understood)"></a></li>
-            </ul>
-        </div>
-    </div>
+
+    <!--ko template:{name: 'TipViewTemplate', data: tipManager.tip} -->
     <!--/ko-->
 </div>
+
+<partial name="Templates/_TipView" />
 
 
 @section Head{

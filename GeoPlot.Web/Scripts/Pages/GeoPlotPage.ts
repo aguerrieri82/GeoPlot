@@ -33,49 +33,28 @@
 
     /****************************************/
 
-    interface IViewActionTip {
-        html: string;
-        featureName: string;
-        elementSelector?: string;
-        showAfter: number;
-        showAction?: () => void;
-        order: number;
+    interface IOverviewViewActions extends Dictionary<number>  {
+
+        areaSelected: number;
+        indicatorChanged: number;
+        indicatorSelected: number;
+        dayChanged: number;
+        viewChanged: number;
+        groupChanged: number;
+        scaleChanged: number;
+        topAreasOpened: number;
+        chartActionExecuted: number;
+        factorChanged: number;
+        maxFactorChanged: number;
+        deltaSelected: number;
+        regionExcluded: number;
     }
 
     /****************************************/
 
-    interface IViewActions<T> extends IDictionary<T> {
-        areaSelected: T;
-        indicatorChanged: T;
-        indicatorSelected: T;
-        dayChanged: T;
-        viewChanged: T;
-        groupChanged: T;
-        scaleChanged: T;
-        topAreasOpened: T;
-        chartActionExecuted: T;
-        factorChanged: T;
-        maxFactorChanged: T;
-        deltaSelected: T;
-        regionExcluded: T;
-    }
-
-    /****************************************/
-
-    interface IViewPreferences {
+    interface IViewPreferences extends ITipPreferences<IOverviewViewActions> {
         isFirstView: boolean;
-        showTips: boolean;
-        actions: IViewActions<number>;
         version: number;
-    }
-
-    /****************************************/
-
-    interface IShowTipOptions {
-        onClose?: () => void;
-        timeout?: number;
-        override?: boolean;
-        force?: boolean;
     }
 
     /****************************************/
@@ -125,108 +104,7 @@
         indicators = ko.observable<IndicatorViewModel[]>();
     }
 
-    /****************************************/
-
-    class TipViewModel {
-
-        private _closeTimeoutId: number;
-        private _element: HTMLElement;
-        private _closeAfter: number;
-
-        constructor(value: IViewActionTip, closeAfter?: number) {
-            this.value = value;
-            this._closeAfter = closeAfter;
-        }
-
-        /****************************************/
-
-        dontShowAgain() {
-
-        }
-
-        /****************************************/
-            
-        onActionExecuted() {
-
-        }
-
-        /****************************************/
-
-        executeAction() {
-            if (this.value.showAction)
-                this.value.showAction();
-            setTimeout(() => this.startPulse());
-            this.onActionExecuted();
-        }
-
-        /****************************************/
-
-        startPulse() {
-            this._element = document.querySelector(this.value.elementSelector);
-            if (!this._element)
-                return;
-            let relY = DomUtils.centerElement(this._element);
-
-            DomUtils.addClass(this._element, "pulse")
-
-            let tipElement = document.querySelector(".tip-container");
-            if (relY < (tipElement.clientTop + tipElement.clientHeight))
-                this.isTransparent(true);
-        }
-
-        /****************************************/
-
-        stopPulse() {
-
-            if (!this._element)
-                return;
-            DomUtils.removeClass(this._element, "pulse");
-            this.isTransparent(false);
-        }
-
-        /****************************************/
-
-        next() {
-
-        }
-
-        /****************************************/
-
-        understood() {
-        }
-
-        /****************************************/
-
-        onClose() {
-
-        }
-
-        /****************************************/
-
-        close() {
-            clearTimeout(this._closeTimeoutId);
-            this.stopPulse();
-            this.isVisible(false);
-            this.onClose();
-        }
-
-        /****************************************/
-
-        show() {
-            if (this._closeTimeoutId)
-                clearTimeout(this._closeTimeoutId);
-            this.isVisible(true);
-            if (this._closeAfter)
-                this._closeTimeoutId = setTimeout(() => this.close(), this._closeAfter);
-        }
-
-        /****************************************/
-
-        value: IViewActionTip;
-        isVisible = ko.observable(false);
-        isTransparent = ko.observable(false);
-    }
-
+  
 
 
     /****************************************/
@@ -247,7 +125,7 @@
         private _preferences: IViewPreferences;
         private _calculator: IndicatorCalculator<TData>;
 
-        private _tips: IViewActions<IViewActionTip> = {
+        private _tips: DictionaryOf<IOverviewViewActions, IViewActionTip> = {
             areaSelected: {
                 order: 0,
                 featureName: "Zone",
@@ -457,7 +335,7 @@
 
             this.dayNumber.subscribe(value => {
                 if (value != this._data.days.length - 1)
-                    this.markAction("dayChanged");
+                    this.tipManager.markAction("dayChanged");
                 this.updateDayData();
                 this._specialDates.current.date = new Date(this._data.days[value].date);
                 this.updateChart();
@@ -484,7 +362,7 @@
                 if (!this._daysData)
                     this.updateTopAreas();
                 this._topAreasVisible = true;
-                this.markAction("topAreasOpened");
+                this.tipManager.markAction("topAreasOpened");
             }
 
             topCasesView.options.onCloseEnd = () => {
@@ -505,7 +383,7 @@
                     return;
                 this.updateIndicator();
                 if (value.id != "totalPositive")
-                    this.markAction("indicatorChanged", value.id);
+                    this.tipManager.markAction("indicatorChanged", value.id);
             });
 
             this.selectedFactor.subscribe(value => {
@@ -513,7 +391,7 @@
                     return;
                 this.updateIndicator();
                 if (value.id != "none")
-                    this.markAction("factorChanged", value.id);
+                    this.tipManager.markAction("factorChanged", value.id);
                 setTimeout(() => M.FormSelect.init(document.querySelectorAll(".row-chart-group select")));
             });
 
@@ -528,7 +406,7 @@
             this.maxFactor.subscribe(value => {
                 if (!this.autoMaxFactor()) {
                     this.updateMap();
-                    this.markAction("maxFactorChanged", value.toString());
+                    this.tipManager.markAction("maxFactorChanged", value.toString());
                 }
                 this.updateUrl();
             });
@@ -537,7 +415,7 @@
                 this.computeStartDayForGroup();
                 this.updateIndicator();
                 if (value)
-                    this.markAction("deltaSelected");
+                    this.tipManager.markAction("deltaSelected");
 
             });
 
@@ -545,7 +423,7 @@
                 this.updateChart();
                 this.updateUrl();
                 if (value)
-                    this.markAction("scaleChanged");
+                    this.tipManager.markAction("scaleChanged");
             });
 
             this.isZoomChart.subscribe(value => {
@@ -557,7 +435,7 @@
                 this.updateChart();
                 this.updateUrl();
                 if (value > 1)
-                    this.markAction("groupChanged", value.toString());
+                    this.tipManager.markAction("groupChanged", value.toString());
             });
 
             this.startDay.subscribe(value => {
@@ -571,7 +449,9 @@
 
             this.loadPreferences();
 
-            this.engageUser();
+            this.tipManager = new TipManager<IOverviewViewActions>(this._tips, () => this._preferences, () => this.savePreferences());
+
+            this.tipManager.engageUser();
 
             let state: IPageState;
 
@@ -586,114 +466,6 @@
                 window.addEventListener("beforeunload", () => this.savePreferences());
 
             //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
-        }
-
-        /****************************************/
-
-        protected markAction(actionId: keyof IViewActions<number>, label?: string) {
-
-            this._preferences.actions[actionId]++;
-            this.savePreferences();
-
-            if (!window["gtag"])
-                return;
-
-            safeCall(() => gtag("event", actionId, {
-                event_category: "GeoPlot",
-                event_label: label,
-                value: this._preferences.actions[actionId]
-            }));
-        }
-
-        /****************************************/
-
-        protected markTip(tipId: keyof IViewActions<number>, action: string) {
-            if (!window["gtag"])
-                return;
-
-            safeCall(()=> gtag("event", action, {
-                event_category: "GeoPlot/Tip",
-                event_label: tipId
-            }));
-        }
-
-        /****************************************/
-
-        protected engageUser() {
-
-            if (this._preferences.showTips != undefined && !this._preferences.showTips)
-                return;
-
-            const nextTip = linq(this._tips).where(a => a.value.showAfter > 0 && this._preferences.actions[a.key] == 0).first();
-
-            if (!this.showTip(nextTip.key, {
-                onClose: () => this.engageUser(),
-                timeout: nextTip.value.showAfter,
-            })) {
-                this.engageUser();
-            }
-
-        }
-
-        /****************************************/
-
-        protected showTip(tipId: keyof IViewActions<IViewActionTip>, options?: IShowTipOptions) {
-
-            if (this._preferences.showTips != undefined && !this._preferences.showTips)
-                return false;
-
-            if ((!options || !options.override) && this.tip() && this.tip().isVisible())
-                return false;
-
-            if ((!options || !options.force) && this._preferences.actions[tipId])
-                return false;
-
-            const tip = this._tips[tipId];
-
-            const model = new TipViewModel(tip);
-
-            model.onActionExecuted = () => {
-                this.markTip(tipId, "how");
-            }
-
-            model.dontShowAgain = () => {
-                this._preferences.showTips = false;
-                this.savePreferences();
-                model.close();
-                this.markTip(tipId, "dontShowAgain");
-            }
-
-            model.understood = () => {
-                this._preferences.actions[tipId]++;
-                this.savePreferences();
-                model.close();
-                this.markTip(tipId, "understood");
-            };
-
-            model.onClose = () => {
-                //this.tip(null);
-                if (options && options.onClose)
-                    options.onClose();
-            }
-
-            let nextTip = linq(this._tips).where(a => a.value.order > tip.order && this._preferences.actions[a.key] == 0).first();
-
-            if (nextTip) {
-                model.next = () => {
-                    model.close();
-                    this._preferences.actions[tipId]++;
-                    this.showTip(nextTip.key);
-                    this.markTip(tipId, "next");
-                }
-            }
-            else
-                model.next = null;
-
-            this.tip(model);
-
-            setTimeout(() => model.show(), options && options.timeout ? options.timeout * 1000 : 0);
-
-            return true;
         }
 
         /****************************************/
@@ -907,7 +679,7 @@
                     M.toast({ html: $string("$(msg-no-copy)") })
                 }
             });
-            this.markAction("chartActionExecuted", "copy");
+            this.tipManager.markAction("chartActionExecuted", "copy");
         }
 
         /****************************************/
@@ -922,7 +694,7 @@
             DomUtils.copyText(text);
 
             M.toast({ html: $string("$(msg-serie-copied)")})
-            this.markAction("chartActionExecuted", "copySerie");
+            this.tipManager.markAction("chartActionExecuted", "copySerie");
         }
 
         /****************************************/
@@ -952,7 +724,7 @@
 
             M.toast({ html: $string("$(msg-serie-copied-studio)") })
 
-            this.markAction("chartActionExecuted", "copySerieForStudio");
+            this.tipManager.markAction("chartActionExecuted", "copySerieForStudio");
         }
 
         /****************************************/
@@ -975,7 +747,7 @@
         setViewMode(mode: ViewMode) {
 
             if (mode != "region")
-                this.markAction("viewChanged", mode);
+                this.tipManager.markAction("viewChanged", mode);
             this.viewMode(mode);
 
             const districtGroup = document.getElementById("group_district");
@@ -999,7 +771,7 @@
 
             if (this.viewMode() == "country") {
                 this.selectedArea = this._geo.areas["it"];
-                this.showTip("regionExcluded", { timeout: 5 });
+                this.tipManager.showTip("regionExcluded", { timeout: 5 });
             }
             else {
                 if (this._topAreasVisible)
@@ -1109,7 +881,7 @@
                     this.selectedArea = area;
             }
 
-            this.markAction("areaSelected", area.name);
+            this.tipManager.markAction("areaSelected", area.name);
         }
 
         /****************************************/
@@ -1169,7 +941,7 @@
                     let item = new IndicatorViewModel();
                     item.indicator = indicator;
                     item.select = () => {
-                        this.markAction("indicatorSelected", item.indicator.id);
+                        this.tipManager.markAction("indicatorSelected", item.indicator.id);
                         this.selectedIndicator(indicator);
                         setTimeout(() =>
                             M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
@@ -1577,9 +1349,9 @@
         isShowEnvData = ko.observable<boolean>(false);
         groupSize = ko.observable<number>(1);
         startDay = ko.observable<number>(0);
+        tipManager: TipManager<IOverviewViewActions>; 
         isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
         groupDays = [1, 2, 3, 4, 5, 6, 7];
-        tip = ko.observable<TipViewModel>();
         factorDescription = ko.observable<string>();
         indicators: KnockoutObservable<IIndicator<TData>[]>;
         factors: KnockoutObservable<IFactor<TData>[]>;
