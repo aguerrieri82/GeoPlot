@@ -330,17 +330,17 @@ var WebApp;
             /****************************************/
             get current() {
                 if (!this._current)
-                    this._current = this._value.substring(this._currentStartIndex, this._curIndex);
+                    this._current = this._value.substring(this._currentStartIndex, this._curIndex - this._separator.length);
                 return this._current;
             }
             /****************************************/
             moveNext() {
-                if (this._curIndex == this._value.length)
+                if (this._curIndex > this._value.length)
                     return false;
                 this._currentStartIndex = this._curIndex;
                 var index = this._value.indexOf(this._separator, this._curIndex);
                 if (index == -1) {
-                    this._curIndex = this._value.length;
+                    this._curIndex = this._value.length + 1;
                 }
                 else
                     this._curIndex = index + this._separator.length;
@@ -357,13 +357,13 @@ var WebApp;
         /****************************************/
         class BaseDataAdapter {
             constructor(options) {
+                this.options = options;
             }
         }
         /****************************************/
         class TextTableDataAdapter extends BaseDataAdapter {
             constructor(options) {
                 super(options);
-                this._options = options;
             }
             /****************************************/
             createIdentifier(value) {
@@ -392,16 +392,16 @@ var WebApp;
             }
             /****************************************/
             extractHeader(text) {
-                const firstRow = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator)).first();
-                const cols = firstRow.split(this._options.columnSeparator);
+                const firstRow = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator)).first();
+                const cols = firstRow.split(this.options.columnSeparator);
                 let headers;
-                if (this._options.hasHeader !== false) {
+                if (this.options.hasHeader !== false) {
                     const rowAnal = [];
                     this.analyzeRow(cols, rowAnal);
                     const stringCount = WebApp.linq(rowAnal).sum(a => a.stringCount);
                     const emptyCount = WebApp.linq(rowAnal).sum(a => a.emptyCount);
                     if (stringCount > 0 && stringCount + emptyCount == cols.length) {
-                        this._options.hasHeader = true;
+                        this.options.hasHeader = true;
                         headers = WebApp.linq(cols).select((a, i) => {
                             if (a == "")
                                 return "col" + i;
@@ -410,31 +410,31 @@ var WebApp;
                     }
                 }
                 if (!headers) {
-                    this._options.hasHeader = false;
+                    this.options.hasHeader = false;
                     headers = WebApp.linq(cols).select((a, i) => "col" + i).toArray();
                 }
-                if (!this._options.columnsIds)
-                    this._options.columnsIds = headers;
+                if (!this.options.columnsIds)
+                    this.options.columnsIds = headers;
             }
             /****************************************/
             extractRowSeparator(text) {
-                if (this._options.rowSeparator)
+                if (this.options.rowSeparator)
                     return;
                 const items = ["\r\n", "\n"];
                 for (var item of items) {
                     if (text.indexOf(item) != -1) {
-                        this._options.rowSeparator = item;
+                        this.options.rowSeparator = item;
                         return;
                     }
                 }
             }
             /****************************************/
             extractColumnSeparator(text) {
-                if (this._options.columnSeparator)
+                if (this.options.columnSeparator)
                     return;
                 const items = ["\t", ";", ",", " "];
                 const stats = {};
-                const rows = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator)).take(10);
+                const rows = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator)).take(10);
                 for (let row of rows) {
                     for (let item of items) {
                         if (stats[item] === false)
@@ -450,7 +450,7 @@ var WebApp;
                 }
                 for (var key in stats) {
                     if (stats[key] !== false) {
-                        this._options.columnSeparator = key;
+                        this.options.columnSeparator = key;
                         return;
                     }
                 }
@@ -475,7 +475,7 @@ var WebApp;
             /****************************************/
             analyzeColumn(value, result) {
                 value in result.values ? result.values[value]++ : result.values[value] = 1;
-                if (value == "")
+                if (value == null || value.length == 0 || value.trim().length == 0)
                     result.emptyCount++;
                 else if (!isNaN(value))
                     result.numberCount++;
@@ -489,7 +489,7 @@ var WebApp;
             /****************************************/
             createParser(anal) {
                 if (anal.numberCount > 0 && anal.stringCount == 0)
-                    return a => !a ? null : parseFloat(a);
+                    return a => isNaN(a) ? null : parseFloat(a);
                 if (anal.booleanCount > 0 && anal.stringCount == 0)
                     return a => a == "true";
                 if (anal.dateCount > 0 && anal.stringCount == 0)
@@ -512,53 +512,58 @@ var WebApp;
                 //Header
                 this.extractHeader(text);
                 //Rows
-                let rows = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator));
-                if (this._options.hasHeader)
+                let rows = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator));
+                if (this.options.hasHeader)
                     rows = rows.skip(1);
                 //col analysis
                 const colAnalysis = [];
-                rows.foreach(row => this.analyzeRow(row.split(this._options.columnSeparator), colAnalysis));
+                rows.foreach(row => this.analyzeRow(row.split(this.options.columnSeparator), colAnalysis));
                 //Parser
-                if (!this._options.columnsParser) {
-                    this._options.columnsParser = {};
-                    colAnalysis.forEach((a, i) => this._options.columnsParser[this._options.columnsIds[i]] = this.createParser(a));
+                if (!this.options.columnsParser) {
+                    this.options.columnsParser = {};
+                    colAnalysis.forEach((a, i) => this.options.columnsParser[this.options.columnsIds[i]] = this.createParser(a));
                 }
                 //X-axis
-                if (!this._options.xColumn)
-                    this._options.xColumn = this._options.columnsIds[0];
+                if (!this.options.xColumn)
+                    this.options.xColumn = this.options.columnsIds[0];
                 //Y-axis
-                if (!this._options.serieColumns) {
-                    this._options.serieColumns = [];
+                if (!this.options.serieColumns) {
+                    this.options.serieColumns = [];
                     colAnalysis.forEach((col, i) => {
                         if (col.numberCount > 0 && col.stringCount == 0)
-                            this._options.serieColumns.push(this._options.columnsIds[i]);
+                            this.options.serieColumns.push(this.options.columnsIds[i]);
                     });
                 }
                 //groups
-                if (!this._options.groupColumns) {
-                    this._options.groupColumns = [];
+                if (!this.options.groupColumns) {
+                    this.options.groupColumns = [];
                     colAnalysis.forEach((col, i) => {
-                        if (col.stringCount > 0) {
+                        if (col.stringCount > 0 && col.emptyCount == 0) {
                             var values = WebApp.linq(col.values);
                             if (values.count() > 1 && values.any(a => a.value > 1))
-                                this._options.groupColumns.push(this._options.columnsIds[i]);
+                                this.options.groupColumns.push(this.options.columnsIds[i]);
                         }
                     });
                 }
-                return colAnalysis;
+                return this.options;
             }
             /****************************************/
             parse(text) {
-                this.analyze(text);
                 var result = [];
-                var rows = WebApp.linq(new SplitEnumerator(text, this._options.rowSeparator));
-                if (this._options.hasHeader)
+                var rows = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator));
+                if (this.options.hasHeader)
                     rows = rows.skip(1);
                 for (var row of rows) {
-                    var cols = row.split(this._options.columnSeparator);
+                    var cols = row.split(this.options.columnSeparator);
                     var item = {};
-                    for (let i = 0; i < cols.length; i++)
-                        item[this._options.columnsIds[i]] = this._options.columnsParser[this._options.columnsIds[i]](cols[i]);
+                    for (let i = 0; i < cols.length; i++) {
+                        const colId = this.options.columnsIds[i];
+                        if (this.options.xColumn != colId &&
+                            this.options.serieColumns.indexOf(colId) == -1 &&
+                            this.options.groupColumns.indexOf(colId) == -1)
+                            continue;
+                        item[colId] = this.options.columnsParser[colId](cols[i]);
+                    }
                     result.push(item);
                 }
                 return result;
@@ -574,15 +579,328 @@ var WebApp;
             parse(text) {
                 return null;
             }
+            /****************************************/
+            analyze(text) {
+                throw new Error("Method not implemented.");
+            }
         }
         /****************************************/
-        /* DataImportControl
+        let ColumnType;
+        (function (ColumnType) {
+            ColumnType[ColumnType["Exclude"] = 0] = "Exclude";
+            ColumnType[ColumnType["XAxis"] = 1] = "XAxis";
+            ColumnType[ColumnType["Serie"] = 2] = "Serie";
+            ColumnType[ColumnType["Group"] = 3] = "Group";
+        })(ColumnType || (ColumnType = {}));
+        /****************************************/
+        class ColumnViewModel {
+            constructor(name, type) {
+                this.alias = ko.observable();
+                this.type = ko.observable(ColumnType.Exclude);
+                this.types = [
+                    { text: "Escludi", value: ColumnType.Exclude },
+                    { text: "Asse X", value: ColumnType.XAxis },
+                    { text: "Serie", value: ColumnType.Serie },
+                    { text: "Gruppo", value: ColumnType.Group }
+                ];
+                this.name = name;
+                this.type(type);
+                this.alias(name);
+            }
+        }
+        /****************************************/
+        class BaseTreeItem {
+            constructor() {
+                this.canDrag = false;
+            }
+            /****************************************/
+            canReadData(transfer) {
+                return false;
+            }
+            /****************************************/
+            readData(transfer) {
+            }
+            /****************************************/
+            writeData(transfer) {
+                return false;
+            }
+            /****************************************/
+            attachNode(node) {
+                this.node = node;
+            }
+            /****************************************/
+            remove() {
+            }
+            /****************************************/
+            onParentChanged() {
+            }
+            /****************************************/
+            canAccept(value) {
+                return false;
+            }
+        }
+        /****************************************/
+        class GroupItem extends BaseTreeItem {
+            constructor() {
+                super();
+            }
+        }
+        /****************************************/
+        class SerieItem extends BaseTreeItem {
+            constructor() {
+                super();
+            }
+        }
         /****************************************/
         class DataImportControl {
             constructor() {
+                /****************************************/
+                this.hasHeader = ko.observable();
+                this.columnSeparator = ko.observable();
+                this.columns = ko.observable();
+                this.table = ko.observable();
+                this.treeView = new GeoPlot.TreeViewModel();
+                this.columnSeparators = [
+                    { text: "TAB", value: "\t" },
+                    { text: ",", value: "," },
+                    { text: ";", value: ";" },
+                    { text: "SPACE", value: " " }
+                ];
+                this.columnSeparators = [
+                    { text: "TAB", value: "\t" },
+                    { text: ",", value: "," },
+                    { text: ";", value: ";" },
+                    { text: "SPACE", value: " " }
+                ];
+                const root = new GeoPlot.TreeNodeViewModel();
+                this.treeView.setRoot(root);
+            }
+            /****************************************/
+            import(text) {
+                debugger;
+                let count = WebApp.linq(new SplitEnumerator("a,s,,", ",")).count();
+                this._text = text;
+                this._adapter = new TextTableDataAdapter({});
+                const options = this._adapter.analyze(this._text);
+                this.hasHeader(options.hasHeader);
+                this.columnSeparator(options.columnSeparator);
+                const cols = [];
+                for (let col of options.columnsIds) {
+                    var model = new ColumnViewModel(col);
+                    if (options.xColumn == col)
+                        model.type(ColumnType.XAxis);
+                    else if (options.serieColumns && options.serieColumns.indexOf(col) != -1)
+                        model.type(ColumnType.Serie);
+                    else if (options.groupColumns && options.groupColumns.indexOf(col) != -1)
+                        model.type(ColumnType.Group);
+                    else
+                        model.type(ColumnType.Exclude);
+                    cols.push(model);
+                }
+                this.columns(cols);
+                this.table(null);
+                this.treeView.root().nodes.removeAll();
+                this.updatePreview();
+            }
+            format(value) {
+                if (typeof value == "number")
+                    return formatNumber(value);
+                if (typeof value == "boolean")
+                    return value ? "si" : "no";
+                if (value instanceof Date)
+                    return WebApp.DateUtils.format(value, $string("$(date-format)"));
+                return value;
+            }
+            /****************************************/
+            updatePreview() {
+                const result = this._adapter.parse(this._text);
+                const table = {
+                    header: WebApp.linq(this._adapter.options.columnsIds).where(a => this._adapter.options.xColumn == a ||
+                        this._adapter.options.serieColumns.indexOf(a) != -1 ||
+                        this._adapter.options.groupColumns.indexOf(a) != -1).toArray(),
+                    rows: WebApp.linq(result).take(50).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
+                };
+                this.table(table);
+            }
+            /****************************************/
+            show() {
+                if (!this._model)
+                    this._model = M.Modal.init(document.getElementById("dataImport"));
+                this._model.open();
             }
         }
         GeoPlot.DataImportControl = DataImportControl;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        /****************************************/
+        /* TreeViewModel
+        /****************************************/
+        /****************************************/
+        class ActionViewModel {
+            execute() {
+            }
+        }
+        GeoPlot.ActionViewModel = ActionViewModel;
+        /****************************************/
+        class TreeNodeViewModel {
+            constructor(value) {
+                this._dargEnterCount = 0;
+                /****************************************/
+                this.nodes = ko.observableArray();
+                this.value = ko.observable();
+                this.isSelected = ko.observable(false);
+                this.isVisible = ko.observable(true);
+                this.isExpanded = ko.observable(false);
+                this.actions = ko.observable();
+                this.value(value);
+                this.isSelected.subscribe(a => {
+                    if (a)
+                        this._treeView.select(this);
+                });
+            }
+            /****************************************/
+            get element() {
+                return this._element;
+            }
+            /****************************************/
+            attachNode(element) {
+                this._element = element;
+                this._element.id = WebApp.DomUtils.generateId();
+                this._element["$model"] = this;
+                let header = this._element.querySelector("header");
+                header.ondragstart = ev => this.onDrag(ev);
+                header.ondragover = ev => this.onDragOver(ev);
+                header.ondragenter = ev => this.onDragEnter(ev);
+                header.ondragleave = ev => this.onDragLeave(ev);
+                header.ondrop = ev => this.onDrop(ev);
+            }
+            /****************************************/
+            onDrag(ev) {
+                if (!this.value().writeData(ev.dataTransfer) || !this.value().canDrag) {
+                    ev.preventDefault();
+                    return false;
+                }
+            }
+            /****************************************/
+            onDragEnter(ev) {
+                this._dargEnterCount++;
+            }
+            /****************************************/
+            onDragLeave(ev) {
+                this._dargEnterCount--;
+                if (this._dargEnterCount == 0)
+                    WebApp.DomUtils.removeClass(this._element, "drop");
+            }
+            /****************************************/
+            onDragOver(ev) {
+                ev.preventDefault();
+                if (this._dargEnterCount == 1) {
+                    let canDrop = true;
+                    if (!this.value().canReadData(ev.dataTransfer))
+                        canDrop = false;
+                    if (canDrop) {
+                        if (ev.ctrlKey)
+                            ev.dataTransfer.dropEffect = "copy";
+                        else
+                            ev.dataTransfer.dropEffect = "move";
+                        WebApp.DomUtils.addClass(this._element, "drop");
+                    }
+                    else
+                        ev.dataTransfer.dropEffect = "move";
+                }
+            }
+            /****************************************/
+            onDrop(ev) {
+                ev.preventDefault();
+                this._dargEnterCount = 0;
+                WebApp.DomUtils.removeClass(this._element, "drop");
+                const elId = ev.dataTransfer.getData("text/html+id");
+                if (elId) {
+                    const element = document.getElementById(elId);
+                    const node = element["$model"];
+                    if (!this.value().canAccept(node.value()))
+                        return;
+                    if (ev.ctrlKey) {
+                    }
+                    else {
+                        if (node._parentNode == this)
+                            return;
+                        node._parentNode.nodes.remove(node);
+                        node._parentNode = this;
+                        this.nodes.push(node);
+                        this.isExpanded(true);
+                        node.value().onParentChanged();
+                        return;
+                    }
+                }
+                else
+                    this.value().readData(ev.dataTransfer);
+            }
+            /****************************************/
+            remove() {
+                if (this._parentNode)
+                    this._parentNode.nodes.remove(this);
+                if (this._treeView.selectedNode() == this)
+                    this._treeView.select(null);
+            }
+            /****************************************/
+            addNode(node) {
+                node.attach(this._treeView, this);
+                this.nodes.push(node);
+            }
+            /****************************************/
+            attach(treeView, parent) {
+                this._treeView = treeView;
+                this._parentNode = parent;
+                for (let childNode of this.nodes())
+                    childNode.attach(treeView);
+            }
+            /****************************************/
+            get parentNode() {
+                return this._parentNode;
+            }
+            /****************************************/
+            toggleVisible() {
+                this.isVisible(!this.isVisible());
+            }
+            /****************************************/
+            toggleSelection() {
+                this.isSelected(!this.isSelected());
+            }
+            /****************************************/
+            expandCollapse() {
+                this.isExpanded(!this.isExpanded());
+            }
+        }
+        GeoPlot.TreeNodeViewModel = TreeNodeViewModel;
+        /****************************************/
+        class TreeViewModel {
+            constructor() {
+                /****************************************/
+                this.root = ko.observable();
+                this.selectedNode = ko.observable();
+            }
+            /****************************************/
+            select(node) {
+                if (this.selectedNode() == node)
+                    return;
+                if (this.selectedNode())
+                    this.selectedNode().isSelected(false);
+                this.selectedNode(node);
+                if (this.selectedNode())
+                    this.selectedNode().isSelected(true);
+            }
+            /****************************************/
+            setRoot(node) {
+                node.attach(this);
+                this.root(node);
+            }
+        }
+        GeoPlot.TreeViewModel = TreeViewModel;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
 /// <reference path="../indicators.ts" />
@@ -2247,7 +2565,7 @@ var WebApp;
             }
             /****************************************/
             createActions(result) {
-                result.push(WebApp.apply(new ActionViewModel(), action => {
+                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(delete)");
                     action.icon = "delete";
                     action.execute = () => this.remove();
@@ -2385,7 +2703,7 @@ var WebApp;
             }
             /****************************************/
             addChildrenWork(value, updateGraph = true) {
-                const node = new TreeNodeViewModel(value);
+                const node = new GeoPlot.TreeNodeViewModel(value);
                 this.node.addNode(node);
                 value.attachNode(node);
                 value.attachGraph(this._graphCtx);
@@ -2878,12 +3196,12 @@ var WebApp;
             /****************************************/
             createActions(result) {
                 super.createActions(result);
-                result.push(WebApp.apply(new ActionViewModel(), action => {
+                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(update)"),
                         action.icon = "autorenew";
                     action.execute = () => this.updateSerie();
                 }));
-                result.push(WebApp.apply(new ActionViewModel(), action => {
+                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(new-regression)"),
                         action.icon = "add_box";
                     action.execute = () => {
@@ -2893,7 +3211,7 @@ var WebApp;
                         reg.node.isSelected(true);
                     };
                 }));
-                result.push(WebApp.apply(new ActionViewModel(), action => {
+                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(zoom)"),
                         action.icon = "zoom_in";
                     action.execute = () => {
@@ -3182,172 +3500,13 @@ var WebApp;
             }
         }
         /****************************************/
-        class ActionViewModel {
-            execute() {
-            }
-        }
-        /****************************************/
-        class TreeNodeViewModel {
-            constructor(value) {
-                this._dargEnterCount = 0;
-                /****************************************/
-                this.nodes = ko.observableArray();
-                this.value = ko.observable();
-                this.isSelected = ko.observable(false);
-                this.isVisible = ko.observable(true);
-                this.isExpanded = ko.observable(false);
-                this.actions = ko.observable();
-                this.value(value);
-                this.isSelected.subscribe(a => {
-                    if (a)
-                        this._treeView.select(this);
-                });
-            }
-            /****************************************/
-            get element() {
-                return this._element;
-            }
-            /****************************************/
-            attachNode(element) {
-                this._element = element;
-                this._element.id = WebApp.DomUtils.generateId();
-                this._element["$model"] = this;
-                let header = this._element.querySelector("header");
-                header.ondragstart = ev => this.onDrag(ev);
-                header.ondragover = ev => this.onDragOver(ev);
-                header.ondragenter = ev => this.onDragEnter(ev);
-                header.ondragleave = ev => this.onDragLeave(ev);
-                header.ondrop = ev => this.onDrop(ev);
-            }
-            /****************************************/
-            onDrag(ev) {
-                if (!this.value().writeData(ev.dataTransfer) || !this.value().canDrag) {
-                    ev.preventDefault();
-                    return false;
-                }
-            }
-            /****************************************/
-            onDragEnter(ev) {
-                this._dargEnterCount++;
-            }
-            /****************************************/
-            onDragLeave(ev) {
-                this._dargEnterCount--;
-                if (this._dargEnterCount == 0)
-                    WebApp.DomUtils.removeClass(this._element, "drop");
-            }
-            /****************************************/
-            onDragOver(ev) {
-                ev.preventDefault();
-                if (this._dargEnterCount == 1) {
-                    let canDrop = true;
-                    if (!this.value().canReadData(ev.dataTransfer))
-                        canDrop = false;
-                    if (canDrop) {
-                        if (ev.ctrlKey)
-                            ev.dataTransfer.dropEffect = "copy";
-                        else
-                            ev.dataTransfer.dropEffect = "move";
-                        WebApp.DomUtils.addClass(this._element, "drop");
-                    }
-                    else
-                        ev.dataTransfer.dropEffect = "move";
-                }
-            }
-            /****************************************/
-            onDrop(ev) {
-                ev.preventDefault();
-                this._dargEnterCount = 0;
-                WebApp.DomUtils.removeClass(this._element, "drop");
-                const elId = ev.dataTransfer.getData("text/html+id");
-                if (elId) {
-                    const element = document.getElementById(elId);
-                    const node = element["$model"];
-                    if (!this.value().canAccept(node.value()))
-                        return;
-                    if (ev.ctrlKey) {
-                    }
-                    else {
-                        if (node._parentNode == this)
-                            return;
-                        node._parentNode.nodes.remove(node);
-                        node._parentNode = this;
-                        this.nodes.push(node);
-                        this.isExpanded(true);
-                        node.value().onParentChanged();
-                        return;
-                    }
-                }
-                else
-                    this.value().readData(ev.dataTransfer);
-            }
-            /****************************************/
-            remove() {
-                if (this._parentNode)
-                    this._parentNode.nodes.remove(this);
-                if (this._treeView.selectedNode() == this)
-                    this._treeView.select(null);
-            }
-            /****************************************/
-            addNode(node) {
-                node.attach(this._treeView, this);
-                this.nodes.push(node);
-            }
-            /****************************************/
-            attach(treeView, parent) {
-                this._treeView = treeView;
-                this._parentNode = parent;
-                for (let childNode of this.nodes())
-                    childNode.attach(treeView);
-            }
-            /****************************************/
-            get parentNode() {
-                return this._parentNode;
-            }
-            /****************************************/
-            toggleVisible() {
-                this.isVisible(!this.isVisible());
-            }
-            /****************************************/
-            toggleSelection() {
-                this.isSelected(!this.isSelected());
-            }
-            /****************************************/
-            expandCollapse() {
-                this.isExpanded(!this.isExpanded());
-            }
-        }
-        /****************************************/
-        class TreeViewModel {
-            constructor() {
-                /****************************************/
-                this.root = ko.observable();
-                this.selectedNode = ko.observable();
-            }
-            /****************************************/
-            select(node) {
-                if (this.selectedNode() == node)
-                    return;
-                if (this.selectedNode())
-                    this.selectedNode().isSelected(false);
-                this.selectedNode(node);
-                if (this.selectedNode())
-                    this.selectedNode().isSelected(true);
-            }
-            /****************************************/
-            setRoot(node) {
-                node.attach(this);
-                this.root(node);
-            }
-        }
-        GeoPlot.TreeViewModel = TreeViewModel;
-        /****************************************/
         class StudioPage {
             constructor(projectId) {
                 /****************************************/
-                this.items = new TreeViewModel();
+                this.items = new GeoPlot.TreeViewModel();
                 this.maxX = ko.observable();
                 this.maxY = ko.observable();
+                this.dataImport = new GeoPlot.DataImportControl();
                 this._projectId = projectId;
                 this._graphCtx = new GraphContext();
                 this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
@@ -3363,27 +3522,27 @@ var WebApp;
                     advancedStyling: true
                 });
                 const actions = [];
-                actions.push(WebApp.apply(new ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(new-project)"),
                         action.icon = "create_new_folder";
                     action.execute = () => this.newProject();
                 }));
-                actions.push(WebApp.apply(new ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(save)"),
                         action.icon = "save";
                     action.execute = () => this.saveState();
                 }));
-                actions.push(WebApp.apply(new ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(options)"),
                         action.icon = "settings";
                     action.execute = () => this.showOptions();
                 }));
-                actions.push(WebApp.apply(new ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(share) Studio"),
                         action.icon = "share";
                     action.execute = () => this.share();
                 }));
-                const root = new TreeNodeViewModel();
+                const root = new GeoPlot.TreeNodeViewModel();
                 root.actions(actions);
                 this.items.setRoot(root);
                 document.body.addEventListener("paste", ev => {
@@ -3455,7 +3614,7 @@ var WebApp;
             /****************************************/
             addProject(config, updateGraph = true) {
                 const project = new StudioProject(config);
-                const node = new TreeNodeViewModel(project);
+                const node = new GeoPlot.TreeNodeViewModel(project);
                 this.items.root().addNode(node);
                 project.attachNode(node);
                 project.attachGraph(this._graphCtx);
@@ -3572,9 +3731,9 @@ var WebApp;
             /****************************************/
             test() {
                 return __awaiter(this, void 0, void 0, function* () {
-                    var adapter = new GeoPlot.TextTableDataAdapter({});
                     var text = yield WebApp.Http.getStringAsync("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv");
-                    adapter.parse(text);
+                    this.dataImport.import(text);
+                    this.dataImport.show();
                 });
             }
         }

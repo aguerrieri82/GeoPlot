@@ -17,6 +17,16 @@
 
 
   <ItemGroup>
+    <None Remove="Scripts\Components\TreeView.ts" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="wwwroot\css\theme.min.css" />
+  </ItemGroup>
+
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.0-preview.1.20124.5" />
     <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="3.8.3">
       <PrivateAssets>all</PrivateAssets>
@@ -29,6 +39,12 @@
     <ProjectReference Include="..\Eusoft\WebApp\src\Eusoft.WebApp.Localization\Eusoft.WebApp.Localization.csproj" />
     <ProjectReference Include="..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj" />
     <ProjectReference Include="..\GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <TypeScriptCompile Update="Scripts\Components\TreeView.ts">
+      <SubType>Code</SubType>
+    </TypeScriptCompile>
   </ItemGroup>
 
 </Project>

@@ -9,7 +9,7 @@
 <div class="studio-page">
     <div class="side-bar">
         <section class="panel series scroll">
-            <header>               
+            <header>
                 <h6 string="$(projects)"></h6>
                 <div class="actions" data-bind="template: {foreach: items.root().actions(), name: 'ActionTemplate'}">
                 </div>
@@ -25,11 +25,11 @@
                         <string>$(msg-no-projects-3)</string>
                     </p>
                 </div>
-                <div class="tree-view">
-                    <a href="#!" data-bind="click: test">Test</a>
-                    <ul data-bind="template: {foreach: items.root().nodes, name: 'TreeItemTemplate'}">
-                    </ul>
-                </div>
+
+                <a href="#!" data-bind="click: test">Test</a>
+
+                <!--ko template: {name: 'TreeViewTemplate', data: items}-->
+                <!--/ko-->
             </div>
         </section>
         <!--ko if: items.selectedNode()-->
@@ -64,6 +64,8 @@
     </section>
 </div>
 
+<!--ko template: {name: 'DataImportTemplate', data: dataImport}-->
+<!--/ko-->
 
 <div id="options" class="modal">
     <div class="modal-content">
@@ -90,6 +92,9 @@
     </div>
 </div>
 
+<partial name="Templates\_TreeView" />
+
+<partial name="Templates\_DataImport" />
 
 <script type="text/html" id="ActionTemplate">
     <a href="#!" data-bind="attr: {title: text}, click: execute">
@@ -98,7 +103,6 @@
 </script>
 
 <script type="text/html" id="ProjectOptionsTemplate">
-
 
 </script>
 
@@ -111,7 +115,6 @@
         <span class="color-box" data-bind="style: {'background-color': color}"></span>
     </div>
 </script>
-
 
 <script type="text/html" id="RegressionOptionsTemplate">
     <div>
@@ -152,25 +155,6 @@
     <!--/ko-->
 
 </script>
-
-
-<script type="text/html" id="TreeItemTemplate">
-    <li data-bind="css: {selected: isSelected, visible: isVisible, expanded: isExpanded}, attach: true">
-        <header data-bind="css: value().itemType, attr: {draggable: value().canDrag}">
-            <a class="expand-collapse" href="#!" data-bind="click: expandCollapse"><i class="material-icons">arrow_drop_down</i></a>
-            <a class="visibility" string-title="$(show-hide)" href="#!" data-bind="click: toggleVisible"><i class="material-icons" data-bind="text: value().icon, style: {color: value()['color'] && value().color() && isVisible() ? value().color() : 'unset'}"></i></a>
-            <a draggable="false" href="#!" data-bind="click: toggleSelection"><span class="label" data-bind="text: value().name"></span></a>
-        </header>
-        <!--ko if: nodes().length > 0-->
-        <ul class="child-nodes" data-bind="template: {foreach: nodes, name: 'TreeItemTemplate'}">
-        </ul>
-        <!--/ko-->
-    </li>
-</script>
-
-@section Head{
-
-}
 
 @section Scripts {
     <script src="~/lib/desmos.js"></script>

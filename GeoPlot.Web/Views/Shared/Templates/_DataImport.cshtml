@@ -1,4 +1,71 @@
 ﻿
 <script id="DataImportTemplate" type="text/html">
 
+    <div id="dataImport" class="modal">
+        <div class="modal-content">
+            <h4 string="$(data-import)"></h4>
+            <div class="main">
+                <!--Tree-->
+                <section class="section-tree">
+                    <!--ko template: {name: 'TreeViewTemplate', data: treeView}-->
+                    <!--/ko-->
+                </section>
+                <div class="content">
+                    <!--Options-->
+                    <section class="section-options">
+                        <div class="options">
+                            <div>
+                                <label>
+                                    <input class="filled-in" type="checkbox" data-bind="checked: hasHeader" />
+                                    <span>Intestazione colonne</span>
+                                </label>
+                            </div>
+                            <div class="col-separator">
+                                <label>Separatore colonnna</label>
+                                <select class="browser-default" data-bind="value: columnSeparator, options: columnSeparators, optionsValue: 'value', optionsText: 'text'">
+                                </select>
+                            </div>
+                        </div>
+                        <div class="columns" data-bind="foreach: columns">
+                            <div>
+                                <div>
+                                    <input type="text" data-bind="value: alias" />
+                                </div>
+                                <div>
+                                    <select class="browser-default" data-bind="value: type, options: types, optionsValue: 'value', optionsText: 'text'">
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <!--Table-->
+                    <section class="section-preview">
+                        <!--ko if: table-->
+                        <table data-bind="with: table">
+                            <thead>
+                                <tr data-bind="foreach: header">
+                                    <th data-bind="text: $data"></th>
+                                </tr>
+                            </thead>
+                            <tbody data-bind="foreach: rows">
+                                <tr data-bind="foreach: $data">
+                                    <td data-bind="text: $data"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!--/ko-->
+                        <!--ko ifnot: table-->
+                        <div>
+                            Selezinare una serie o un gruppo per vedere l'anteprima
+                        </div>
+                        <!--/ko-->
+                    </section>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a href="#!" class="modal-close waves-effect waves-green btn-flat">Importa</a>
+        </div>
+    </div>
+
 </script>

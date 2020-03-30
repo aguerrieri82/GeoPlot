@@ -93,6 +93,23 @@ svg.map {
     width: 50vh;
     max-width: 100%;
     pointer-events: painted;
+
+    .active {
+        .area {
+
+            &.selected {
+                stroke: #F57F17 !important;
+                stroke-width: 0.20% !important;
+            }
+
+            &:hover {
+                transition-duration: 0.2s;
+                fill-opacity: 0.5;
+                stroke: #F57F17 !important;
+                stroke-width: 0.20% !important;
+            }
+        }
+    }
     /*
     .environment {
         > circle {

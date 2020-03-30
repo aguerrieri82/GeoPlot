@@ -4,354 +4,357 @@
 
     var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region };
 }
-<div class="container">
-    <section class="main title">
-        <h6><string>$(day)</string> <span data-bind="text: currentData"></span></h6>
-    </section>
-    <div class="row">
-        <div class="main col s12 m6 l7">
-            <section class="card card-map">
-                <ul class="tabs" id="areaTabs">
-                    <li class="tab"><a href="#districtTab"><string transform="CapitalizeFirst">$(districts)</string></a></li>
-                    <li class="tab"><a href="#regionTab"><string transform="CapitalizeFirst">$(regions)</string></a></li>
-                    <li class="tab"><a href="#italyTab"><string transform="CapitalizeFirst">$(italy)</string></a></li>
-                </ul>
-                <div class="card-content">
-                    <div id="regionTab" data-view-mode="region"></div>
-                    <div id="districtTab" data-view-mode="district"></div>
-                    <div id="italyTab" data-view-mode="country"></div>
-                    <div class="center-align map-container">
-                        <div class="actions">
-                            <a href="#!" string-title="$(copy-map)" data-bind="click: copyMap"><i class="material-icons">image</i></a>
-                        </div>
-                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
-                            <style type="text/css">
-                                svg.map .environment > circle {
-                                    stroke: #000;
-                                    stroke-width: 500;
-                                    fill-opacity: 0.7;
-                                }
-
-                                svg.map .group .area {
-                                    fill: none;
-                                }
-
-                                    svg.map .group .area.region {
+    <div class="container">
+        <section class="main title">
+            <h6><string>$(day)</string> <span data-bind="text: currentData"></span></h6>
+        </section>
+        <div class="row">
+            <div class="main col s12 m6 l7">
+                <section class="card card-map">
+                    <ul class="tabs" id="areaTabs">
+                        <li class="tab"><a href="#districtTab"><string transform="CapitalizeFirst">$(districts)</string></a></li>
+                        <li class="tab"><a href="#regionTab"><string transform="CapitalizeFirst">$(regions)</string></a></li>
+                        <li class="tab"><a href="#italyTab"><string transform="CapitalizeFirst">$(italy)</string></a></li>
+                    </ul>
+                    <div class="card-content">
+                        <div id="regionTab" data-view-mode="region"></div>
+                        <div id="districtTab" data-view-mode="district"></div>
+                        <div id="italyTab" data-view-mode="country"></div>
+                        <div class="center-align map-container">
+                            <div class="actions">
+                                <a href="#!" string-title="$(copy-map)" data-bind="click: copyMap"><i class="material-icons">image</i></a>
+                            </div>
+                            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+                                <style type="text/css">
+                                    svg.map .environment > circle {
                                         stroke: #000;
-                                        stroke-width: 0.2%;
+                                        stroke-width: 500;
+                                        fill-opacity: 0.7;
                                     }
 
-                                    svg.map .group .area.district {
-                                        stroke: #999;
-                                        stroke-width: 0.05%;
+                                    svg.map .group .area {
+                                        fill: none;
                                     }
 
-                                svg.map .group.active .area {
-                                    fill: white;
-                                }
+                                        svg.map .group .area.region {
+                                            stroke: #000;
+                                            stroke-width: 0.2%;
+                                        }
 
-                                    svg.map .group.active .area.region {
-                                        stroke-width: 0.15%;
+                                        svg.map .group .area.district {
+                                            stroke: #999;
+                                            stroke-width: 0.05%;
+                                        }
+
+                                    svg.map .group.active .area {
+                                        fill: white;
                                     }
-                            </style>
-                            <style type="text/css">
-                                .good {
-                                    fill: #4caf50;
-                                    background-color: #4caf50;
-                                }
 
-                                .medium {
-                                    fill: #ffeb3b;
-                                    background-color: #ffeb3b;
-                                }
+                                        svg.map .group.active .area.region {
+                                            stroke-width: 0.15%;
+                                        }
+                                </style>
+                                <style type="text/css">
+                                    .good {
+                                        fill: #4caf50;
+                                        background-color: #4caf50;
+                                    }
 
-                                .bad {
-                                    fill: #ff9800;
-                                    background-color: #ff9800;
-                                }
+                                    .medium {
+                                        fill: #ffeb3b;
+                                        background-color: #ffeb3b;
+                                    }
 
-                                .sever {
-                                    fill: #f44336;
-                                    background-color: #f44336;
-                                }
+                                    .bad {
+                                        fill: #ff9800;
+                                        background-color: #ff9800;
+                                    }
 
-                                .verysevere {
-                                    fill: #9c27b0;
-                                    background-color: #9c27b0;
+                                    .sever {
+                                        fill: #f44336;
+                                        background-color: #f44336;
+                                    }
+
+                                    .verysevere {
+                                        fill: #9c27b0;
+                                        background-color: #9c27b0;
+                                    }
+                                </style>
+                                @foreach (var areaType in typeOrder)
+                                {
+                                    <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: viewMode() == '@(areaType.ToString().ToLower())'}">
+                                        @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
+                                        {
+                                            <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">
+                                                @foreach (var poly in area.Value.Geometry)
+                                                {
+                                                    <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                                                }
+                                            </g>
+                                            area.Value.Geometry = null;
+                                        }
+                                    </g>
                                 }
-                            </style>
-                            @foreach (var areaType in typeOrder)
-                            {
-                                <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: viewMode() == '@(areaType.ToString().ToLower())'}">
-                                    @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
+                                <g class="environment" data-bind="visible: isShowEnvData">
+                                    @foreach (var item in Model.Environment.Where(a => a.Value.ReportingYear == 2018).OrderBy(a => a.Value.Value))
                                     {
-                                        <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">
-                                            @foreach (var poly in area.Value.Geometry)
-                                            {
-                                                <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
-                                            }
-                                        </g>
-                                        area.Value.Geometry = null;
+                                        <circle cx="@item.Position.X" cy="@item.Position.Y" r="15000" class="@item.Severity.ToString().ToLower()" data-value="@item.Value.Value" id="@item.Value.StationId"></circle>
                                     }
                                 </g>
-                            }
-                            <g class="environment" data-bind="visible: isShowEnvData">
-                                @foreach (var item in Model.Environment.Where(a => a.Value.ReportingYear == 2018).OrderBy(a => a.Value.Value))
-                                {
-                                    <circle cx="@item.Position.X" cy="@item.Position.Y" r="15000" class="@item.Severity.ToString().ToLower()" data-value="@item.Value.Value" id="@item.Value.StationId"></circle>
-                                }
-                            </g>
-                        </svg>
+                            </svg>
 
-                    </div>
-                </div>
-            </section>
-
-            <section class="main day">
-                <div class="stack-horizontal">
-                    <span data-bind="text: dayNumber"></span>
-                    <div class="range-field stack-fit">
-                        <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
-                    </div>
-                    <div>
-                        <button string-title="$(play)" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
-                        <button string-title="$(pause)" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <div class="main col s12 m6 l5 ">
-            <section class="card">
-                <div class="card-content">
-                    <!--ko if: currentArea-->
-                    <span class="card-title" data-bind="text: currentArea().value.name"></span>
-
-                    <div class="card-section">
-                        <div class="flex-col-3">
-                            <div class="summary-field">
-                                <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
-                                <span data-bind="text: formatNumber(currentArea().indicator())"></span>
-                            </div>
-                            <div class="summary-field">
-                                <label data-bind="text: selectedFactor().name"></label>
-                                <div data-bind="text: currentArea().reference"></div>
-                            </div>
-                            <div class="summary-field">
-                                <label data-bind="attr: {title: factorDescription}" string="$(factor)"></label>
-                                <div data-bind="text: currentArea().factor"></div>
-                            </div>
-                        </div>
-                        <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
-                            <div class="title-actions">
-                                <label class="title">
-                                    <span data-bind="text: factorDescription"></span>
-                                </label>
-                                <div class="actions">
-                                    <a href="#!" string-title="$(copy-studio)" data-bind="click: copySerieForStudio"><i class="material-icons">input</i></a>
-                                    <a href="#!" string-title="$(copy-chart)" data-bind="click: copyChart"><i class="material-icons">image</i></a>
-                                    <a href="#!" string-title="$(copy-serie)" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
-                                    <a href="#!" string-title="$(expand-chart)" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
-                                </div>
-
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="areaGraph">
-                                </canvas>
-                            </div>
                         </div>
                     </div>
-                    <div class="card-section expandable indicators">
-                        <h6 class="section-title" onclick="expandCollapse(this)">
-                            <span string="$(indicators)"></span>
-                            <i class="material-icons">chevron_right</i>
-                        </h6>
-                        <div class="section-content">
-                            <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
-                                <div class="summary-field selectable" data-bind="style: {color: indicator.colorLight}, click: select">
-                                    <label data-bind="text: indicator.name"></label>
-                                    <span data-bind="text: formatNumber(value())"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-section expandable closed chart-options">
-                        <h6 class="section-title" onclick="expandCollapse(this)">
-                            <span string="$(chart-options)"></span>
-                            <i class="material-icons">chevron_right</i>
-                        </h6>
-                        <div class="section-content">
-                            <div class="row">
-                                <div class="col s12 log-scale">
-                                    <label>
-                                        <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
-                                        <span string="$(log-scale)"></span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="row no-margin row-chart-group">
-                                <div class="col s6 input-field">D:\Development\Personal\Git\GeoPlot\GeoPlot.Web\Views\Shared\Templates\_TipView.cshtml
-                                    <select data-bind="options: groupDays, value: groupSize"></select>
-                                    <label>
-                                        <span string="$(group-days)"></span>
-                                        <i class="material-icons tooltipped" data-position="top" string-data-tooltip="$(info-group-days)">info</i>
-                                    </label>
-                                </div>
-                                <div class="col s6 input-field">
-                                    <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
-                                    <label string="$(starting-from)"></label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                </section>
 
-                    <!--/ko-->
-                    <!--ko ifnot: currentArea-->
-                    <div class="empty-text flex-row-inline item-margin-small">
-                        <i class="material-icons small orange-text">warning</i>
+                <section class="main day">
+                    <div class="stack-horizontal">
+                        <span data-bind="text: dayNumber"></span>
+                        <div class="range-field stack-fit">
+                            <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
+                        </div>
                         <div>
-                            <string>$(msg-select-a-1)</string> <span data-bind="text: WebApp.GeoPlot.ViewModes[viewMode()].label.singular"></span> <string>$(msg-select-a-2)</string>
+                            <button string-title="$(play)" class="waves-effect waves-light btn" data-bind="click: play, visible: !isPlaying()"><i class="material-icons ">play_circle_outline</i></button>
+                            <button string-title="$(pause)" class="waves-effect waves-light btn" data-bind="click: pause, visible: isPlaying()"><i class="material-icons ">pause_circle_outline</i></button>
                         </div>
                     </div>
-                    <!--/ko-->
-                </div>
-            </section>
-            <section class="card">
-                <div class="card-content">
-                    <span class="card-title" string="$(filter)"></span>
-                    <div class="row no-margin row-indicator">
-                        <div class="col s6 input-field filter-indicator">
-                            <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
-                            <label string="$(indicator)"></label>
-                        </div>
-                        <div class="col s6 input-field filter-factor">
-                            <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
-                            <label string="$(in-relation-to)"></label>
-                        </div>
-                    </div>
-                    <div class="row no-margin row-factor">
-                        <div class="col s12">
-                            <label class="day-delta">
-                                <input class="filled-in" type="checkbox" data-bind="checked: isDayDelta" />
-                                <span string="$(daily-increment)"></span>
-                            </label>
-                        </div>
-                        <div class="col s6 input-field">
-                            <label>
-                                <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor" />
-                                <span string="$(auto-threshold)"></span>
-                                <i class="material-icons tooltipped" data-position="top" string-data-tooltip="$(info-auto-threshold)"></i>
-                            </label>
-                        </div>
-                        <div class="input-field col s6 max-factor">
-                            <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
-                            <label string="$(factor-threshold)" class="active" for="limit"></label>
-                        </div>
-                    </div>
-                    <div class="row no-margin row-factor">
-                        <div class="col s12">
-                            <label>
-                                <input class="filled-in" type="checkbox" data-bind="checked: isShowEnvData" />
-                                <span string="$(show-environmental-data)"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                </section>
+            </div>
 
-            <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
-                <li>
-                    <div class="card-title collapsible-header">
-                        <span data-bind="text: capitalizeFirst(WebApp.GeoPlot.ViewModes[viewMode()].label.plural)"></span><string>&nbsp;$(more-effected)</string>
-                        <i class="material-icons">chevron_right</i>
-                    </div>
-                    <div class="collapsible-body">
-                        <!--ko if topAreas-->
-                        <table class="responsive-table highlight">
-                            <thead>
-                                <tr>
-                                    <th string="$(name)"></th>
-                                    <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
-                                    <!--ko if: selectedFactor().id != 'none'-->
-                                    <th data-bind="text: selectedFactor().name"></th>
-                                    <th data-bind="attr: {title: factorDescription}">Fatt.</th>
-                                    <!--/ko-->
-                                </tr>
-                            </thead>
-                            <tbody data-bind="foreach: topAreas">
-                                <tr data-bind="click: select">
-                                    <td data-bind="text: value.name"></td>
-                                    <td data-bind="text: formatNumber(indicator())"></td>
-                                    <!--ko if: $parent.selectedFactor().id != 'none'-->
-                                    <td><span data-bind="text: reference"></span></td>
-                                    <td><span data-bind="text: factor"></span></td>
-                                    <!--/ko-->
-                                </tr>
-                            </tbody>
-                        </table>
+            <div class="main col s12 m6 l5 ">
+                <section class="card">
+                    <div class="card-content">
+                        <!--ko if: currentArea-->
+                        <span class="card-title" data-bind="text: currentArea().value.name"></span>
+
+                        <div class="card-section">
+                            <div class="flex-col-3">
+                                <div class="summary-field">
+                                    <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
+                                    <span data-bind="text: formatNumber(currentArea().indicator())"></span>
+                                </div>
+                                <div class="summary-field">
+                                    <label data-bind="text: selectedFactor().name"></label>
+                                    <div data-bind="text: currentArea().reference"></div>
+                                </div>
+                                <div class="summary-field">
+                                    <label data-bind="attr: {title: factorDescription}" string="$(factor)"></label>
+                                    <div data-bind="text: currentArea().factor"></div>
+                                </div>
+                            </div>
+                            <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
+                                <div class="title-actions">
+                                    <label class="title">
+                                        <span data-bind="text: factorDescription"></span>
+                                    </label>
+                                    <div class="actions">
+                                        <a href="#!" string-title="$(copy-studio)" data-bind="click: copySerieForStudio"><i class="material-icons">input</i></a>
+                                        <a href="#!" string-title="$(copy-chart)" data-bind="click: copyChart"><i class="material-icons">image</i></a>
+                                        <a href="#!" string-title="$(copy-serie)" data-bind="click: copySerie"><i class="material-icons">content_copy</i></a>
+                                        <a href="#!" string-title="$(expand-chart)" data-bind="click: toggleChartZoom"><i class="material-icons">zoom_out_map</i></a>
+                                    </div>
+
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="areaGraph">
+                                    </canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-section expandable indicators">
+                            <h6 class="section-title" onclick="expandCollapse(this)">
+                                <span string="$(indicators)"></span>
+                                <i class="material-icons">chevron_right</i>
+                            </h6>
+                            <div class="section-content">
+                                <div class="flex-col-3 summary" data-bind="foreach: currentArea().indicators">
+                                    <div class="summary-field selectable" data-bind="style: {color: indicator.colorLight}, click: select">
+                                        <label data-bind="text: indicator.name"></label>
+                                        <span data-bind="text: formatNumber(value())"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-section expandable closed chart-options">
+                            <h6 class="section-title" onclick="expandCollapse(this)">
+                                <span string="$(chart-options)"></span>
+                                <i class="material-icons">chevron_right</i>
+                            </h6>
+                            <div class="section-content">
+                                <div class="row">
+                                    <div class="col s12 log-scale">
+                                        <label>
+                                            <input class="filled-in" type="checkbox" data-bind="checked: isLogScale" />
+                                            <span string="$(log-scale)"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="row no-margin row-chart-group">
+                                    <div class="col s6 input-field">
+                                        D:\Development\Personal\Git\GeoPlot\GeoPlot.Web\Views\Shared\Templates\_TipView.cshtml
+                                        <select data-bind="options: groupDays, value: groupSize"></select>
+                                        <label>
+                                            <span string="$(group-days)"></span>
+                                            <i class="material-icons tooltipped" data-position="top" string-data-tooltip="$(info-group-days)">info</i>
+                                        </label>
+                                    </div>
+                                    <div class="col s6 input-field">
+                                        <select data-bind="options: days, value: startDay, optionsValue: 'number', optionsText: 'text'"></select>
+                                        <label string="$(starting-from)"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!--/ko-->
+                        <!--ko ifnot: currentArea-->
+                        <div class="empty-text flex-row-inline item-margin-small">
+                            <i class="material-icons small orange-text">warning</i>
+                            <div>
+                                <string>$(msg-select-a-1)</string> <span data-bind="text: WebApp.GeoPlot.ViewModes[viewMode()].label.singular"></span> <string>$(msg-select-a-2)</string>
+                            </div>
+                        </div>
+                        <!--/ko-->
+                    </div>
+                </section>
+                <section class="card">
+                    <div class="card-content">
+                        <span class="card-title" string="$(filter)"></span>
+                        <div class="row no-margin row-indicator">
+                            <div class="col s6 input-field filter-indicator">
+                                <select data-bind="options: indicators, value: selectedIndicator, optionsText: 'name'"></select>
+                                <label string="$(indicator)"></label>
+                            </div>
+                            <div class="col s6 input-field filter-factor">
+                                <select data-bind="options: factors, value: selectedFactor, optionsText: 'name'"></select>
+                                <label string="$(in-relation-to)"></label>
+                            </div>
+                        </div>
+                        <div class="row no-margin row-factor">
+                            <div class="col s12">
+                                <label class="day-delta">
+                                    <input class="filled-in" type="checkbox" data-bind="checked: isDayDelta" />
+                                    <span string="$(daily-increment)"></span>
+                                </label>
+                            </div>
+                            <div class="col s6 input-field">
+                                <label>
+                                    <input class="filled-in" type="checkbox" data-bind="checked: autoMaxFactor" />
+                                    <span string="$(auto-threshold)"></span>
+                                    <i class="material-icons tooltipped" data-position="top" string-data-tooltip="$(info-auto-threshold)"></i>
+                                </label>
+                            </div>
+                            <div class="input-field col s6 max-factor">
+                                <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
+                                <label string="$(factor-threshold)" class="active" for="limit"></label>
+                            </div>
+                        </div>
+                        <div class="row no-margin row-factor">
+                            <div class="col s12">
+                                <label>
+                                    <input class="filled-in" type="checkbox" data-bind="checked: isShowEnvData" />
+                                    <span string="$(show-environmental-data)"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
+                    <li>
+                        <div class="card-title collapsible-header">
+                            <span data-bind="text: capitalizeFirst(WebApp.GeoPlot.ViewModes[viewMode()].label.plural)"></span><string>&nbsp;$(more-effected)</string>
+                            <i class="material-icons">chevron_right</i>
+                        </div>
+                        <div class="collapsible-body">
+                            <!--ko if topAreas-->
+                            <table class="responsive-table highlight">
+                                <thead>
+                                    <tr>
+                                        <th string="$(name)"></th>
+                                        <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
+                                        <!--ko if: selectedFactor().id != 'none'-->
+                                        <th data-bind="text: selectedFactor().name"></th>
+                                        <th data-bind="attr: {title: factorDescription}">Fatt.</th>
+                                        <!--/ko-->
+                                    </tr>
+                                </thead>
+                                <tbody data-bind="foreach: topAreas">
+                                    <tr data-bind="click: select">
+                                        <td data-bind="text: value.name"></td>
+                                        <td data-bind="text: formatNumber(indicator())"></td>
+                                        <!--ko if: $parent.selectedFactor().id != 'none'-->
+                                        <td><span data-bind="text: reference"></span></td>
+                                        <td><span data-bind="text: factor"></span></td>
+                                        <!--/ko-->
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <!--/ko-->
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <section class="main data-source">
+            <h5 string="$(data-source):"></h5>
+            <ul>
+                <li>
+                    <label string="$(indicators)"></label>
+                    <a href="https://github.com/pcm-dpc/COVID-19/tree/master/dati-json" target="_blank">Protezione civile</a>
+                    <span class="last-update"><string>@string.Format("$(updated-on) {0:dd/MM/yyyy} $(at) {0:HH:mm:ss}", Model.LastUpdate)</string></span>
+                </li>
+                <li>
+                    <label string="$(demography)">Demografia</label>
+                    <a href="http://demo.istat.it/pop2019/index3.html" target="_blank">Istat</a>
+                    <span class="last-update"><string>$(updated-on) 2019</string></span>
+                </li>
+                <li>
+                    <label string="$(surface)"></label>
+                    <a href="https://www.istat.it/it/files/2013/02/Dati-comunali-e-provinciali.zip" target="_blank">Istat</a>
+                    <span class="last-update"><string>$(updated-on) 2011</string></span>
+                </li>
+                <li>
+                    <label string="$(geo-data)">Dati geografici</label>
+                    <a href="https://github.com/openpolis/geojson-italy/tree/master/geojson" target="_blank">Open polis</a>
+                    <span class="last-update"><string>$(updated-at) Settembre 2019</string></span>
+                </li>
+                <li>
+                    <label string="$(environmental-data)"></label>
+                    <a href="http://aidef.apps.eea.europa.eu/?source=%7B%22query%22%3A%7B%22match_all%22%3A%7B%7D%7D%2C%22display_type%22%3A%22tabular%22%7D" target="_blank">Europian Environment Agency</a>
+                    <span class="last-update"><string>$(updated-on) 2018</string></span>
+                    <div class="note">
+                        <string>$(env-method)</string>
+                        <div class="legend">
+                            <i class="good"></i>
+                            <span>&lt; 20 µg m³</span>
+                        </div>
+                        <div class="legend">
+                            <i class="medium"></i>
+                            <span>20 - 40 µg m³</span>
+                        </div>
+                        <div class="legend">
+                            <i class="bad"></i>
+                            <span>40 - 50 µg m³</span>
+                        </div>
+                        <div class="legend">
+                            <i class="sever"></i>
+                            <span>50 - 75 µg m³</span>
+                        </div>
+                        <div class="legend">
+                            <i class="verysevere"></i>
+                            <span>&gt; 75 µg m³</span>
+                        </div>
                     </div>
                 </li>
             </ul>
-        </div>
-    </div>
-    <section class="main data-source">
-        <h5 string="$(data-source):"></h5>
-        <ul>
-            <li>
-                <label string="$(indicators)"></label>
-                <a href="https://github.com/pcm-dpc/COVID-19/tree/master/dati-json" target="_blank">Protezione civile</a>
-                <span class="last-update"><string>@string.Format("$(updated-on) {0:dd/MM/yyyy} $(at) {0:HH:mm:ss}", Model.LastUpdate)</string></span>
-            </li>
-            <li>
-                <label string="$(demography)">Demografia</label>
-                <a href="http://demo.istat.it/pop2019/index3.html" target="_blank">Istat</a>
-                <span class="last-update"><string>$(updated-on) 2019</string></span>
-            </li>
-            <li>
-                <label string="$(surface)"></label>
-                <a href="https://www.istat.it/it/files/2013/02/Dati-comunali-e-provinciali.zip" target="_blank">Istat</a>
-                <span class="last-update"><string>$(updated-on) 2011</string></span>
-            </li>
-            <li>
-                <label string="$(geo-data)">Dati geografici</label>
-                <a href="https://github.com/openpolis/geojson-italy/tree/master/geojson" target="_blank">Open polis</a>
-                <span class="last-update"><string>$(updated-at) Settembre 2019</string></span>
-            </li>
-            <li>
-                <label string="$(environmental-data)"></label>
-                <a href="http://aidef.apps.eea.europa.eu/?source=%7B%22query%22%3A%7B%22match_all%22%3A%7B%7D%7D%2C%22display_type%22%3A%22tabular%22%7D" target="_blank">Europian Environment Agency</a>
-                <span class="last-update"><string>$(updated-on) 2018</string></span>
-                <div class="note">
-                    <string>$(env-method)</string>
-                    <div class="legend">
-                        <i class="good"></i>
-                        <span>&lt; 20 µg m³</span>
-                    </div>
-                    <div class="legend">
-                        <i class="medium"></i>
-                        <span>20 - 40 µg m³</span>
-                    </div>
-                    <div class="legend">
-                        <i class="bad"></i>
-                        <span>40 - 50 µg m³</span>
-                    </div>
-                    <div class="legend">
-                        <i class="sever"></i>
-                        <span>50 - 75 µg m³</span>
-                    </div>
-                    <div class="legend">
-                        <i class="verysevere"></i>
-                        <span>&gt; 75 µg m³</span>
-                    </div>
-                </div>
-            </li>
-        </ul>
-    </section>
+        </section>
 
-    <!--ko template:{name: 'TipViewTemplate', data: tipManager.tip} -->
-    <!--/ko-->
-</div>
+        <!--ko if: tipManager.tip -->
+        <!--ko template:{name: 'TipViewTemplate', data: tipManager.tip} -->
+        <!--/ko-->
+        <!--/ko-->
+    </div>
 
 <partial name="Templates/_TipView" />
 

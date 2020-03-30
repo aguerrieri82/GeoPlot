@@ -5,16 +5,20 @@
     "removeComments": false,
     "sourceMap": true,
     "target": "ES6",
-    "downlevelIteration": true,
     "outFile": "wwwroot/js/app.js",
-    "lib": [ "ES6",  "dom", "es2017.string" ]
+    "lib": [ "ES6", "dom", "es2017.string" ],
+    "types": ["chart.js", "knockout", "materialize-css", "jquery"]
   },
   "compileOnSave": true,
-  "typeAcquisition": { "enable": true },
   "references": [
     { "path": "../Eusoft/WebApp/src/Eusoft.WebApp/Scripts/core" }
   ],
+  
   "include": [
     "scripts"
+  ],
+  "exclude": [
+    "node_modules",
+    "node_modules/@types/node"
   ]
 }
