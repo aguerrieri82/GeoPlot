@@ -301,11 +301,13 @@
 
 
 #dataImport {
+    max-height: none;
 
     .main {
         display: flex;
         flex-direction: row;
         overflow: hidden;
+        height: 500px;
 
         > .content {
             flex-grow: 1;
@@ -318,14 +320,28 @@
         overflow: auto;
     }
 
-    .section-tree {
+    .side-bar {
         width: 30%;
-        border: solid 1px #ddd;
-        border-radius: 4px;
-        padding: 8px;
         margin-right: 16px;
         flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+
+        .actions {
+            margin-top: 8px;
+            flex-shrink: 0;
+        }
+
+        .section-tree {
+            border: solid 1px #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            overflow: auto;
+            flex-grow: 1;
+        }
     }
+
 
     .options {
         border: solid 1px #ddd;

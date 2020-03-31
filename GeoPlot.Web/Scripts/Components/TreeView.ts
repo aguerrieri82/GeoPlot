@@ -51,15 +51,37 @@
         protected _parentNode: TreeNodeViewModel<T>;
         protected _element: HTMLElement;
         protected _dargEnterCount = 0;
+        protected _childLoaded = false;
 
         constructor(value?: T) {
 
             this.value(value);
+            this.isExpanded.subscribe(async value => {
+
+                if (value && !this._childLoaded) {
+                    await this.loadChildNodes();
+                    this._childLoaded = true;
+                }
+            });
+
             this.isSelected.subscribe(a => {
 
                 if (a)
                     this._treeView.select(this);
             });
+        }
+
+        /****************************************/
+
+        async loadChildNodes() {
+
+        }
+
+        /****************************************/
+
+        clear() {
+            this._childLoaded = false;
+            this.nodes.removeAll();
         }
 
         /****************************************/
@@ -76,6 +98,8 @@
             this._element.id = DomUtils.generateId();
             this._element["$model"] = this;
 
+            this._element.addEventListener("keydown", ev => this.onKeyDown(ev));
+
             let header = <HTMLElement>this._element.querySelector("header");
 
             header.ondragstart = ev => this.onDrag(ev);
@@ -83,6 +107,18 @@
             header.ondragenter = ev => this.onDragEnter(ev);
             header.ondragleave = ev => this.onDragLeave(ev);
             header.ondrop = ev => this.onDrop(ev);
+        }
+
+
+        /****************************************/
+
+        protected onKeyDown(ev: KeyboardEvent) {
+
+            if (ev.keyCode == 46 && (<HTMLElement>ev.target).tagName != "INPUT") {
+                ev.preventDefault();
+                if (this.isSelected())
+                    this.value().remove();
+            }
         }
 
         /****************************************/
@@ -214,8 +250,9 @@
 
         /****************************************/
 
-        toggleSelection() {
-            this.isSelected(!this.isSelected());
+        select() {
+            this.isSelected(true);
+            this._element.focus();
         }
 
         /****************************************/

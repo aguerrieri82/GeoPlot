@@ -55,6 +55,8 @@
 
     }
 
+    /****************************************/
+
     interface IColumnAnalisys {
         values: IDictionary<number>;
         booleanCount: number;
@@ -68,11 +70,68 @@
     /* IDataAdapter
     /****************************************/
 
+    interface IDataSeriePoint {
+        x: any;
+        y: number;
+    }
+
+    /****************************************/
+
+    interface IDataSerie {
+        name: string;
+        values: IDataSeriePoint[];
+    }
+
+    /****************************************/
+
+    interface IDataGroup {
+        name: string;
+        groups?: IDictionary<IDataGroup>;
+        series?: IDictionary<IDataSerie>;
+    }
+
+    interface IDataMainGroup extends IDataGroup {
+    }
+
+    type IDataTable = IDictionary<any>[];
+
+    /****************************************/
+
+    type TextParser<T> = (value: string) => T;
+
+    type TextFormatter<T> = (value: T) => string;
+
+    enum ColumnType {
+        Exclude,
+        XAxis,
+        Serie,
+        Group
+    }
+
+    /****************************************/
+
+    interface IColumnFilter<T> {
+
+        include?: T[];
+        exclude?: T[];
+    }
+
+    /****************************************/
+
+    interface IDataAdapterColumn<T> {
+
+        id: string;
+        type: ColumnType;
+        name?: string;
+        filter?: IColumnFilter<T>;
+        parser?: TextParser<T>;
+        formatter?: TextFormatter<T>;
+    }
+
+    /****************************************/
+
     interface IDataAdapterOptions {
-        columnsIds?: string[];
-        groupColumns?: string[];
-        serieColumns?: string[];
-        xColumn?: string;
+        columns?: IDataAdapterColumn<any>[];
         source?: () => Promise<string>;
     }
 
@@ -80,33 +139,30 @@
 
     interface IDataAdapter<TOptions extends IDataAdapterOptions> {
 
-        parse(text: string): IDictionary<string>[];
+        loadGroup(text: string, options: TOptions): IDataMainGroup;
 
-        analyze(text: string): TOptions;
+        loadTable(text: string, options: ITextTableDataAdapterOptions, maxItems?: number): IDataTable 
 
-        options: TOptions;
+        analyze(text: string, options?: TOptions): TOptions;
     }
 
     /****************************************/
 
     abstract class BaseDataAdapter<TOptions extends IDataAdapterOptions> implements IDataAdapter<TOptions> {
 
-        constructor(options: TOptions) {
-            this.options = options;
+        constructor() {
         }
 
-        abstract parse(text: string): IDictionary<string>[];
+        abstract loadGroup(text: string, options: TOptions): IDataMainGroup;
 
-        abstract analyze(text: string): TOptions;
+        abstract loadTable(text: string, options: TOptions, maxItems?: number): IDataTable;
 
-        options: TOptions;
+        abstract analyze(text: string, options?: TOptions): TOptions;
     }
 
     /****************************************/
     /* TextTableDataAdapter
     /****************************************/
-
-    type TextParser = (value: string) => any;
 
 
     interface ITextTableDataAdapterOptions extends IDataAdapterOptions {
@@ -114,15 +170,14 @@
         hasHeader?: boolean;
         columnSeparator?: string;
         rowSeparator?: string;
-        columnsParser?: IDictionary<TextParser>;
     }
 
     /****************************************/
 
     export class TextTableDataAdapter extends BaseDataAdapter<ITextTableDataAdapterOptions> {
 
-        constructor(options?: ITextTableDataAdapterOptions) {
-            super(options);
+        constructor() {
+            super();
         }
 
         /****************************************/
@@ -154,14 +209,14 @@
 
         /****************************************/
 
-        protected extractHeader(text: string) {
+        protected extractHeader(text: string, options: ITextTableDataAdapterOptions) {
 
-            const firstRow = linq(new SplitEnumerator(text, this.options.rowSeparator)).first();
-            const cols = firstRow.split(this.options.columnSeparator);
+            const firstRow = linq(new SplitEnumerator(text, options.rowSeparator)).first();
+            const cols = firstRow.split(options.columnSeparator);
 
             let headers: string[];
 
-            if (this.options.hasHeader !== false) {
+            if (options.hasHeader !== false) {
 
                 const rowAnal: IColumnAnalisys[] = [];
 
@@ -171,36 +226,36 @@
                 const emptyCount = linq(rowAnal).sum(a => a.emptyCount);
 
                 if (stringCount > 0 && stringCount + emptyCount == cols.length) {
-                    this.options.hasHeader = true;
+                    options.hasHeader = true;
 
                     headers = linq(cols).select((a, i) => {
                         if (a == "")
                             return "col" + i;
-                        return this.createIdentifier(a)
+                        return a;
                     }).toArray();
                 }
             }
 
             if (!headers) {
-                this.options.hasHeader = false;
+                options.hasHeader = false;
 
                 headers = linq(cols).select((a, i) => "col" + i).toArray();
             }
-            if (!this.options.columnsIds)
-                this.options.columnsIds = headers;
+            if (!options.columns)
+                options.columns = linq(headers).select(a => ({ id: this.createIdentifier(a), name: a, type: ColumnType.Exclude })).toArray();
         }
 
         /****************************************/
 
-        protected extractRowSeparator(text: string) {
-            if (this.options.rowSeparator)
+        protected extractRowSeparator(text: string, options: ITextTableDataAdapterOptions) {
+            if (options.rowSeparator)
                 return;
 
             const items = ["\r\n", "\n"];
 
             for (var item of items) {
                 if (text.indexOf(item) != -1) {
-                    this.options.rowSeparator = item;
+                    options.rowSeparator = item;
                     return;
                 }
             }
@@ -208,16 +263,16 @@
 
         /****************************************/
 
-        protected extractColumnSeparator(text: string) {
+        protected extractColumnSeparator(text: string, options: ITextTableDataAdapterOptions) {
 
-            if (this.options.columnSeparator)
+            if (options.columnSeparator)
                 return;
 
             const items = ["\t", ";", ",", " "];
 
             const stats = {};
 
-            const rows = linq(new SplitEnumerator(text, this.options.rowSeparator)).take(10);
+            const rows = linq(new SplitEnumerator(text, options.rowSeparator)).take(10);
 
             for (let row of rows) {
 
@@ -239,7 +294,7 @@
 
             for (var key in stats) {
                 if (stats[key] !== false) {
-                    this.options.columnSeparator = key;
+                    options.columnSeparator = key;
                     return;
                 }
             }
@@ -289,7 +344,7 @@
 
         /****************************************/
 
-        protected createParser(anal: IColumnAnalisys): TextParser {
+        protected createParser(anal: IColumnAnalisys): TextParser<any> {
 
             if (anal.numberCount > 0 && anal.stringCount == 0)
                 return a => isNaN(<any>a) ? null : parseFloat(a);
@@ -312,93 +367,156 @@
             return a => null;
         }
 
+
+
         /****************************************/
 
-        analyze(text: string) : ITextTableDataAdapterOptions {
+        analyze(text: string, options?: ITextTableDataAdapterOptions): ITextTableDataAdapterOptions {
+
+            if (!options)
+                options = {};
 
             //Separators
-            this.extractRowSeparator(text);
-            this.extractColumnSeparator(text);
+            this.extractRowSeparator(text, options);
+            this.extractColumnSeparator(text, options);
 
             //Header
-            this.extractHeader(text);
+            this.extractHeader(text, options);
 
             //Rows
-            let rows = linq(new SplitEnumerator(text, this.options.rowSeparator));
+            let rows = linq(new SplitEnumerator(text, options.rowSeparator));
 
-            if (this.options.hasHeader)
+            if (options.hasHeader)
                 rows = rows.skip(1);
 
             //col analysis
             const colAnalysis: IColumnAnalisys[] = [];
             rows.foreach(row =>
-                this.analyzeRow(row.split(this.options.columnSeparator), colAnalysis));
+                this.analyzeRow(row.split(options.columnSeparator), colAnalysis));
+
+            const columns = linq(options.columns);
 
             //Parser
-            if (!this.options.columnsParser) {
-                this.options.columnsParser = {};
-                colAnalysis.forEach((a, i) =>
-                    this.options.columnsParser[this.options.columnsIds[i]] = this.createParser(a));
-            }
+            colAnalysis.forEach((col, i) => {
+                if (!options.columns[i].parser)
+                    options.columns[i].parser = this.createParser(col);
+            });
 
             //X-axis
-            if (!this.options.xColumn)
-                this.options.xColumn = this.options.columnsIds[0];
+            if (!columns.any(a => a.type == ColumnType.XAxis))
+                columns.first(a => a.type == ColumnType.Exclude).type = ColumnType.XAxis;
 
             //Y-axis
-            if (!this.options.serieColumns) {
-                this.options.serieColumns = [];
+            if (!columns.any(a => a.type == ColumnType.Serie)) {
                 colAnalysis.forEach((col, i) => {
 
                     if (col.numberCount > 0 && col.stringCount == 0)
-                        this.options.serieColumns.push(this.options.columnsIds[i]);
+                        options.columns[i].type = ColumnType.Serie;
                 });
             }
 
             //groups
-            if (!this.options.groupColumns) {
-
-                this.options.groupColumns = [];
+            if (!columns.any(a => a.type == ColumnType.Group)) {
 
                 colAnalysis.forEach((col, i) => {
 
                     if (col.stringCount > 0 && col.emptyCount == 0) {
                         var values = linq(col.values);
                         if (values.count() > 1 && values.any(a => a.value > 1))
-                            this.options.groupColumns.push(this.options.columnsIds[i]);
+                            options.columns[i].type = ColumnType.Group;
                     }
                 });
             }
 
-            return this.options;
+            return options;
         }
+
 
         /****************************************/
 
-        parse(text: string): IDictionary<string>[] {
+        loadTable(text: string, options: ITextTableDataAdapterOptions, maxItems? : number): IDataTable {
 
-            var result: IDictionary<string>[] = [];
+            var result: IDataTable = [];
 
-            var rows = linq(new SplitEnumerator(text, this.options.rowSeparator));
+            var rows = linq(new SplitEnumerator(text, options.rowSeparator));
 
-            if (this.options.hasHeader)
+            if (options.hasHeader)
                 rows = rows.skip(1);
 
             for (var row of rows) {
-                var cols = row.split(this.options.columnSeparator);
+                var cols = row.split(options.columnSeparator);
 
                 var item: IDictionary<string> = {};
 
                 for (let i = 0; i < cols.length; i++) {
-                    const colId = this.options.columnsIds[i];
-                    if (this.options.xColumn != colId &&
-                        this.options.serieColumns.indexOf(colId) == -1 &&
-                        this.options.groupColumns.indexOf(colId) == -1)
+                    const col = options.columns[i];
+                    if (col.type == ColumnType.Exclude)
                         continue;
-                    item[colId] = this.options.columnsParser[colId](cols[i]);
+                    item[col.id] = col.parser(cols[i]);
                 }
 
                 result.push(item);
+
+                if (maxItems && result.length >= maxItems)
+                    break;
+            }
+
+            return result;
+        }    
+
+        /****************************************/
+
+        loadGroup(text: string, options: ITextTableDataAdapterOptions): IDataMainGroup {
+
+            var result: IDataMainGroup = {name: "main" };
+            var rows = linq(new SplitEnumerator(text, options.rowSeparator));
+
+            if (options.hasHeader)
+                rows = rows.skip(1);
+
+            const xColumnIndex = linq(options.columns).where(a => a.type == ColumnType.XAxis).select((a, i) => i).first();
+
+            for (var row of rows) {
+
+                const values = row.split(options.columnSeparator);
+                const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
+
+                const item: IDictionary<string> = {};
+
+                let curGroup: IDataGroup = result;
+
+                for (let i = 0; i < values.length; i++) {
+                    const col = options.columns[i];
+
+                    if (col.type == ColumnType.Exclude || col.type == ColumnType.XAxis)
+                        continue;
+
+                    let value = col.parser(values[i]);
+
+                    if (col.type == ColumnType.Group) {
+
+                        if (!curGroup.groups)
+                            curGroup.groups = {};
+
+                        if (value === "")
+                            value = $string("<$(empty)>");
+
+                        if (!(value in curGroup.groups)) 
+                            curGroup.groups[value] = { name: value };
+
+                        curGroup = curGroup.groups[value];
+                    }
+
+                    else if (col.type == ColumnType.Serie) {
+                        if (!curGroup.series)
+                            curGroup.series = {};
+
+                        if (!(col.id in curGroup.series))
+                            curGroup.series[col.id] = { name: col.id, values: [] };
+
+                        curGroup.series[col.id].values.push({ x: xValue, y: value });
+                    }
+                }
             }
 
             return result;
@@ -418,22 +536,30 @@
 
     class JsonDataAdapter extends BaseDataAdapter<JsonDataAdapterOptions> {
 
-
-        constructor(options: JsonDataAdapterOptions) {
-            super(options);
+        constructor() {
+            super();
         }
 
         /****************************************/
 
-        parse(text: string): IDictionary<string>[] {
+        loadGroup(text: string, options: JsonDataAdapterOptions): IDataMainGroup {
+
             return null;
         }
 
         /****************************************/
 
-        analyze(text: string): JsonDataAdapterOptions {
-            throw new Error("Method not implemented.");
+        loadTable(text: string, options: JsonDataAdapterOptions, maxItems?: number): IDataTable {
+
+            return null;
         }
+
+        /****************************************/
+
+        analyze(text: string, options?: JsonDataAdapterOptions): JsonDataAdapterOptions {
+            return null;
+        }
+
     }
 
     /****************************************/
@@ -455,35 +581,26 @@
 
     /****************************************/
 
-    enum ColumnType {
-        Exclude,
-        XAxis,
-        Serie,
-        Group
-    }
+    class ColumnViewModel<T> {
 
-    /****************************************/
-
-    class ColumnViewModel {
-
-        constructor(name: string, type?: ColumnType) {
+        constructor(value: IDataAdapterColumn<T>) {
             this.types = [
-                { text: "Escludi", value: ColumnType.Exclude },
-                { text: "Asse X", value: ColumnType.XAxis },
-                { text: "Serie", value: ColumnType.Serie },
-                { text: "Gruppo", value: ColumnType.Group }
+                { text: $string("$(exclude)"), value: ColumnType.Exclude },
+                { text: $string("$(x-axis)"), value: ColumnType.XAxis },
+                { text: $string("$(serie)"), value: ColumnType.Serie },
+                { text: $string("$(group)"), value: ColumnType.Group }
             ];
 
-            this.name = name;
-            this.type(type);
-            this.alias(name);
+            this.value = value;
+            this.type(value.type);
+            this.alias(value.name);
         }
 
         /****************************************/
 
-        name: string;
+        value: IDataAdapterColumn<T>;
         alias = ko.observable<string>();
-        type = ko.observable(ColumnType.Exclude);
+        type = ko.observable();
         types: ITextValue<ColumnType>[];
     }
 
@@ -540,8 +657,8 @@
 
         /****************************************/
 
-        name: KnockoutObservable<string>;
-        color?: KnockoutObservable<string>;
+        name = ko.observable<string>();
+        color = ko.observable<string>();
         canDrag: boolean;
         itemType: string;
         icon: string;
@@ -551,16 +668,37 @@
     /****************************************/
 
     class GroupItem extends BaseTreeItem {
-        constructor() {
+
+        constructor(value: IDataGroup) {
             super();
+            this.value = value;
+            this.icon = "folder";
+            this.itemType = "group";
+            this.color("#ffc107");
+            this.name(value.name);
         }
+
+        /****************************************/
+
+        value: IDataGroup;
     }
+
     /****************************************/
 
     class SerieItem extends BaseTreeItem {
-        constructor() {
+
+        constructor(value: IDataSerie) {
             super();
+            this.value = value;
+            this.icon = "insert_chart";
+            this.itemType = "serie";
+            this.color("#4caf50");
+            this.name(value.name);
         }
+
+        /****************************************/
+
+        value: IDataSerie;
     }
 
     /****************************************/
@@ -570,73 +708,119 @@
         private _model: M.Modal;
         private _adapter: IDataAdapter<IDataAdapterOptions>;
         private _text: string;
+        private _options: ITextTableDataAdapterOptions;
 
         constructor() {
 
             this.columnSeparators = [
-                { text: "TAB", value: "\t" },
+                { text: $string("$(tab-key)"), value: "\t" },
                 { text: ",", value: "," },
                 { text: ";", value: ";" },
-                { text: "SPACE", value: " " }
+                { text: $string("$(sapce-key)"), value: " " }
             ];
 
-            this.columnSeparators = [
-                { text: "TAB", value: "\t" },
-                { text: ",", value: "," },
-                { text: ";", value: ";" },
-                { text: "SPACE", value: " " }
-            ];
+    
 
             const root = new TreeNodeViewModel<any>();            
             this.treeView.setRoot(root);
+            this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
         }
 
         /****************************************/
 
-        import(text: string) {
-
-            debugger;
-
-            let count = linq(new SplitEnumerator("a,s,,",",")).count();
+        import(text: string, options?: ITextTableDataAdapterOptions) : boolean {
 
             this._text = text;
-            this._adapter = new TextTableDataAdapter({});
+            this._adapter = new TextTableDataAdapter();
+            this._options = this._adapter.analyze(this._text, options);
 
-            const options = <ITextTableDataAdapterOptions>this._adapter.analyze(this._text);
+            if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
+                return false;
 
-            this.hasHeader(options.hasHeader);
-            this.columnSeparator(options.columnSeparator);
+            this.hasHeader(this._options.hasHeader);
+            this.columnSeparator(this._options.columnSeparator);
 
-            const cols: ColumnViewModel[] = [];
+            const cols: ColumnViewModel<any>[] = [];
 
-            for (let col of options.columnsIds) {
+            for (let col of this._options.columns) {
                 var model = new ColumnViewModel(col);
-                if (options.xColumn == col)
-                    model.type(ColumnType.XAxis);
-                else if (options.serieColumns && options.serieColumns.indexOf(col) != -1)
-                    model.type(ColumnType.Serie);
-                else if (options.groupColumns && options.groupColumns.indexOf(col) != -1)
-                    model.type(ColumnType.Group);
-                else
-                    model.type(ColumnType.Exclude);
-
                 cols.push(model);
             }
 
             this.columns(cols);
 
-            this.table(null);
+            this.updatePreview();
 
-            this.treeView.root().nodes.removeAll();
+            return true;
+        }
+
+        /****************************************/
+
+        applyChanges() {
+            this._options.hasHeader = this.hasHeader();
+            this._options.columnSeparator = this.columnSeparator();
+            this._options.columns.forEach((col, i) => {
+                col.name = this.columns()[i].alias();
+                col.type = this.columns()[i].type();
+            });
 
             this.updatePreview();
         }
+
+        /****************************************/
+
+        protected updateGroups() {
+
+            const group = this._adapter.loadGroup(this._text, this._options);
+
+            this.updateNode(this.treeView.root(), group);
+        }
+
+        /****************************************/
+
+        protected updateNode(node: TreeNodeViewModel<ITreeItem>, group: IDataGroup) {
+
+            node.clear();
+
+            if (group.groups) {
+                for (let item of linq(group.groups)) {
+                    let childNode = new TreeNodeViewModel<ITreeItem>(new GroupItem(item.value));
+                    childNode.loadChildNodes = async () => this.updateNode(childNode, item.value);
+                    node.addNode(childNode);
+                }
+            }
+
+            if (group.series) {
+                for (let item of linq(group.series)) {
+                    let childNode = new TreeNodeViewModel<ITreeItem>(new SerieItem(item.value));
+                    node.addNode(childNode);
+                }
+            }
+
+        }
+
+        /****************************************/
+
+        protected updateTable() {
+
+
+            const result = this._adapter.loadTable(this._text, this._options, 50);
+
+            const table: ITableViewModel = {
+                header: linq(this._options.columns).where(a => a.type != ColumnType.Exclude).select(a => a.name).toArray(),
+                rows: linq(result).select(a => linq(a).select(b => this.format(b.value)).toArray()).toArray()
+            }
+
+            this.table(table);
+        }
+
+        /****************************************/
 
         protected format(value: any): string {
             if (typeof value == "number")
                 return formatNumber(value);
             if (typeof value == "boolean")
-                return value ? "si" : "no";
+                return $string(value ? "$(yes)" : "$(no)");
             if (value instanceof Date)
                 return DateUtils.format(value, $string("$(date-format)"));
             return value;
@@ -646,19 +830,27 @@
 
         protected updatePreview() {
 
-            const result = this._adapter.parse(this._text);
+            this.updateGroups();
+            this.updateTable();
+        }
 
+        /****************************************/
 
+        protected onNodeSelected(node: TreeNodeViewModel<ITreeItem>) {
 
-            const table: ITableViewModel = {
-                header: linq(this._adapter.options.columnsIds).where(a =>
-                    this._adapter.options.xColumn == a ||
-                    this._adapter.options.serieColumns.indexOf(a) != -1 ||
-                    this._adapter.options.groupColumns.indexOf(a) != -1).toArray(),                    
-                rows: linq(result).take(50).select(a=> linq(a).select(b=> this.format( b.value)).toArray()).toArray()
+            if (node && node.value() instanceof SerieItem) {
+
+                const serie = (<SerieItem>node.value()).value;
+                const xColumn = linq(this._options.columns).where(a => a.type == ColumnType.XAxis).select(a => a.name).first();
+
+                const table: ITableViewModel = {
+                    header: [xColumn, serie.name],
+                    rows: linq(serie.values).take(50).select(a => [this.format(a.x), this.format(a.y)]).toArray()
+                }
+                this.table(table);
             }
-
-            this.table(table);
+            else
+                this.table(null);
         }
 
         /****************************************/
@@ -675,7 +867,7 @@
 
         hasHeader = ko.observable<boolean>();
         columnSeparator = ko.observable<string>();
-        columns = ko.observable<ColumnViewModel[]>();
+        columns = ko.observable<ColumnViewModel<any>[]>();
         columnSeparators: ITextValue<string>[];
         table = ko.observable<ITableViewModel>();
         treeView = new TreeViewModel<ITreeItem>();

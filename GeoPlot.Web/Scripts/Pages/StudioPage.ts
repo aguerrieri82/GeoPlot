@@ -1602,10 +1602,6 @@
                     ev.preventDefault();
             });
 
-            document.body.addEventListener("keydown", ev => {
-                this.onKeyDown(ev);
-            });
-
             M.Modal.init(document.getElementById("options"), {
                 onCloseEnd: () => this.updateOptions()
             });
@@ -1645,16 +1641,6 @@
             this.maxY(Math.round(bounds.mathCoordinates.height));
             const dialog = M.Modal.getInstance(document.getElementById("options"));
             dialog.open();
-        }
-
-        /****************************************/
-
-        removeSelected() {
-
-            if (!this.items.selectedNode())
-                return;
-            const value = this.items.selectedNode().value();
-            value.remove();
         }
 
         /****************************************/
@@ -1770,15 +1756,6 @@
 
         /****************************************/
 
-        protected onKeyDown(ev: KeyboardEvent) {
-            if (ev.keyCode == 46 && (<HTMLElement>ev.target).tagName != "INPUT") {
-                ev.preventDefault();
-                this.removeSelected();
-            }
-        }
-
-        /****************************************/
-
         protected onPaste(data: DataTransfer) : boolean {
 
             let project = this.getSelectedProject();
@@ -1799,7 +1776,15 @@
                         reg.node.isSelected(true);
                         return true;
                     }
+
+                    if (this.dataImport.import(text)) {
+                        this.dataImport.show();
+                        return;
+                    }
+
                 }
+
+                M.toast({ html: $string("$(msg-format-not-reconized)") });
             }
             else
                 M.toast({ html: $string("$(msg-select-project)") });

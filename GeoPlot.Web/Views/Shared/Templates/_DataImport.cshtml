@@ -5,11 +5,17 @@
         <div class="modal-content">
             <h4 string="$(data-import)"></h4>
             <div class="main">
-                <!--Tree-->
-                <section class="section-tree">
-                    <!--ko template: {name: 'TreeViewTemplate', data: treeView}-->
-                    <!--/ko-->
-                </section>
+                <div class="side-bar">
+
+                    <!--Tree-->
+                    <section class="section-tree">
+                        <!--ko template: {name: 'TreeViewTemplate', data: treeView}-->
+                        <!--/ko-->
+                    </section>
+                    <div class="actions">
+                        <button class="waves-effect waves-light btn" click: applyChanges"><i class="material-icons left">refresh</i><string>$(update)</string></button>
+                    </div>
+                </div>
                 <div class="content">
                     <!--Options-->
                     <section class="section-options">
@@ -17,11 +23,11 @@
                             <div>
                                 <label>
                                     <input class="filled-in" type="checkbox" data-bind="checked: hasHeader" />
-                                    <span>Intestazione colonne</span>
+                                    <span string="$(row-headers)"></span><
                                 </label>
                             </div>
                             <div class="col-separator">
-                                <label>Separatore colonnna</label>
+                                <label string="$(col-sperator)"></label>
                                 <select class="browser-default" data-bind="value: columnSeparator, options: columnSeparators, optionsValue: 'value', optionsText: 'text'">
                                 </select>
                             </div>
@@ -40,6 +46,7 @@
                     </section>
                     <!--Table-->
                     <section class="section-preview">
+
                         <!--ko if: table-->
                         <table data-bind="with: table">
                             <thead>
@@ -55,12 +62,12 @@
                         </table>
                         <!--/ko-->
                         <!--ko ifnot: table-->
-                        <div>
-                            Selezinare una serie o un gruppo per vedere l'anteprima
-                        </div>
+                        <div string="msg-no-serie-sel"></div>
                         <!--/ko-->
                     </section>
                 </div>
+
+
             </div>
         </div>
         <div class="modal-footer">

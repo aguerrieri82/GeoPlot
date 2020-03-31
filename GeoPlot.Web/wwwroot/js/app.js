@@ -354,16 +354,22 @@ var WebApp;
                 this._current = null;
             }
         }
+        let ColumnType;
+        (function (ColumnType) {
+            ColumnType[ColumnType["Exclude"] = 0] = "Exclude";
+            ColumnType[ColumnType["XAxis"] = 1] = "XAxis";
+            ColumnType[ColumnType["Serie"] = 2] = "Serie";
+            ColumnType[ColumnType["Group"] = 3] = "Group";
+        })(ColumnType || (ColumnType = {}));
         /****************************************/
         class BaseDataAdapter {
-            constructor(options) {
-                this.options = options;
+            constructor() {
             }
         }
         /****************************************/
         class TextTableDataAdapter extends BaseDataAdapter {
-            constructor(options) {
-                super(options);
+            constructor() {
+                super();
             }
             /****************************************/
             createIdentifier(value) {
@@ -391,50 +397,50 @@ var WebApp;
                 return result;
             }
             /****************************************/
-            extractHeader(text) {
-                const firstRow = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator)).first();
-                const cols = firstRow.split(this.options.columnSeparator);
+            extractHeader(text, options) {
+                const firstRow = WebApp.linq(new SplitEnumerator(text, options.rowSeparator)).first();
+                const cols = firstRow.split(options.columnSeparator);
                 let headers;
-                if (this.options.hasHeader !== false) {
+                if (options.hasHeader !== false) {
                     const rowAnal = [];
                     this.analyzeRow(cols, rowAnal);
                     const stringCount = WebApp.linq(rowAnal).sum(a => a.stringCount);
                     const emptyCount = WebApp.linq(rowAnal).sum(a => a.emptyCount);
                     if (stringCount > 0 && stringCount + emptyCount == cols.length) {
-                        this.options.hasHeader = true;
+                        options.hasHeader = true;
                         headers = WebApp.linq(cols).select((a, i) => {
                             if (a == "")
                                 return "col" + i;
-                            return this.createIdentifier(a);
+                            return a;
                         }).toArray();
                     }
                 }
                 if (!headers) {
-                    this.options.hasHeader = false;
+                    options.hasHeader = false;
                     headers = WebApp.linq(cols).select((a, i) => "col" + i).toArray();
                 }
-                if (!this.options.columnsIds)
-                    this.options.columnsIds = headers;
+                if (!options.columns)
+                    options.columns = WebApp.linq(headers).select(a => ({ id: this.createIdentifier(a), name: a, type: ColumnType.Exclude })).toArray();
             }
             /****************************************/
-            extractRowSeparator(text) {
-                if (this.options.rowSeparator)
+            extractRowSeparator(text, options) {
+                if (options.rowSeparator)
                     return;
                 const items = ["\r\n", "\n"];
                 for (var item of items) {
                     if (text.indexOf(item) != -1) {
-                        this.options.rowSeparator = item;
+                        options.rowSeparator = item;
                         return;
                     }
                 }
             }
             /****************************************/
-            extractColumnSeparator(text) {
-                if (this.options.columnSeparator)
+            extractColumnSeparator(text, options) {
+                if (options.columnSeparator)
                     return;
                 const items = ["\t", ";", ",", " "];
                 const stats = {};
-                const rows = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator)).take(10);
+                const rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator)).take(10);
                 for (let row of rows) {
                     for (let item of items) {
                         if (stats[item] === false)
@@ -450,7 +456,7 @@ var WebApp;
                 }
                 for (var key in stats) {
                     if (stats[key] !== false) {
-                        this.options.columnSeparator = key;
+                        options.columnSeparator = key;
                         return;
                     }
                 }
@@ -505,66 +511,104 @@ var WebApp;
                 return a => null;
             }
             /****************************************/
-            analyze(text) {
+            analyze(text, options) {
+                if (!options)
+                    options = {};
                 //Separators
-                this.extractRowSeparator(text);
-                this.extractColumnSeparator(text);
+                this.extractRowSeparator(text, options);
+                this.extractColumnSeparator(text, options);
                 //Header
-                this.extractHeader(text);
+                this.extractHeader(text, options);
                 //Rows
-                let rows = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator));
-                if (this.options.hasHeader)
+                let rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator));
+                if (options.hasHeader)
                     rows = rows.skip(1);
                 //col analysis
                 const colAnalysis = [];
-                rows.foreach(row => this.analyzeRow(row.split(this.options.columnSeparator), colAnalysis));
+                rows.foreach(row => this.analyzeRow(row.split(options.columnSeparator), colAnalysis));
+                const columns = WebApp.linq(options.columns);
                 //Parser
-                if (!this.options.columnsParser) {
-                    this.options.columnsParser = {};
-                    colAnalysis.forEach((a, i) => this.options.columnsParser[this.options.columnsIds[i]] = this.createParser(a));
-                }
+                colAnalysis.forEach((col, i) => {
+                    if (!options.columns[i].parser)
+                        options.columns[i].parser = this.createParser(col);
+                });
                 //X-axis
-                if (!this.options.xColumn)
-                    this.options.xColumn = this.options.columnsIds[0];
+                if (!columns.any(a => a.type == ColumnType.XAxis))
+                    columns.first(a => a.type == ColumnType.Exclude).type = ColumnType.XAxis;
                 //Y-axis
-                if (!this.options.serieColumns) {
-                    this.options.serieColumns = [];
+                if (!columns.any(a => a.type == ColumnType.Serie)) {
                     colAnalysis.forEach((col, i) => {
                         if (col.numberCount > 0 && col.stringCount == 0)
-                            this.options.serieColumns.push(this.options.columnsIds[i]);
+                            options.columns[i].type = ColumnType.Serie;
                     });
                 }
                 //groups
-                if (!this.options.groupColumns) {
-                    this.options.groupColumns = [];
+                if (!columns.any(a => a.type == ColumnType.Group)) {
                     colAnalysis.forEach((col, i) => {
                         if (col.stringCount > 0 && col.emptyCount == 0) {
                             var values = WebApp.linq(col.values);
                             if (values.count() > 1 && values.any(a => a.value > 1))
-                                this.options.groupColumns.push(this.options.columnsIds[i]);
+                                options.columns[i].type = ColumnType.Group;
                         }
                     });
                 }
-                return this.options;
+                return options;
             }
             /****************************************/
-            parse(text) {
+            loadTable(text, options, maxItems) {
                 var result = [];
-                var rows = WebApp.linq(new SplitEnumerator(text, this.options.rowSeparator));
-                if (this.options.hasHeader)
+                var rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator));
+                if (options.hasHeader)
                     rows = rows.skip(1);
                 for (var row of rows) {
-                    var cols = row.split(this.options.columnSeparator);
+                    var cols = row.split(options.columnSeparator);
                     var item = {};
                     for (let i = 0; i < cols.length; i++) {
-                        const colId = this.options.columnsIds[i];
-                        if (this.options.xColumn != colId &&
-                            this.options.serieColumns.indexOf(colId) == -1 &&
-                            this.options.groupColumns.indexOf(colId) == -1)
+                        const col = options.columns[i];
+                        if (col.type == ColumnType.Exclude)
                             continue;
-                        item[colId] = this.options.columnsParser[colId](cols[i]);
+                        item[col.id] = col.parser(cols[i]);
                     }
                     result.push(item);
+                    if (maxItems && result.length >= maxItems)
+                        break;
+                }
+                return result;
+            }
+            /****************************************/
+            loadGroup(text, options) {
+                var result = { name: "main" };
+                var rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator));
+                if (options.hasHeader)
+                    rows = rows.skip(1);
+                const xColumnIndex = WebApp.linq(options.columns).where(a => a.type == ColumnType.XAxis).select((a, i) => i).first();
+                for (var row of rows) {
+                    const values = row.split(options.columnSeparator);
+                    const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
+                    const item = {};
+                    let curGroup = result;
+                    for (let i = 0; i < values.length; i++) {
+                        const col = options.columns[i];
+                        if (col.type == ColumnType.Exclude || col.type == ColumnType.XAxis)
+                            continue;
+                        let value = col.parser(values[i]);
+                        if (col.type == ColumnType.Group) {
+                            if (!curGroup.groups)
+                                curGroup.groups = {};
+                            if (value === "")
+                                value = $string("<$(empty)>");
+                            if (!(value in curGroup.groups))
+                                curGroup.groups[value] = { name: value };
+                            curGroup = curGroup.groups[value];
+                        }
+                        else if (col.type == ColumnType.Serie) {
+                            if (!curGroup.series)
+                                curGroup.series = {};
+                            if (!(col.id in curGroup.series))
+                                curGroup.series[col.id] = { name: col.id, values: [] };
+                            curGroup.series[col.id].values.push({ x: xValue, y: value });
+                        }
+                    }
                 }
                 return result;
             }
@@ -572,45 +616,44 @@ var WebApp;
         GeoPlot.TextTableDataAdapter = TextTableDataAdapter;
         /****************************************/
         class JsonDataAdapter extends BaseDataAdapter {
-            constructor(options) {
-                super(options);
+            constructor() {
+                super();
             }
             /****************************************/
-            parse(text) {
+            loadGroup(text, options) {
                 return null;
             }
             /****************************************/
-            analyze(text) {
-                throw new Error("Method not implemented.");
+            loadTable(text, options, maxItems) {
+                return null;
+            }
+            /****************************************/
+            analyze(text, options) {
+                return null;
             }
         }
         /****************************************/
-        let ColumnType;
-        (function (ColumnType) {
-            ColumnType[ColumnType["Exclude"] = 0] = "Exclude";
-            ColumnType[ColumnType["XAxis"] = 1] = "XAxis";
-            ColumnType[ColumnType["Serie"] = 2] = "Serie";
-            ColumnType[ColumnType["Group"] = 3] = "Group";
-        })(ColumnType || (ColumnType = {}));
-        /****************************************/
         class ColumnViewModel {
-            constructor(name, type) {
+            constructor(value) {
                 this.alias = ko.observable();
-                this.type = ko.observable(ColumnType.Exclude);
+                this.type = ko.observable();
                 this.types = [
-                    { text: "Escludi", value: ColumnType.Exclude },
-                    { text: "Asse X", value: ColumnType.XAxis },
-                    { text: "Serie", value: ColumnType.Serie },
-                    { text: "Gruppo", value: ColumnType.Group }
+                    { text: $string("$(exclude)"), value: ColumnType.Exclude },
+                    { text: $string("$(x-axis)"), value: ColumnType.XAxis },
+                    { text: $string("$(serie)"), value: ColumnType.Serie },
+                    { text: $string("$(group)"), value: ColumnType.Group }
                 ];
-                this.name = name;
-                this.type(type);
-                this.alias(name);
+                this.value = value;
+                this.type(value.type);
+                this.alias(value.name);
             }
         }
         /****************************************/
         class BaseTreeItem {
             constructor() {
+                /****************************************/
+                this.name = ko.observable();
+                this.color = ko.observable();
                 this.canDrag = false;
             }
             /****************************************/
@@ -641,14 +684,24 @@ var WebApp;
         }
         /****************************************/
         class GroupItem extends BaseTreeItem {
-            constructor() {
+            constructor(value) {
                 super();
+                this.value = value;
+                this.icon = "folder";
+                this.itemType = "group";
+                this.color("#ffc107");
+                this.name(value.name);
             }
         }
         /****************************************/
         class SerieItem extends BaseTreeItem {
-            constructor() {
+            constructor(value) {
                 super();
+                this.value = value;
+                this.icon = "insert_chart";
+                this.itemType = "serie";
+                this.color("#4caf50");
+                this.name(value.name);
             }
         }
         /****************************************/
@@ -661,66 +714,102 @@ var WebApp;
                 this.table = ko.observable();
                 this.treeView = new GeoPlot.TreeViewModel();
                 this.columnSeparators = [
-                    { text: "TAB", value: "\t" },
+                    { text: $string("$(tab-key)"), value: "\t" },
                     { text: ",", value: "," },
                     { text: ";", value: ";" },
-                    { text: "SPACE", value: " " }
-                ];
-                this.columnSeparators = [
-                    { text: "TAB", value: "\t" },
-                    { text: ",", value: "," },
-                    { text: ";", value: ";" },
-                    { text: "SPACE", value: " " }
+                    { text: $string("$(sapce-key)"), value: " " }
                 ];
                 const root = new GeoPlot.TreeNodeViewModel();
                 this.treeView.setRoot(root);
+                this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
             }
             /****************************************/
-            import(text) {
-                debugger;
-                let count = WebApp.linq(new SplitEnumerator("a,s,,", ",")).count();
+            import(text, options) {
                 this._text = text;
-                this._adapter = new TextTableDataAdapter({});
-                const options = this._adapter.analyze(this._text);
-                this.hasHeader(options.hasHeader);
-                this.columnSeparator(options.columnSeparator);
+                this._adapter = new TextTableDataAdapter();
+                this._options = this._adapter.analyze(this._text, options);
+                if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
+                    return false;
+                this.hasHeader(this._options.hasHeader);
+                this.columnSeparator(this._options.columnSeparator);
                 const cols = [];
-                for (let col of options.columnsIds) {
+                for (let col of this._options.columns) {
                     var model = new ColumnViewModel(col);
-                    if (options.xColumn == col)
-                        model.type(ColumnType.XAxis);
-                    else if (options.serieColumns && options.serieColumns.indexOf(col) != -1)
-                        model.type(ColumnType.Serie);
-                    else if (options.groupColumns && options.groupColumns.indexOf(col) != -1)
-                        model.type(ColumnType.Group);
-                    else
-                        model.type(ColumnType.Exclude);
                     cols.push(model);
                 }
                 this.columns(cols);
-                this.table(null);
-                this.treeView.root().nodes.removeAll();
+                this.updatePreview();
+                return true;
+            }
+            /****************************************/
+            applyChanges() {
+                this._options.hasHeader = this.hasHeader();
+                this._options.columnSeparator = this.columnSeparator();
+                this._options.columns.forEach((col, i) => {
+                    col.name = this.columns()[i].alias();
+                    col.type = this.columns()[i].type();
+                });
                 this.updatePreview();
             }
+            /****************************************/
+            updateGroups() {
+                const group = this._adapter.loadGroup(this._text, this._options);
+                this.updateNode(this.treeView.root(), group);
+            }
+            /****************************************/
+            updateNode(node, group) {
+                node.clear();
+                if (group.groups) {
+                    for (let item of WebApp.linq(group.groups)) {
+                        let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(item.value));
+                        childNode.loadChildNodes = () => __awaiter(this, void 0, void 0, function* () { return this.updateNode(childNode, item.value); });
+                        node.addNode(childNode);
+                    }
+                }
+                if (group.series) {
+                    for (let item of WebApp.linq(group.series)) {
+                        let childNode = new GeoPlot.TreeNodeViewModel(new SerieItem(item.value));
+                        node.addNode(childNode);
+                    }
+                }
+            }
+            /****************************************/
+            updateTable() {
+                const result = this._adapter.loadTable(this._text, this._options, 50);
+                const table = {
+                    header: WebApp.linq(this._options.columns).where(a => a.type != ColumnType.Exclude).select(a => a.name).toArray(),
+                    rows: WebApp.linq(result).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
+                };
+                this.table(table);
+            }
+            /****************************************/
             format(value) {
                 if (typeof value == "number")
                     return formatNumber(value);
                 if (typeof value == "boolean")
-                    return value ? "si" : "no";
+                    return $string(value ? "$(yes)" : "$(no)");
                 if (value instanceof Date)
                     return WebApp.DateUtils.format(value, $string("$(date-format)"));
                 return value;
             }
             /****************************************/
             updatePreview() {
-                const result = this._adapter.parse(this._text);
-                const table = {
-                    header: WebApp.linq(this._adapter.options.columnsIds).where(a => this._adapter.options.xColumn == a ||
-                        this._adapter.options.serieColumns.indexOf(a) != -1 ||
-                        this._adapter.options.groupColumns.indexOf(a) != -1).toArray(),
-                    rows: WebApp.linq(result).take(50).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
-                };
-                this.table(table);
+                this.updateGroups();
+                this.updateTable();
+            }
+            /****************************************/
+            onNodeSelected(node) {
+                if (node && node.value() instanceof SerieItem) {
+                    const serie = node.value().value;
+                    const xColumn = WebApp.linq(this._options.columns).where(a => a.type == ColumnType.XAxis).select(a => a.name).first();
+                    const table = {
+                        header: [xColumn, serie.name],
+                        rows: WebApp.linq(serie.values).take(50).select(a => [this.format(a.x), this.format(a.y)]).toArray()
+                    };
+                    this.table(table);
+                }
+                else
+                    this.table(null);
             }
             /****************************************/
             show() {
@@ -749,6 +838,7 @@ var WebApp;
         class TreeNodeViewModel {
             constructor(value) {
                 this._dargEnterCount = 0;
+                this._childLoaded = false;
                 /****************************************/
                 this.nodes = ko.observableArray();
                 this.value = ko.observable();
@@ -757,10 +847,26 @@ var WebApp;
                 this.isExpanded = ko.observable(false);
                 this.actions = ko.observable();
                 this.value(value);
+                this.isExpanded.subscribe((value) => __awaiter(this, void 0, void 0, function* () {
+                    if (value && !this._childLoaded) {
+                        yield this.loadChildNodes();
+                        this._childLoaded = true;
+                    }
+                }));
                 this.isSelected.subscribe(a => {
                     if (a)
                         this._treeView.select(this);
                 });
+            }
+            /****************************************/
+            loadChildNodes() {
+                return __awaiter(this, void 0, void 0, function* () {
+                });
+            }
+            /****************************************/
+            clear() {
+                this._childLoaded = false;
+                this.nodes.removeAll();
             }
             /****************************************/
             get element() {
@@ -771,12 +877,21 @@ var WebApp;
                 this._element = element;
                 this._element.id = WebApp.DomUtils.generateId();
                 this._element["$model"] = this;
+                this._element.addEventListener("keydown", ev => this.onKeyDown(ev));
                 let header = this._element.querySelector("header");
                 header.ondragstart = ev => this.onDrag(ev);
                 header.ondragover = ev => this.onDragOver(ev);
                 header.ondragenter = ev => this.onDragEnter(ev);
                 header.ondragleave = ev => this.onDragLeave(ev);
                 header.ondrop = ev => this.onDrop(ev);
+            }
+            /****************************************/
+            onKeyDown(ev) {
+                if (ev.keyCode == 46 && ev.target.tagName != "INPUT") {
+                    ev.preventDefault();
+                    if (this.isSelected())
+                        this.value().remove();
+                }
             }
             /****************************************/
             onDrag(ev) {
@@ -868,8 +983,9 @@ var WebApp;
                 this.isVisible(!this.isVisible());
             }
             /****************************************/
-            toggleSelection() {
-                this.isSelected(!this.isSelected());
+            select() {
+                this.isSelected(true);
+                this._element.focus();
             }
             /****************************************/
             expandCollapse() {
@@ -3549,9 +3665,6 @@ var WebApp;
                     if (this.onPaste(ev.clipboardData))
                         ev.preventDefault();
                 });
-                document.body.addEventListener("keydown", ev => {
-                    this.onKeyDown(ev);
-                });
                 M.Modal.init(document.getElementById("options"), {
                     onCloseEnd: () => this.updateOptions()
                 });
@@ -3585,13 +3698,6 @@ var WebApp;
                 this.maxY(Math.round(bounds.mathCoordinates.height));
                 const dialog = M.Modal.getInstance(document.getElementById("options"));
                 dialog.open();
-            }
-            /****************************************/
-            removeSelected() {
-                if (!this.items.selectedNode())
-                    return;
-                const value = this.items.selectedNode().value();
-                value.remove();
             }
             /****************************************/
             getSelectedProject() {
@@ -3683,13 +3789,6 @@ var WebApp;
                 });
             }
             /****************************************/
-            onKeyDown(ev) {
-                if (ev.keyCode == 46 && ev.target.tagName != "INPUT") {
-                    ev.preventDefault();
-                    this.removeSelected();
-                }
-            }
-            /****************************************/
             onPaste(data) {
                 let project = this.getSelectedProject();
                 if (!project && !this.projects.any())
@@ -3708,7 +3807,12 @@ var WebApp;
                             reg.node.isSelected(true);
                             return true;
                         }
+                        if (this.dataImport.import(text)) {
+                            this.dataImport.show();
+                            return;
+                        }
                     }
+                    M.toast({ html: $string("$(msg-format-not-reconized)") });
                 }
                 else
                     M.toast({ html: $string("$(msg-select-project)") });

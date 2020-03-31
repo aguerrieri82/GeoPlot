@@ -589,50 +589,57 @@ svg.map {
 .tree-view .child-nodes {
   margin-left: 40px; }
 
-#dataImport .main {
-  display: flex;
-  flex-direction: row;
-  overflow: hidden; }
-  #dataImport .main > .content {
-    flex-grow: 1;
-    overflow: hidden; }
-
-#dataImport .section-preview {
-  max-height: 300px;
-  overflow: auto; }
-
-#dataImport .section-tree {
-  width: 30%;
-  border: solid 1px #ddd;
-  border-radius: 4px;
-  padding: 8px;
-  margin-right: 16px;
-  flex-shrink: 0; }
-
-#dataImport .options {
-  border: solid 1px #ddd;
-  border-radius: 4px;
-  padding: 8px;
-  margin-bottom: 16px; }
-  #dataImport .options .col-separator select {
-    max-width: 10em; }
-
-#dataImport .section-preview {
-  border: solid 1px #ddd;
-  border-radius: 4px;
-  padding: 8px; }
-
-#dataImport .columns {
-  display: flex;
-  flex-direction: row;
-  overflow-x: auto;
-  border: solid 1px #ddd;
-  border-radius: 4px;
-  margin-bottom: 16px; }
-  #dataImport .columns > * {
-    padding: 8px;
-    border-right: solid 1px #ddd;
+#dataImport {
+  max-height: none; }
+  #dataImport .main {
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    height: 500px; }
+    #dataImport .main > .content {
+      flex-grow: 1;
+      overflow: hidden; }
+  #dataImport .section-preview {
+    max-height: 300px;
+    overflow: auto; }
+  #dataImport .side-bar {
+    width: 30%;
+    margin-right: 16px;
     flex-shrink: 0;
-    margin-right: 8px;
+    overflow: hidden;
     display: flex;
     flex-direction: column; }
+    #dataImport .side-bar .actions {
+      margin-top: 8px;
+      flex-shrink: 0; }
+    #dataImport .side-bar .section-tree {
+      border: solid 1px #ddd;
+      border-radius: 4px;
+      padding: 8px;
+      overflow: auto;
+      flex-grow: 1; }
+  #dataImport .options {
+    border: solid 1px #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 16px; }
+    #dataImport .options .col-separator select {
+      max-width: 10em; }
+  #dataImport .section-preview {
+    border: solid 1px #ddd;
+    border-radius: 4px;
+    padding: 8px; }
+  #dataImport .columns {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    border: solid 1px #ddd;
+    border-radius: 4px;
+    margin-bottom: 16px; }
+    #dataImport .columns > * {
+      padding: 8px;
+      border-right: solid 1px #ddd;
+      flex-shrink: 0;
+      margin-right: 8px;
+      display: flex;
+      flex-direction: column; }
