@@ -34,7 +34,7 @@ namespace GeoPlot.Coronavirus
                 Value = new InfectionData()
                 {
                     TotalPositive = row.totale_casi,
-                    CurrentPositive = row.totale_attualmente_positivi,
+                    CurrentPositive = row.totale_positivi,
                     TotalDeath = row.deceduti,
                     TotalHealed = row.dimessi_guariti,
                     TotalHospedalized = row.ricoverati_con_sintomi,

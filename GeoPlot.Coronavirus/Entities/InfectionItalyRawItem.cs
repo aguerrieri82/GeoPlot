@@ -19,9 +19,9 @@ namespace GeoPlot.Coronavirus.Entities
 
         public int? isolamento_domiciliare;
 
-        public int? totale_attualmente_positivi;
+        public int? totale_positivi;
 
-        public int? nuovi_attualmente_positivi;
+        public int? nuovi_positivi;
 
         public int? dimessi_guariti;
 
