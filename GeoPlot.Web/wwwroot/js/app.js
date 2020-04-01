@@ -730,8 +730,8 @@ var WebApp;
             importText(text, options) {
                 return __awaiter(this, void 0, void 0, function* () {
                     M.toast({ html: $string("$(msg-start-analysis)") });
-                    yield WebApp.PromiseUtils.delay(0);
                     this.hasData(true);
+                    yield WebApp.PromiseUtils.delay(0);
                     this._text = text;
                     this._adapter = new WebApp.TextTableDataAdapter();
                     this._options = yield this._adapter.analyzeAsync(this._text, options, 5000);
@@ -4184,6 +4184,8 @@ var WebApp;
                 root.actions(actions);
                 this.items.setRoot(root);
                 document.body.addEventListener("paste", (ev) => __awaiter(this, void 0, void 0, function* () {
+                    if (ev.target.tagName == "INPUT")
+                        return;
                     if (yield this.onPaste(ev.clipboardData))
                         ev.preventDefault();
                 }));

@@ -1640,6 +1640,8 @@
             this.items.setRoot(root);
 
             document.body.addEventListener("paste", async ev => {
+                if ((<HTMLElement>ev.target).tagName == "INPUT")
+                    return;
                 if (await this.onPaste(ev.clipboardData))
                     ev.preventDefault();
             });
