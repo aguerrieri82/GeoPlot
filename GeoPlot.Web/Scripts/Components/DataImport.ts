@@ -2,6 +2,138 @@
 
 namespace WebApp.GeoPlot {
 
+    
+    /****************************************/
+    /* FileDragDrop
+    /****************************************/
+
+    export class FileDragDrop {
+
+        protected _element: HTMLElement;
+        protected _dargEnterCount = 0;
+
+        /****************************************/
+
+        attachNode(element: HTMLElement) {
+
+            this._element = element;
+            element.ondragover = ev => this.onDragOver(ev);
+            element.ondrop = ev => this.onDrop(ev);
+            element.ondragenter = ev => this.onDragEnter(ev);
+            element.ondragleave = ev => this.onDragLeave(ev);
+        }
+
+        /****************************************/
+
+        onFileDropped(content: string) {
+
+        }
+
+        /****************************************/
+
+        protected onDragEnter(ev: DragEvent) {
+            this._dargEnterCount++;
+        }
+
+        /****************************************/
+
+        protected onDragLeave(ev: DragEvent) {
+            this._dargEnterCount--;
+            if (this._dargEnterCount == 0)
+                DomUtils.removeClass(this._element, "drop");
+        }
+            
+        /****************************************/
+
+        protected onDragOver(ev: DragEvent) {
+            ev.preventDefault();
+
+            if (this._dargEnterCount == 1) 
+                DomUtils.addClass(this._element, "drop");
+        }
+
+        /****************************************/
+
+        protected async onDrop(ev: DragEvent) {
+            ev.preventDefault();
+
+            this._dargEnterCount = 0;
+
+            DomUtils.removeClass(this._element, "drop");
+            if (ev.dataTransfer.files.length == 1) {
+                const file = ev.dataTransfer.files[0];
+                if (file.name.toLowerCase().endsWith(".csv")) {
+                    const text = await ev.dataTransfer.files[0].text();
+                    this.onFileDropped(text);
+                    return;
+                }
+            }
+            M.toast({html: $string("$(msg-not-supported-only-csv)")})
+        }
+    }
+
+    /****************************************/
+    /* ProgressViewModel
+    /****************************************/
+
+    type ProgressStatus = "hidden" | "indefinite" | "show";
+
+    export class ProgressViewModel {
+
+        _showCount = 0;
+
+        /****************************************/
+
+        constructor() {
+            this.status("hidden");
+            Operation.onBegin.add((s, op) => this.show(op));
+            Operation.onEnd.add((s, op) => this.hide(op));
+            Operation.onProgress.add((s, data) => this.update(data.operation, data.progress));
+        }
+
+        /****************************************/
+
+        show(op: IOperation) {
+            if (this._showCount == 0) {
+                this.status("indefinite");
+                this.percentage(100);
+            }
+            this.message(<string>op.message);
+            this._showCount++;
+        }
+
+        /****************************************/
+
+        update(op: IOperation, progress: IOperationProgress) {
+
+            this.message(op["getProgressDescription"](progress));
+            if (progress.totCount != undefined && progress.current != undefined) {
+                this.percentage(Math.min(100, (progress.current / progress.totCount) * 100));
+                this.status("show");
+            }
+            else {
+                this.status("show");
+                this.percentage(100);
+            }
+        }
+
+        /****************************************/
+
+        hide(op: IOperation) {
+            this._showCount--;
+            if (this._showCount == 0) {
+                //this.message("");
+                this.status("hidden");
+            }
+        }
+
+        /****************************************/
+
+        message = ko.observable<string>();
+        percentage = ko.observable<number>();
+        status = ko.observable<ProgressStatus>();
+    }
+
     /****************************************/
     /* DataImportControl
     /****************************************/
@@ -121,17 +253,23 @@ namespace WebApp.GeoPlot {
             
             this.treeView.setRoot(new TreeNodeViewModel<any>());
             this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
+
+            this.fileDrop.onFileDropped = text => this.importText(text);
         }
 
         /****************************************/
 
-        import(text: string, options?: ITextTableDaOptions) : boolean {
+        async importText(text: string, options?: ITextTableDaOptions): Promise<boolean> {
 
-            linq(new CsvSplitEnumerator(",,", ",")).toArray();
+            M.toast({ html: $string("$(msg-start-analysis)") })
+
+            this.hasData(true);
+
+            await PromiseUtils.delay(0);
 
             this._text = text;
             this._adapter = new TextTableDataAdapter();
-            this._options = this._adapter.analyze(this._text, options, 5000);
+            this._options = await this._adapter.analyzeAsync(this._text, options, 5000);
 
             if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
                 return false;
@@ -148,7 +286,7 @@ namespace WebApp.GeoPlot {
 
             this.columns(cols);
 
-            this.updatePreview();
+            await this.updatePreview();
 
             return true;
         }
@@ -212,7 +350,7 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
-        applyChanges() {
+        async applyChanges() {
             this._options.hasHeader = this.hasHeader();
             this._options.columnSeparator = this.columnSeparator();
             this._options.columns.forEach((col, i) => {
@@ -220,14 +358,14 @@ namespace WebApp.GeoPlot {
                 col.type = this.columns()[i].type();
             });
 
-            this.updatePreview(true);
+            await this.updatePreview(true);
         }
 
         /****************************************/
 
-        protected updateGroups() {
+        protected async updateGroups() {
 
-            const group = this._adapter.loadGroup(this._text, this._options);
+            const group = await this._adapter.loadGroupAsync(this._text, this._options);
 
             let childNode = new TreeNodeViewModel<ITreeItem>(new GroupItem(group));
 
@@ -267,9 +405,9 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
-        protected updateTable() {
+        protected async updateTable() {
 
-            const result = this._adapter.loadTable(this._text, this._options, 50);
+            const result = await this._adapter.loadTableAsync(this._text, this._options, 50);
 
             const table: ITableViewModel = {
                 header: linq(this._options.columns).where(a => a.type != DaColumnType.Exclude).select(a => a.name).toArray(),
@@ -293,14 +431,14 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
-        protected updatePreview(force = false) {
+        protected async updatePreview(force = false) {
 
             if (force || this._options.rowsCount < 5000 - 1)
-                this.updateGroups();
+                await this.updateGroups();
             else
                 this.treeView.root().clear();
 
-            this.updateTable();
+            await this.updateTable();
         }
 
         /****************************************/
@@ -331,6 +469,7 @@ namespace WebApp.GeoPlot {
                     onCloseEnd: el => {
                         if (this._onGetData)
                             this._onGetData([]);
+                        this.reset();
                     }
                 });
             }
@@ -342,11 +481,46 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
+        reset() {
+            this._text = null;
+            this._options = null;
+            this._onGetData = null;
+            this.hasData(false);
+            this.treeView.root().clear();
+            this.table(null);
+        }
+
+        /****************************************/
+
+        async importUrl() {
+            const op = Operation.begin($string("$(msg-download-progress)"));
+            try {
+                let request = await fetch(this.sourceUrl());
+                if (request.ok) {
+                    const text = await request.text();
+                    if (text) {
+                        this.importText(text);
+                        return;
+                    }
+                }
+                M.toast({ html: $string("$(msg-download-error): " + request.statusText) });
+            }
+            finally {
+                op.end();
+            }
+        }
+
+        /****************************************/
+
         hasHeader = ko.observable<boolean>();
         columnSeparator = ko.observable<string>();
         columns = ko.observable<ColumnViewModel<any>[]>();
         columnSeparators: ITextValue<string>[];
         table = ko.observable<ITableViewModel>();
         treeView = new TreeViewModel<ITreeItem>();
+        progress = new ProgressViewModel();
+        hasData = ko.observable(false);
+        sourceUrl = ko.observable<string>();
+        fileDrop = new FileDragDrop();
     }
 }

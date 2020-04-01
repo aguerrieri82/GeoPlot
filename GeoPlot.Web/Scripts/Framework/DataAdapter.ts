@@ -48,7 +48,7 @@
 
     /****************************************/
 
-    export type IDaTable = IDictionary<any>[];    
+    export type IDaTable = IDictionary<any>[];
 
     /****************************************/
 
@@ -91,11 +91,11 @@
 
     export interface IDataAdapter<TOptions extends IDaOptions> {
 
-        loadGroup(text: string, options: TOptions): IDaMainGroup;
+        loadGroupAsync(text: string, options: TOptions): Promise<IDaMainGroup>;
 
-        loadTable(text: string, options: ITextTableDaOptions, maxItems?: number): IDaTable
+        loadTableAsync(text: string, options: ITextTableDaOptions, maxItems?: number): Promise<IDaTable>
 
-        analyze(text: string, options?: TOptions, maxRows?: number): TOptions;
+        analyzeAsync(text: string, options?: TOptions, maxRows?: number): Promise<TOptions>;
     }
 
     /****************************************/
@@ -107,11 +107,11 @@
 
         /****************************************/
 
-        abstract loadGroup(text: string, options: TOptions): IDaMainGroup;
+        abstract loadGroupAsync(text: string, options: TOptions): Promise<IDaMainGroup>;
 
-        abstract loadTable(text: string, options: TOptions, maxItems?: number): IDaTable;
+        abstract loadTableAsync(text: string, options: TOptions, maxItems?: number): Promise<IDaTable>;
 
-        abstract analyze(text: string, options?: TOptions, maxRows?: number): TOptions;
+        abstract analyzeAsync(text: string, options?: TOptions, maxRows?: number): Promise<TOptions>;
     }
 
     /****************************************/
@@ -323,7 +323,7 @@
 
         /****************************************/
 
-        analyze(text: string, options?: ITextTableDaOptions, maxRows? : number): ITextTableDaOptions {
+        async analyzeAsync(text: string, options?: ITextTableDaOptions, maxRows?: number): Promise<ITextTableDaOptions> {
 
             if (!options)
                 options = {};
@@ -348,11 +348,14 @@
             //col analysis
             const colAnalysis: IDaColumnAnalisys[] = [];
             let rowCount = 0;
-            rows.foreach(row => {
+
+            await rows.foreachAsync(async row => {
                 rowCount++;
                 this.analyzeRow(linq(new CsvSplitEnumerator(row, options.columnSeparator)).toArray(), colAnalysis);
-                if (rowCount % 200 == 0)
+                if (rowCount % 200 == 0) {
                     curOp.progress = { current: rowCount };
+                    await PromiseUtils.delay(0);
+                }
             });
 
             options.rowsCount = rowCount;
@@ -399,7 +402,7 @@
 
         /****************************************/
 
-        loadTable(text: string, options: ITextTableDaOptions, maxItems?: number): IDaTable {
+        async loadTableAsync(text: string, options: ITextTableDaOptions, maxItems?: number): Promise<IDaTable> {
 
             var result: IDaTable = [];
 
@@ -431,7 +434,7 @@
 
         /****************************************/
 
-        loadGroup(text: string, options: ITextTableDaOptions): IDaMainGroup {
+        async loadGroupAsync(text: string, options: ITextTableDaOptions): Promise<IDaMainGroup> {
 
             var result: IDaMainGroup = { name: $string("$(da-main-group)") };
             var rows = linq(new SplitEnumerator(text, options.rowSeparator));
@@ -443,8 +446,9 @@
 
             let curOp = Operation.begin("Loading groups...");
             let rowCount = 0;
+            let chunkCount;
 
-            for (var row of rows) {
+            await rows.foreachAsync(async row => {
 
                 const values = linq(new CsvSplitEnumerator(row, options.columnSeparator)).toArray();
                 const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
@@ -487,8 +491,14 @@
                 }
 
                 rowCount++;
-                curOp.progress = { current: rowCount, totCount: options.rowsCount };
-            }
+
+                if (rowCount % 200 == 0) {
+                    curOp.progress = { current: rowCount, totCount: options.rowsCount };
+                    await PromiseUtils.delay(0);
+                }
+            });
+
+            options.rowsCount = rowCount
 
             curOp.end();
 
@@ -515,21 +525,21 @@
 
         /****************************************/
 
-        loadGroup(text: string, options: JsonDaOptions): IDaMainGroup {
+        async loadGroupAsync(text: string, options: JsonDaOptions): Promise<IDaMainGroup> {
 
             return null;
         }
 
         /****************************************/
 
-        loadTable(text: string, options: JsonDaOptions, maxItems?: number): IDaTable {
+        async loadTableAsync(text: string, options: JsonDaOptions, maxItems?: number): Promise<IDaTable> {
 
             return null;
         }
 
         /****************************************/
 
-        analyze(text: string, options?: JsonDaOptions, maxRows?: number): JsonDaOptions {
+        async analyzeAsync(text: string, options?: JsonDaOptions, maxRows?: number): Promise<JsonDaOptions> {
             return null;
         }
 

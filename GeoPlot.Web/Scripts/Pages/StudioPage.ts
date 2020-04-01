@@ -431,7 +431,7 @@
 
             this.node.addNode(node);
 
-            value.attachNode(node);
+                value.attachNode(node);
 
             value.attachGraph(this._graphCtx);
 
@@ -1620,14 +1620,19 @@
                 action.execute = () => this.saveState();
             }));
             actions.push(apply(new ActionViewModel(), action => {
-                action.text = $string("$(options)"),
-                action.icon = "settings";
-                action.execute = () => this.showOptions();
+                action.text = $string("$(import)"),
+                    action.icon = "import_export";
+                action.execute = () => this.import();
             }));
             actions.push(apply(new ActionViewModel(), action => {
                 action.text = $string("$(share) Studio"),
                 action.icon = "share";
                 action.execute = () => this.share();
+            }));
+            actions.push(apply(new ActionViewModel(), action => {
+                action.text = $string("$(options)"),
+                    action.icon = "settings";
+                action.execute = () => this.showOptions();
             }));
 
             const root = new TreeNodeViewModel<any>();
@@ -1794,6 +1799,26 @@
         /****************************************/
 
         protected async onPaste(data: DataTransfer) : Promise<boolean> {
+           
+            const text = data.getData("text/plain").toString();
+            if (text)
+                return await this.importText(text);
+            return false;
+        }
+
+        /****************************************/
+
+        async import() {
+//            var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
+
+            let project = this.getSelectedProject();
+            const data = await this.dataImport.show();
+            this.addImportedData(data, project);
+            return true;
+        }
+        /****************************************/
+
+        async importText(text: string): Promise<boolean> {
 
             let project = this.getSelectedProject();
             if (!project && !this.projects.any())
@@ -1803,68 +1828,68 @@
                 M.toast({ html: $string("$(msg-select-project)") });
                 return false;
             }
-            const text = data.getData("text/plain").toString();
-            if (text) {
-                const serie = StudioSerie.fromText(text);
-                if (serie) {
-                    project.addSerie(serie);
-                    project.node.isExpanded(true);
-                    serie.node.isExpanded(true);
-                    serie.zoom();
-                    const reg = serie.addRegression(null, false);
-                    reg.updateGraph();
-                    reg.node.isSelected(true);
-                    return true;
-                }
 
-                try {
-                    if (this.dataImport.import(text)) {
+            const serie = StudioSerie.fromText(text);
+            if (serie) {
+                project.addSerie(serie);
+                project.node.isExpanded(true);
+                serie.node.isExpanded(true);
+                serie.zoom();
+                const reg = serie.addRegression(null, false);
+                reg.updateGraph();
+                reg.node.isSelected(true);
+                return true;
+            }
 
-                        const data = await this.dataImport.show();
+            try {
 
-                        if (data.length == 1) {
-                            if (this.items.selectedNode() && this.items.selectedNode().value() instanceof StudioSerie) {
-                                if (confirm("Sostituire la serie selezionata con i nuovi dati?")) {
-                                    const serie = <StudioSerie>this.items.selectedNode().value();
-                                    serie.source = data[0];
-                                    serie.importValues(data[0].serie.values);
-                                    serie.updateGraph(true);
-                                    return true;
-                                }
-                            }
-                        }
-
-                        project.node.isExpanded(true);
-
-                        for (let item of data) {
-
-                            const serie = new StudioSerie({
-                                name: item.serie.name,
-                                values: item.serie.values,
-                                source: item
-                            });
-
-                            project.addSerie(serie);
-                            serie.node.isExpanded(true);
-
-                            const reg = serie.addRegression(null, false);
-                            reg.updateGraph();
-                            reg.node.isSelected(true);
-                        }
-
-                        return true;
-                    }
-
-                }
-                catch (e) {
-                    console.error(e);
-                }
+                if (await this.dataImport.importText(text))
+                    await this.import();
+            }
+            catch (e) {
+                console.error(e);
             }
 
             M.toast({ html: $string("$(msg-format-not-reconized)") });
 
             return false;
         }
+
+        /****************************************/
+
+        protected addImportedData(data: IDataImportSerieSource[], project: StudioProject) {
+
+            if (data.length == 1) {
+                if (this.items.selectedNode() && this.items.selectedNode().value() instanceof StudioSerie) {
+                    if (confirm("Sostituire la serie selezionata con i nuovi dati?")) {
+                        const serie = <StudioSerie>this.items.selectedNode().value();
+                        serie.source = data[0];
+                        serie.importValues(data[0].serie.values);
+                        serie.updateGraph(true);
+                        return true;
+                    }
+                }
+            }
+
+            project.node.isExpanded(true);
+
+            for (let item of data) {
+
+                const serie = new StudioSerie({
+                    name: item.serie.name,
+                    values: item.serie.values,
+                    source: item
+                });
+
+                project.addSerie(serie);
+                serie.node.isExpanded(true);
+
+                const reg = serie.addRegression(null, false);
+                reg.updateGraph();
+                reg.node.isSelected(true);
+            }
+        }
+
 
         /****************************************/
 
@@ -1882,15 +1907,6 @@
 
         async init() {
             this.loadState();
-            //this.demo();
-        }
-
-        /****************************************/
-
-        async test() {
-            var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
-            this.dataImport.import(text);
-            this.dataImport.show();
         }
 
         /****************************************/

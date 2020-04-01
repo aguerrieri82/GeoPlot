@@ -17,6 +17,15 @@
                     </div>
                 </div>
                 <div class="content">
+                    <!--ko with: progress-->
+                    <div class="progress-section" data-bind="css: status">
+                        <div class="message" data-bind="text: message"></div>
+                        <div class="progress-container">
+                            <div class="progress-bar" data-bind="style: {width: percentage() + '%'}"></div>
+                        </div>
+                    </div>
+                    <!--/ko-->
+                    <!--ko if: hasData-->
                     <!--Options-->
                     <section class="section-options">
                         <div class="options">
@@ -65,7 +74,23 @@
                         <div string="msg-no-serie-sel"></div>
                         <!--/ko-->
                     </section>
+                    <!--/ko-->
+                    <!--ko ifnot: hasData-->
+                    <div class="import-url">
+                        <div class="input-field">
+                            <label>Url:</label>
+                            <input type="text" data-bind="value: sourceUrl" />
+                        </div>
+                        <button class="btn" data-bind="click: importUrl">Importa URL</button>
+                    </div>
+                    <!--ko with: fileDrop-->
+                    <div class="drop-file" dropzone="copy" data-bind="attach: attachNode">
+                        <string>$(drop-here)</string>
+                    </div>
+                    <!--/ko-->
+                    <!--/ko-->
                 </div>
+
 
 
             </div>

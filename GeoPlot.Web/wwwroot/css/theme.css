@@ -476,6 +476,34 @@ svg.map {
   .studio-page #calculator {
     height: 100%; }
 
+.function-selector {
+  margin-bottom: 16px;
+  margin-top: 16px; }
+  .function-selector > * {
+    border: solid 1px #ccc;
+    padding: 8px;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    height: 32px;
+    width: 32px; }
+    .function-selector > *.active {
+      background-color: #90caf9; }
+    .function-selector > * a {
+      display: block;
+      content: ' ';
+      height: 100%; }
+  .function-selector .linear {
+    background-image: url("../image/linear.png"); }
+  .function-selector .exponential {
+    background-image: url("../image/exponential.png"); }
+  .function-selector .normal {
+    background-image: url("../image/normal.png"); }
+  .function-selector .log-normal {
+    background-image: url("../image/log-normal.png"); }
+
+/****************************************/
+/* Panel                            */
 /****************************************/
 .panel {
   border-bottom: solid 4px #ccc;
@@ -523,32 +551,8 @@ svg.map {
     margin-left: 8px;
     display: block; }
 
-.function-selector {
-  margin-bottom: 16px;
-  margin-top: 16px; }
-  .function-selector > * {
-    border: solid 1px #ccc;
-    padding: 8px;
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    height: 32px;
-    width: 32px; }
-    .function-selector > *.active {
-      background-color: #90caf9; }
-    .function-selector > * a {
-      display: block;
-      content: ' ';
-      height: 100%; }
-  .function-selector .linear {
-    background-image: url("../image/linear.png"); }
-  .function-selector .exponential {
-    background-image: url("../image/exponential.png"); }
-  .function-selector .normal {
-    background-image: url("../image/normal.png"); }
-  .function-selector .log-normal {
-    background-image: url("../image/log-normal.png"); }
-
+/****************************************/
+/* TreeView                             */
 /****************************************/
 .tree-view ul {
   list-style: none;
@@ -589,6 +593,9 @@ svg.map {
 .tree-view .child-nodes {
   margin-left: 40px; }
 
+/****************************************/
+/* DataImport                           */
+/****************************************/
 #dataImport {
   max-height: none; }
   #dataImport .main {
@@ -645,3 +652,34 @@ svg.map {
       margin-right: 8px;
       display: flex;
       flex-direction: column; }
+  #dataImport .import-url {
+    border: solid 1px #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px; }
+  #dataImport .drop-file {
+    border: dashed 1px #333;
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center; }
+    #dataImport .drop-file.drop {
+      border-width: 3px; }
+
+/****************************************/
+/* Progress                            */
+/****************************************/
+.progress-section {
+  flex-shrink: 0;
+  margin-bottom: 16px; }
+  .progress-section .message {
+    font-size: 13px;
+    color: #444;
+    margin-bottom: 8px; }
+  .progress-section .progress-container {
+    height: 6px;
+    background-color: #eee; }
+    .progress-section .progress-container .progress-bar {
+      background-color: #1565c0;
+      height: 100%; }
+  .progress-section.hidden {
+    display: none; }

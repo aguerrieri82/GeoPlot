@@ -561,8 +561,102 @@ var WebApp;
     var GeoPlot;
     (function (GeoPlot) {
         /****************************************/
-        /* DataImportControl
+        /* FileDragDrop
         /****************************************/
+        class FileDragDrop {
+            constructor() {
+                this._dargEnterCount = 0;
+            }
+            /****************************************/
+            attachNode(element) {
+                this._element = element;
+                element.ondragover = ev => this.onDragOver(ev);
+                element.ondrop = ev => this.onDrop(ev);
+                element.ondragenter = ev => this.onDragEnter(ev);
+                element.ondragleave = ev => this.onDragLeave(ev);
+            }
+            /****************************************/
+            onFileDropped(content) {
+            }
+            /****************************************/
+            onDragEnter(ev) {
+                this._dargEnterCount++;
+            }
+            /****************************************/
+            onDragLeave(ev) {
+                this._dargEnterCount--;
+                if (this._dargEnterCount == 0)
+                    WebApp.DomUtils.removeClass(this._element, "drop");
+            }
+            /****************************************/
+            onDragOver(ev) {
+                ev.preventDefault();
+                if (this._dargEnterCount == 1)
+                    WebApp.DomUtils.addClass(this._element, "drop");
+            }
+            /****************************************/
+            onDrop(ev) {
+                return __awaiter(this, void 0, void 0, function* () {
+                    ev.preventDefault();
+                    this._dargEnterCount = 0;
+                    WebApp.DomUtils.removeClass(this._element, "drop");
+                    if (ev.dataTransfer.files.length == 1) {
+                        const file = ev.dataTransfer.files[0];
+                        if (file.name.toLowerCase().endsWith(".csv")) {
+                            const text = yield ev.dataTransfer.files[0].text();
+                            this.onFileDropped(text);
+                            return;
+                        }
+                    }
+                    M.toast({ html: $string("$(msg-not-supported-only-csv)") });
+                });
+            }
+        }
+        GeoPlot.FileDragDrop = FileDragDrop;
+        class ProgressViewModel {
+            /****************************************/
+            constructor() {
+                this._showCount = 0;
+                /****************************************/
+                this.message = ko.observable();
+                this.percentage = ko.observable();
+                this.status = ko.observable();
+                this.status("hidden");
+                WebApp.Operation.onBegin.add((s, op) => this.show(op));
+                WebApp.Operation.onEnd.add((s, op) => this.hide(op));
+                WebApp.Operation.onProgress.add((s, data) => this.update(data.operation, data.progress));
+            }
+            /****************************************/
+            show(op) {
+                if (this._showCount == 0) {
+                    this.status("indefinite");
+                    this.percentage(100);
+                }
+                this.message(op.message);
+                this._showCount++;
+            }
+            /****************************************/
+            update(op, progress) {
+                this.message(op["getProgressDescription"](progress));
+                if (progress.totCount != undefined && progress.current != undefined) {
+                    this.percentage(Math.min(100, (progress.current / progress.totCount) * 100));
+                    this.status("show");
+                }
+                else {
+                    this.status("show");
+                    this.percentage(100);
+                }
+            }
+            /****************************************/
+            hide(op) {
+                this._showCount--;
+                if (this._showCount == 0) {
+                    //this.message("");
+                    this.status("hidden");
+                }
+            }
+        }
+        GeoPlot.ProgressViewModel = ProgressViewModel;
         /****************************************/
         class ColumnViewModel {
             constructor(value) {
@@ -618,6 +712,10 @@ var WebApp;
                 this.columns = ko.observable();
                 this.table = ko.observable();
                 this.treeView = new GeoPlot.TreeViewModel();
+                this.progress = new ProgressViewModel();
+                this.hasData = ko.observable(false);
+                this.sourceUrl = ko.observable();
+                this.fileDrop = new FileDragDrop();
                 this.columnSeparators = [
                     { text: $string("$(tab-key)"), value: "\t" },
                     { text: ",", value: "," },
@@ -626,25 +724,30 @@ var WebApp;
                 ];
                 this.treeView.setRoot(new GeoPlot.TreeNodeViewModel());
                 this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
+                this.fileDrop.onFileDropped = text => this.importText(text);
             }
             /****************************************/
-            import(text, options) {
-                WebApp.linq(new WebApp.CsvSplitEnumerator(",,", ",")).toArray();
-                this._text = text;
-                this._adapter = new WebApp.TextTableDataAdapter();
-                this._options = this._adapter.analyze(this._text, options, 5000);
-                if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
-                    return false;
-                this.hasHeader(this._options.hasHeader);
-                this.columnSeparator(this._options.columnSeparator);
-                const cols = [];
-                for (let col of this._options.columns) {
-                    var model = new ColumnViewModel(col);
-                    cols.push(model);
-                }
-                this.columns(cols);
-                this.updatePreview();
-                return true;
+            importText(text, options) {
+                return __awaiter(this, void 0, void 0, function* () {
+                    M.toast({ html: $string("$(msg-start-analysis)") });
+                    yield WebApp.PromiseUtils.delay(0);
+                    this.hasData(true);
+                    this._text = text;
+                    this._adapter = new WebApp.TextTableDataAdapter();
+                    this._options = yield this._adapter.analyzeAsync(this._text, options, 5000);
+                    if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
+                        return false;
+                    this.hasHeader(this._options.hasHeader);
+                    this.columnSeparator(this._options.columnSeparator);
+                    const cols = [];
+                    for (let col of this._options.columns) {
+                        var model = new ColumnViewModel(col);
+                        cols.push(model);
+                    }
+                    this.columns(cols);
+                    yield this.updatePreview();
+                    return true;
+                });
             }
             /****************************************/
             getSelectedData() {
@@ -695,23 +798,27 @@ var WebApp;
             }
             /****************************************/
             applyChanges() {
-                this._options.hasHeader = this.hasHeader();
-                this._options.columnSeparator = this.columnSeparator();
-                this._options.columns.forEach((col, i) => {
-                    col.name = this.columns()[i].alias();
-                    col.type = this.columns()[i].type();
+                return __awaiter(this, void 0, void 0, function* () {
+                    this._options.hasHeader = this.hasHeader();
+                    this._options.columnSeparator = this.columnSeparator();
+                    this._options.columns.forEach((col, i) => {
+                        col.name = this.columns()[i].alias();
+                        col.type = this.columns()[i].type();
+                    });
+                    yield this.updatePreview(true);
                 });
-                this.updatePreview(true);
             }
             /****************************************/
             updateGroups() {
-                const group = this._adapter.loadGroup(this._text, this._options);
-                let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(group));
-                this.treeView.root().clear();
-                this.treeView.root().addNode(childNode);
-                childNode.value().attachNode(childNode);
-                this.updateNode(childNode, group);
-                childNode.isExpanded(true);
+                return __awaiter(this, void 0, void 0, function* () {
+                    const group = yield this._adapter.loadGroupAsync(this._text, this._options);
+                    let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(group));
+                    this.treeView.root().clear();
+                    this.treeView.root().addNode(childNode);
+                    childNode.value().attachNode(childNode);
+                    this.updateNode(childNode, group);
+                    childNode.isExpanded(true);
+                });
             }
             /****************************************/
             updateNode(node, group) {
@@ -734,12 +841,14 @@ var WebApp;
             }
             /****************************************/
             updateTable() {
-                const result = this._adapter.loadTable(this._text, this._options, 50);
-                const table = {
-                    header: WebApp.linq(this._options.columns).where(a => a.type != WebApp.DaColumnType.Exclude).select(a => a.name).toArray(),
-                    rows: WebApp.linq(result).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
-                };
-                this.table(table);
+                return __awaiter(this, void 0, void 0, function* () {
+                    const result = yield this._adapter.loadTableAsync(this._text, this._options, 50);
+                    const table = {
+                        header: WebApp.linq(this._options.columns).where(a => a.type != WebApp.DaColumnType.Exclude).select(a => a.name).toArray(),
+                        rows: WebApp.linq(result).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
+                    };
+                    this.table(table);
+                });
             }
             /****************************************/
             format(value) {
@@ -753,11 +862,13 @@ var WebApp;
             }
             /****************************************/
             updatePreview(force = false) {
-                if (force || this._options.rowsCount < 5000 - 1)
-                    this.updateGroups();
-                else
-                    this.treeView.root().clear();
-                this.updateTable();
+                return __awaiter(this, void 0, void 0, function* () {
+                    if (force || this._options.rowsCount < 5000 - 1)
+                        yield this.updateGroups();
+                    else
+                        this.treeView.root().clear();
+                    yield this.updateTable();
+                });
             }
             /****************************************/
             onNodeSelected(node) {
@@ -780,11 +891,41 @@ var WebApp;
                         onCloseEnd: el => {
                             if (this._onGetData)
                                 this._onGetData([]);
+                            this.reset();
                         }
                     });
                 }
                 this._model.open();
                 return new Promise(res => this._onGetData = res);
+            }
+            /****************************************/
+            reset() {
+                this._text = null;
+                this._options = null;
+                this._onGetData = null;
+                this.hasData(false);
+                this.treeView.root().clear();
+                this.table(null);
+            }
+            /****************************************/
+            importUrl() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const op = WebApp.Operation.begin($string("$(msg-download-progress)"));
+                    try {
+                        let request = yield fetch(this.sourceUrl());
+                        if (request.ok) {
+                            const text = yield request.text();
+                            if (text) {
+                                this.importText(text);
+                                return;
+                            }
+                        }
+                        M.toast({ html: $string("$(msg-download-error): " + request.statusText) });
+                    }
+                    finally {
+                        op.end();
+                    }
+                });
             }
         }
         GeoPlot.DataImportControl = DataImportControl;
@@ -1188,122 +1329,135 @@ var WebApp;
             return a => null;
         }
         /****************************************/
-        analyze(text, options, maxRows) {
-            if (!options)
-                options = {};
-            //Separators
-            this.extractRowSeparator(text, options);
-            this.extractColumnSeparator(text, options);
-            //Header
-            this.extractHeader(text, options);
-            //Rows
-            let rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
-            if (maxRows)
-                rows = rows.take(maxRows);
-            if (options.hasHeader)
-                rows = rows.skip(1);
-            let curOp = WebApp.Operation.begin("Analazing rows...");
-            //col analysis
-            const colAnalysis = [];
-            let rowCount = 0;
-            rows.foreach(row => {
-                rowCount++;
-                this.analyzeRow(WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray(), colAnalysis);
-                if (rowCount % 200 == 0)
-                    curOp.progress = { current: rowCount };
-            });
-            options.rowsCount = rowCount;
-            curOp.end();
-            const columns = WebApp.linq(options.columns);
-            //Parser
-            colAnalysis.forEach((col, i) => {
-                if (!options.columns[i].parser)
-                    options.columns[i].parser = this.createParser(col);
-            });
-            //X-axis
-            if (!columns.any(a => a.type == DaColumnType.XAxis))
-                columns.first(a => a.type == DaColumnType.Exclude).type = DaColumnType.XAxis;
-            //Y-axis
-            if (!columns.any(a => a.type == DaColumnType.Serie)) {
-                colAnalysis.forEach((col, i) => {
-                    if (col.numberCount > 0 && col.stringCount == 0)
-                        options.columns[i].type = DaColumnType.Serie;
-                });
-            }
-            //groups
-            if (!columns.any(a => a.type == DaColumnType.Group)) {
-                colAnalysis.forEach((col, i) => {
-                    if (col.stringCount > 0 && col.emptyCount == 0) {
-                        var values = WebApp.linq(col.values);
-                        if (values.count() > 1 && values.any(a => a.value > 1))
-                            options.columns[i].type = DaColumnType.Group;
+        analyzeAsync(text, options, maxRows) {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (!options)
+                    options = {};
+                //Separators
+                this.extractRowSeparator(text, options);
+                this.extractColumnSeparator(text, options);
+                //Header
+                this.extractHeader(text, options);
+                //Rows
+                let rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+                if (maxRows)
+                    rows = rows.take(maxRows);
+                if (options.hasHeader)
+                    rows = rows.skip(1);
+                let curOp = WebApp.Operation.begin("Analazing rows...");
+                //col analysis
+                const colAnalysis = [];
+                let rowCount = 0;
+                yield rows.foreachAsync((row) => __awaiter(this, void 0, void 0, function* () {
+                    rowCount++;
+                    this.analyzeRow(WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray(), colAnalysis);
+                    if (rowCount % 200 == 0) {
+                        curOp.progress = { current: rowCount };
+                        yield WebApp.PromiseUtils.delay(0);
                     }
+                }));
+                options.rowsCount = rowCount;
+                curOp.end();
+                const columns = WebApp.linq(options.columns);
+                //Parser
+                colAnalysis.forEach((col, i) => {
+                    if (!options.columns[i].parser)
+                        options.columns[i].parser = this.createParser(col);
                 });
-            }
-            return options;
+                //X-axis
+                if (!columns.any(a => a.type == DaColumnType.XAxis))
+                    columns.first(a => a.type == DaColumnType.Exclude).type = DaColumnType.XAxis;
+                //Y-axis
+                if (!columns.any(a => a.type == DaColumnType.Serie)) {
+                    colAnalysis.forEach((col, i) => {
+                        if (col.numberCount > 0 && col.stringCount == 0)
+                            options.columns[i].type = DaColumnType.Serie;
+                    });
+                }
+                //groups
+                if (!columns.any(a => a.type == DaColumnType.Group)) {
+                    colAnalysis.forEach((col, i) => {
+                        if (col.stringCount > 0 && col.emptyCount == 0) {
+                            var values = WebApp.linq(col.values);
+                            if (values.count() > 1 && values.any(a => a.value > 1))
+                                options.columns[i].type = DaColumnType.Group;
+                        }
+                    });
+                }
+                return options;
+            });
         }
         /****************************************/
-        loadTable(text, options, maxItems) {
-            var result = [];
-            var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
-            if (options.hasHeader)
-                rows = rows.skip(1);
-            for (var row of rows) {
-                const cols = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
-                const item = {};
-                for (let i = 0; i < cols.length; i++) {
-                    const col = options.columns[i];
-                    if (col.type == DaColumnType.Exclude)
-                        continue;
-                    item[col.id] = col.parser(cols[i]);
+        loadTableAsync(text, options, maxItems) {
+            return __awaiter(this, void 0, void 0, function* () {
+                var result = [];
+                var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+                if (options.hasHeader)
+                    rows = rows.skip(1);
+                for (var row of rows) {
+                    const cols = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
+                    const item = {};
+                    for (let i = 0; i < cols.length; i++) {
+                        const col = options.columns[i];
+                        if (col.type == DaColumnType.Exclude)
+                            continue;
+                        item[col.id] = col.parser(cols[i]);
+                    }
+                    result.push(item);
+                    if (maxItems && result.length >= maxItems)
+                        break;
                 }
-                result.push(item);
-                if (maxItems && result.length >= maxItems)
-                    break;
-            }
-            return result;
+                return result;
+            });
         }
         /****************************************/
-        loadGroup(text, options) {
-            var result = { name: $string("$(da-main-group)") };
-            var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
-            if (options.hasHeader)
-                rows = rows.skip(1);
-            const xColumnIndex = WebApp.linq(options.columns).where(a => a.type == DaColumnType.XAxis).select((a, i) => i).first();
-            let curOp = WebApp.Operation.begin("Loading groups...");
-            let rowCount = 0;
-            for (var row of rows) {
-                const values = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
-                const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
-                const item = {};
-                let curGroup = result;
-                for (let i = 0; i < values.length; i++) {
-                    const col = options.columns[i];
-                    if (col.type == DaColumnType.Exclude || col.type == DaColumnType.XAxis)
-                        continue;
-                    let value = col.parser(values[i]);
-                    if (col.type == DaColumnType.Group) {
-                        if (!curGroup.groups)
-                            curGroup.groups = {};
-                        if (value === "")
-                            value = $string("<$(empty)>");
-                        if (!(value in curGroup.groups))
-                            curGroup.groups[value] = { name: value, colId: col.id };
-                        curGroup = curGroup.groups[value];
+        loadGroupAsync(text, options) {
+            return __awaiter(this, void 0, void 0, function* () {
+                var result = { name: $string("$(da-main-group)") };
+                var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+                if (options.hasHeader)
+                    rows = rows.skip(1);
+                const xColumnIndex = WebApp.linq(options.columns).where(a => a.type == DaColumnType.XAxis).select((a, i) => i).first();
+                let curOp = WebApp.Operation.begin("Loading groups...");
+                let rowCount = 0;
+                let chunkCount;
+                yield rows.foreachAsync((row) => __awaiter(this, void 0, void 0, function* () {
+                    const values = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
+                    const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
+                    const item = {};
+                    let curGroup = result;
+                    for (let i = 0; i < values.length; i++) {
+                        const col = options.columns[i];
+                        if (col.type == DaColumnType.Exclude || col.type == DaColumnType.XAxis)
+                            continue;
+                        let value = col.parser(values[i]);
+                        if (col.type == DaColumnType.Group) {
+                            if (!curGroup.groups)
+                                curGroup.groups = {};
+                            if (value === "")
+                                value = $string("<$(empty)>");
+                            if (!(value in curGroup.groups))
+                                curGroup.groups[value] = { name: value, colId: col.id };
+                            curGroup = curGroup.groups[value];
+                        }
+                        else if (col.type == DaColumnType.Serie) {
+                            if (!curGroup.series)
+                                curGroup.series = {};
+                            if (!(col.id in curGroup.series))
+                                curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
+                            curGroup.series[col.id].values.push({ x: xValue, y: value });
+                        }
                     }
-                    else if (col.type == DaColumnType.Serie) {
-                        if (!curGroup.series)
-                            curGroup.series = {};
-                        if (!(col.id in curGroup.series))
-                            curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
-                        curGroup.series[col.id].values.push({ x: xValue, y: value });
+                    rowCount++;
+                    if (rowCount % 200 == 0) {
+                        curOp.progress = { current: rowCount, totCount: options.rowsCount };
+                        yield WebApp.PromiseUtils.delay(0);
                     }
-                }
-                rowCount++;
-                curOp.progress = { current: rowCount, totCount: options.rowsCount };
-            }
-            curOp.end();
-            return result;
+                }));
+                options.rowsCount = rowCount;
+                curOp.end();
+                return result;
+            });
         }
     }
     WebApp.TextTableDataAdapter = TextTableDataAdapter;
@@ -1313,16 +1467,22 @@ var WebApp;
             super();
         }
         /****************************************/
-        loadGroup(text, options) {
-            return null;
+        loadGroupAsync(text, options) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return null;
+            });
         }
         /****************************************/
-        loadTable(text, options, maxItems) {
-            return null;
+        loadTableAsync(text, options, maxItems) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return null;
+            });
         }
         /****************************************/
-        analyze(text, options, maxRows) {
-            return null;
+        analyzeAsync(text, options, maxRows) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return null;
+            });
         }
     }
     WebApp.JsonDataAdapter = JsonDataAdapter;
@@ -1483,6 +1643,7 @@ var WebApp;
                     console.log(this.getProgressDescription(this._progress));
                     if (this._progress.message)
                         this.message = this._progress.message;
+                    WebApp.Operation.onProgress.raise(this, { operation: this, progress: value });
                 }
                 else
                     this.message = undefined;
@@ -1509,6 +1670,10 @@ var WebApp;
         class BaseOperationManager {
             constructor() {
                 this._oprations = [];
+                /****************************************/
+                this.onBegin = WebApp.event();
+                this.onEnd = WebApp.event();
+                this.onProgress = WebApp.event();
             }
             progress(progress) {
                 if (WebApp.ObjectUtils.isString(progress))
@@ -1533,6 +1698,7 @@ var WebApp;
                 }
                 else
                     operation.parentOperation.addSubOperation(operation);
+                this.onBegin.raise(this, operation);
                 return operation;
             }
             /****************************************/
@@ -1548,6 +1714,7 @@ var WebApp;
                     if (operation.type == WebApp.OperationType.Global) {
                     }
                 }
+                this.onEnd.raise(this, operation);
             }
             /****************************************/
             get current() {
@@ -3999,14 +4166,19 @@ var WebApp;
                     action.execute = () => this.saveState();
                 }));
                 actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(options)"),
-                        action.icon = "settings";
-                    action.execute = () => this.showOptions();
+                    action.text = $string("$(import)"),
+                        action.icon = "import_export";
+                    action.execute = () => this.import();
                 }));
                 actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(share) Studio"),
                         action.icon = "share";
                     action.execute = () => this.share();
+                }));
+                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                    action.text = $string("$(options)"),
+                        action.icon = "settings";
+                    action.execute = () => this.showOptions();
                 }));
                 const root = new GeoPlot.TreeNodeViewModel();
                 root.actions(actions);
@@ -4141,6 +4313,25 @@ var WebApp;
             /****************************************/
             onPaste(data) {
                 return __awaiter(this, void 0, void 0, function* () {
+                    const text = data.getData("text/plain").toString();
+                    if (text)
+                        return yield this.importText(text);
+                    return false;
+                });
+            }
+            /****************************************/
+            import() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    //            var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
+                    let project = this.getSelectedProject();
+                    const data = yield this.dataImport.show();
+                    this.addImportedData(data, project);
+                    return true;
+                });
+            }
+            /****************************************/
+            importText(text) {
+                return __awaiter(this, void 0, void 0, function* () {
                     let project = this.getSelectedProject();
                     if (!project && !this.projects.any())
                         project = this.newProject();
@@ -4148,56 +4339,54 @@ var WebApp;
                         M.toast({ html: $string("$(msg-select-project)") });
                         return false;
                     }
-                    const text = data.getData("text/plain").toString();
-                    if (text) {
-                        const serie = StudioSerie.fromText(text);
-                        if (serie) {
-                            project.addSerie(serie);
-                            project.node.isExpanded(true);
-                            serie.node.isExpanded(true);
-                            serie.zoom();
-                            const reg = serie.addRegression(null, false);
-                            reg.updateGraph();
-                            reg.node.isSelected(true);
-                            return true;
-                        }
-                        try {
-                            if (this.dataImport.import(text)) {
-                                const data = yield this.dataImport.show();
-                                if (data.length == 1) {
-                                    if (this.items.selectedNode() && this.items.selectedNode().value() instanceof StudioSerie) {
-                                        if (confirm("Sostituire la serie selezionata con i nuovi dati?")) {
-                                            const serie = this.items.selectedNode().value();
-                                            serie.source = data[0];
-                                            serie.importValues(data[0].serie.values);
-                                            serie.updateGraph(true);
-                                            return true;
-                                        }
-                                    }
-                                }
-                                project.node.isExpanded(true);
-                                for (let item of data) {
-                                    const serie = new StudioSerie({
-                                        name: item.serie.name,
-                                        values: item.serie.values,
-                                        source: item
-                                    });
-                                    project.addSerie(serie);
-                                    serie.node.isExpanded(true);
-                                    const reg = serie.addRegression(null, false);
-                                    reg.updateGraph();
-                                    reg.node.isSelected(true);
-                                }
-                                return true;
-                            }
-                        }
-                        catch (e) {
-                            console.error(e);
-                        }
+                    const serie = StudioSerie.fromText(text);
+                    if (serie) {
+                        project.addSerie(serie);
+                        project.node.isExpanded(true);
+                        serie.node.isExpanded(true);
+                        serie.zoom();
+                        const reg = serie.addRegression(null, false);
+                        reg.updateGraph();
+                        reg.node.isSelected(true);
+                        return true;
+                    }
+                    try {
+                        if (yield this.dataImport.importText(text))
+                            yield this.import();
+                    }
+                    catch (e) {
+                        console.error(e);
                     }
                     M.toast({ html: $string("$(msg-format-not-reconized)") });
                     return false;
                 });
+            }
+            /****************************************/
+            addImportedData(data, project) {
+                if (data.length == 1) {
+                    if (this.items.selectedNode() && this.items.selectedNode().value() instanceof StudioSerie) {
+                        if (confirm("Sostituire la serie selezionata con i nuovi dati?")) {
+                            const serie = this.items.selectedNode().value();
+                            serie.source = data[0];
+                            serie.importValues(data[0].serie.values);
+                            serie.updateGraph(true);
+                            return true;
+                        }
+                    }
+                }
+                project.node.isExpanded(true);
+                for (let item of data) {
+                    const serie = new StudioSerie({
+                        name: item.serie.name,
+                        values: item.serie.values,
+                        source: item
+                    });
+                    project.addSerie(serie);
+                    serie.node.isExpanded(true);
+                    const reg = serie.addRegression(null, false);
+                    reg.updateGraph();
+                    reg.node.isSelected(true);
+                }
             }
             /****************************************/
             get projects() {
@@ -4211,15 +4400,6 @@ var WebApp;
             init() {
                 return __awaiter(this, void 0, void 0, function* () {
                     this.loadState();
-                    //this.demo();
-                });
-            }
-            /****************************************/
-            test() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    var text = yield (yield fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
-                    this.dataImport.import(text);
-                    this.dataImport.show();
                 });
             }
         }

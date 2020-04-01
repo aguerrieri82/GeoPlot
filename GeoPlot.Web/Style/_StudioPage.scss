@@ -100,6 +100,50 @@
     }
 }
 
+.function-selector {
+    margin-bottom: 16px;
+    margin-top: 16px;
+
+    > * {
+        border: solid 1px #ccc;
+        padding: 8px;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        height: 32px;
+        width: 32px;
+
+        &.active {
+            background-color: #90caf9;
+        }
+
+        a {
+            display: block;
+            content: ' ';
+            height: 100%;
+        }
+    }
+
+    .linear {
+        background-image: url('../image/linear.png');
+    }
+
+    .exponential {
+        background-image: url('../image/exponential.png');
+    }
+
+    .normal {
+        background-image: url('../image/normal.png');
+    }
+
+    .log-normal {
+        background-image: url('../image/log-normal.png');
+    }
+}
+
+
+/****************************************/
+/* Panel                            */
 /****************************************/
 
 .panel {
@@ -161,14 +205,15 @@
     }
 }
 
-.color-edit{
+.color-edit {
     display: flex;
     align-items: center;
 
-    .input-field{
-        flex-grow:1;
+    .input-field {
+        flex-grow: 1;
     }
-    .color-box{
+
+    .color-box {
         width: 24px;
         height: 24px;
         border: solid 1px #ccc;
@@ -177,48 +222,11 @@
     }
 }
 
-.function-selector {
-    margin-bottom: 16px;
-    margin-top: 16px;
-
-    > * {
-        border: solid 1px #ccc;
-        padding: 8px;
-        background-position: center center;
-        background-repeat: no-repeat;
-        background-size: contain;
-        height: 32px;
-        width: 32px;
-
-        &.active {
-            background-color: #90caf9;
-        }
-
-        a {
-            display: block;
-            content: ' ';
-            height: 100%;
-        }
-    }
-
-    .linear {
-        background-image: url('../image/linear.png');
-    }
-
-    .exponential {
-        background-image: url('../image/exponential.png');
-    }
-
-    .normal {
-        background-image: url('../image/normal.png');
-    }
-
-    .log-normal {
-        background-image: url('../image/log-normal.png');
-    }
-}
 
 /****************************************/
+/* TreeView                             */
+/****************************************/
+
 .tree-view {
     ul {
         list-style: none;
@@ -299,6 +307,9 @@
     }
 }
 
+/****************************************/
+/* DataImport                           */
+/****************************************/
 
 #dataImport {
     max-height: none;
@@ -377,6 +388,62 @@
             margin-right: 8px;
             display: flex;
             flex-direction: column;
+        }
+    }
+
+    .import-url {
+        border: solid 1px #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 8px;
+    }
+
+    .drop-file {
+        border: dashed 1px #333;
+        border-radius: 4px;
+        padding: 16px;
+        text-align: center;
+
+        &.drop{
+            border-width: 3px;
+        }
+    }
+}
+
+/****************************************/
+/* Progress                            */
+/****************************************/
+
+.progress-section {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+
+    .message {
+        font-size: 13px;
+        color: #444;
+        margin-bottom: 8px;
+    }
+
+    .progress-container {
+        height: 6px;
+        background-color: #eee;
+
+        .progress-bar {
+            background-color: #1565c0;
+            height: 100%;
+        }
+    }
+
+
+    &.hidden {
+        display: none;
+    }
+
+    &.indefinite {
+        .progress-container {
+
+            .progress {
+            }
         }
     }
 }

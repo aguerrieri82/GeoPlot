@@ -47,6 +47,8 @@
 
                 if (this._progress.message)
                     this.message = this._progress.message;
+
+                Operation.onProgress.raise(this, { operation: this, progress: value });
             }
             else
                 this.message = undefined;
@@ -129,6 +131,8 @@
             else
                 operation.parentOperation.addSubOperation(operation);
 
+            this.onBegin.raise(this, operation);
+
             return operation;
         }
 
@@ -149,6 +153,7 @@
                 if (operation.type == OperationType.Global) {
                 }
             }
+            this.onEnd.raise(this, operation);
         }
 
         /****************************************/
@@ -162,6 +167,12 @@
         get operations(): Iterable<IOperation> {
             return this._oprations;
         }
+
+        /****************************************/
+
+        readonly onBegin = event<IOperation>();
+        readonly onEnd = event<IOperation>();
+        readonly onProgress = event<{ operation: IOperation, progress: IOperationProgress }>();
     }
 
     /****************************************/
