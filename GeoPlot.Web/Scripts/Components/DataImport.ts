@@ -66,11 +66,22 @@
         dateCount: number;
     }
 
+
+    /****************************************/
+
+    export interface IDataImportSerieSource  {
+        type: "data-import";
+        options: IDataAdapterOptions;
+        groups?: { id: string, value: string }[];
+        serie: IDataSerie;
+        source?: string;
+    }
+
     /****************************************/
     /* IDataAdapter
     /****************************************/
 
-    interface IDataSeriePoint {
+    export interface IDataSeriePoint {
         x: any;
         y: number;
     }
@@ -80,12 +91,14 @@
     interface IDataSerie {
         name: string;
         values: IDataSeriePoint[];
+        colId: string;
     }
 
     /****************************************/
 
     interface IDataGroup {
         name: string;
+        colId?: string;
         groups?: IDictionary<IDataGroup>;
         series?: IDictionary<IDataSerie>;
     }
@@ -502,7 +515,7 @@
                             value = $string("<$(empty)>");
 
                         if (!(value in curGroup.groups)) 
-                            curGroup.groups[value] = { name: value };
+                            curGroup.groups[value] = { name: value, colId: col.id };
 
                         curGroup = curGroup.groups[value];
                     }
@@ -512,7 +525,7 @@
                             curGroup.series = {};
 
                         if (!(col.id in curGroup.series))
-                            curGroup.series[col.id] = { name: col.id, values: [] };
+                            curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
 
                         curGroup.series[col.id].values.push({ x: xValue, y: value });
                     }
@@ -699,6 +712,7 @@
         /****************************************/
 
         value: IDataSerie;
+        colId: string;
     }
 
     /****************************************/
@@ -709,6 +723,7 @@
         private _adapter: IDataAdapter<IDataAdapterOptions>;
         private _text: string;
         private _options: ITextTableDataAdapterOptions;
+        private _onGetData: (data: IDataImportSerieSource[]) => void;
 
         constructor() {
 
@@ -752,6 +767,63 @@
             this.updatePreview();
 
             return true;
+        }
+
+        /****************************************/
+
+        async getSelectedData(): Promise<IDataImportSerieSource[]> {
+
+            const result: IDataImportSerieSource[] = [];
+            await this.getSelectedDataWork(this.treeView.root(), [], result);
+            return result;
+        }
+
+        /****************************************/
+
+        protected async getSelectedDataWork(node: TreeNodeViewModel<ITreeItem>, groups: { id: string, value: string }[], result: IDataImportSerieSource[]) {
+
+            if (!node.isVisible())
+                return;
+
+            if (node.value() instanceof SerieItem) {
+                const serie = (<SerieItem>node.value()).value;
+                const source: IDataImportSerieSource = {
+                    type: "data-import",
+                    options: this._options,
+                    serie: serie,
+                    groups: groups
+                };
+                result.push(source);
+                return;
+            }
+
+            if (!node.isExpanded())
+                await node.loadChildNodes();
+
+            if (node.value() instanceof GroupItem) {
+
+                const group = (<GroupItem>node.value()).value;
+
+                let newGroups = groups.slice(0, groups.length);
+                newGroups.push({ id: group.colId, value: group.name });
+
+                groups = newGroups;
+            }
+
+            for (let childNode of node.nodes())
+                await this.getSelectedDataWork(childNode, groups, result);
+        }
+
+
+        /****************************************/
+
+        async executeImport() {
+            const data = await this.getSelectedData();
+            if (this._onGetData) {
+                this._onGetData(data);
+                this._onGetData = null;
+            }
+            this._model.close();
         }
 
         /****************************************/
@@ -855,13 +927,23 @@
 
         /****************************************/
 
-        show() {
+        show() : Promise<IDataImportSerieSource[]> {
 
-            if (!this._model)
-                this._model = M.Modal.init(document.getElementById("dataImport"));
+            if (!this._model) {
+                this._model = M.Modal.init(document.getElementById("dataImport"), {
+                    onCloseEnd: el => {
+                        if (this._onGetData)
+                            this._onGetData([]);
+                    }
+                });
+            }
 
             this._model.open();
+            
+            return new Promise(res => this._onGetData = res);
         }
+
+
 
         /****************************************/
 

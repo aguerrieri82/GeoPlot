@@ -15,7 +15,7 @@
         type: "serie";
         serie: IDayAreaSerieSource;
         title: string;
-        values?: IFunctionPoint<number>[];
+        values?: IFunctionPoint[];
         color?: string;
     }
 
@@ -99,6 +99,7 @@
             this.calculator.setState(state);
         }
 
+
         /****************************************/
 
         setColor(id: string, color: string) {
@@ -107,9 +108,10 @@
 
         /****************************************/
 
-        updateTable(id: string, values: IFunctionPoint<number>[]) {
+        updateTable(id: string, values: IFunctionPoint[]) {
             const exp = <Desmos.ITableExpression>linq(this.calculator.getExpressions()).where(a => a.id == id).first();
             if (exp) {
+
                 exp.columns[0].values = linq(values).select(a => a.x.toString()).toArray();
                 exp.columns[1].values = linq(values).select(a => a.y.toString()).toArray();
                 this.calculator.setExpression(exp);
@@ -1055,14 +1057,14 @@
     /****************************************/
 
     interface IDiscreteFunction extends IFunction {
-        readonly values: IFunctionPoint<number>[];
+        readonly values: IFunctionPoint[];
     }
 
     /****************************************/
 
     interface IStudioSerieConfig extends IItemConfig {
-        source?: IDayAreaSerieSource;
-        values?: IFunctionPoint<number>[];
+        source?: SerieSource;
+        values?: IFunctionPoint[];
         offsetX?: number;
         children?: IStudioRegressionConfig[];
     }
@@ -1095,6 +1097,34 @@
                 this.setState(config);
             }
         }
+
+
+        /****************************************/
+
+        importValues(points: IDataSeriePoint[]): IFunctionPoint[] {
+
+            if (points && points.length > 0) {
+
+                if (points[0].x instanceof Date) {
+                    const startDate = <Date>points[0].x;
+                    return linq(points).select(a => (<IFunctionPoint>{
+                        x: Math.round(DateUtils.diff(a.x, startDate).totalDays),
+                        xLabel: a.x,
+                        y: a.y
+                    })).toArray();
+                }
+
+                if (isNaN( points[0].x)) {
+                    return linq(points).select((a, i) => (<IFunctionPoint>{
+                        x: i,
+                        xLabel: a.x,
+                        y: a.y
+                    })).toArray();
+                }
+            }
+            return points;
+        }
+
 
         /****************************************/
 
@@ -1307,7 +1337,7 @@
                 this.source = state.source;
 
             if (state.values != undefined)
-                this.values = state.values;
+                this.values = this.importValues(state.values);
         }
 
         /****************************************/
@@ -1332,17 +1362,24 @@
 
         async updateSerie() {
 
-            if (!this._graphCtx.serieCalculator) {
-                M.toast({ html: $string("$(msg-downloading-data)") })
-                const model = await Api.loadStudioData();
-                this._graphCtx.serieCalculator = new IndicatorCalculator(model.data, InfectionDataSet, model.geo);
+            if (this.source.type == "geoplot") {
+
+                if (!this._graphCtx.serieCalculator) {
+                    M.toast({ html: $string("$(msg-downloading-data)") })
+                    const model = await Api.loadStudioData();
+                    this._graphCtx.serieCalculator = new IndicatorCalculator(model.data, InfectionDataSet, model.geo);
+                }
+
+                this.values = this.importValues(this._graphCtx.serieCalculator.getSerie(this.source));
+
+                this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+                this.children.foreach(a => a.onParentChanged());
+
+                M.toast({ html: $string("$(msg-update-complete)") })
             }
+            else
+                M.toast({ html: $string("$(msg-update-not-supported)") })
 
-            this.values = this._graphCtx.serieCalculator.getSerie(this.source);
-            this._graphCtx.updateTable(this.getGraphId("table"), this.values);
-            this.children.foreach(a => a.onParentChanged());
-
-            M.toast({html: $string("$(msg-update-complete)")})
         }
 
         /****************************************/
@@ -1365,8 +1402,8 @@
 
         color = ko.observable<string>();
         offsetX = ko.observable<number>(0);
-        source: IDayAreaSerieSource;
-        values: IFunctionPoint<number>[];
+        source: SerieSource;
+        values: IFunctionPoint[];
     }
 
     /****************************************/
@@ -1597,8 +1634,8 @@
             root.actions(actions);
             this.items.setRoot(root);
 
-            document.body.addEventListener("paste", ev => {
-                if (this.onPaste(ev.clipboardData))
+            document.body.addEventListener("paste", async ev => {
+                if (await this.onPaste(ev.clipboardData))
                     ev.preventDefault();
             });
 
@@ -1756,38 +1793,77 @@
 
         /****************************************/
 
-        protected onPaste(data: DataTransfer) : boolean {
+        protected async onPaste(data: DataTransfer) : Promise<boolean> {
 
             let project = this.getSelectedProject();
             if (!project && !this.projects.any())
                 project = this.newProject();
 
-            if (project) {
-                const text = data.getData("text/plain").toString();
-                if (text) {
-                    const serie = StudioSerie.fromText(text);
-                    if (serie) {
-                        project.addSerie(serie);
+            if (!project) {
+                M.toast({ html: $string("$(msg-select-project)") });
+                return false;
+            }
+            const text = data.getData("text/plain").toString();
+            if (text) {
+                const serie = StudioSerie.fromText(text);
+                if (serie) {
+                    project.addSerie(serie);
+                    project.node.isExpanded(true);
+                    serie.node.isExpanded(true);
+                    serie.zoom();
+                    const reg = serie.addRegression(null, false);
+                    reg.updateGraph();
+                    reg.node.isSelected(true);
+                    return true;
+                }
+
+                try {
+                    if (this.dataImport.import(text)) {
+
+                        const data = await this.dataImport.show();
+
+                        if (data.length == 1) {
+                            if (this.items.selectedNode() && this.items.selectedNode().value() instanceof StudioSerie) {
+                                if (confirm("Sostituire la serie selezionata con i nuovi dati?")) {
+                                    const serie = <StudioSerie>this.items.selectedNode().value();
+                                    serie.source = data[0];
+                                    serie.importValues(data[0].serie.values);
+                                    serie.updateGraph(true);
+                                    return true;
+                                }
+                            }
+                        }
+
                         project.node.isExpanded(true);
-                        serie.node.isExpanded(true);
-                        serie.zoom();
-                        const reg = serie.addRegression(null, false);
-                        reg.updateGraph();
-                        reg.node.isSelected(true);
+
+                        for (let item of data) {
+
+                            const serie = new StudioSerie({
+                                name: item.serie.name,
+                                values: item.serie.values,
+                                source: item
+                            });
+
+                            project.addSerie(serie);
+                            serie.node.isExpanded(true);
+
+                            const reg = serie.addRegression(null, false);
+                            reg.updateGraph();
+                            reg.node.isSelected(true);
+                        }
+
                         return true;
                     }
 
-                    if (this.dataImport.import(text)) {
-                        this.dataImport.show();
-                        return;
-                    }
-
                 }
-
-                M.toast({ html: $string("$(msg-format-not-reconized)") });
+                catch (e) {
+                    console.error(e);
+                }
             }
-            else
-                M.toast({ html: $string("$(msg-select-project)") });
+
+            M.toast({ html: $string("$(msg-format-not-reconized)") });
+
+            return false;
         }
 
         /****************************************/

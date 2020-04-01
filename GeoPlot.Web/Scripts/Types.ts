@@ -91,7 +91,12 @@
 
     /****************************************/
 
-    export interface IDayAreaSerieSource {
+    export type SerieSource = IDayAreaSerieSource | IDataImportSerieSource;
+
+    /****************************************/
+
+    export interface IDayAreaSerieSource  {
+        type: "geoplot";
         areaId: string;
         exeludedAreaIds?: string[];
         indicatorId: string;
@@ -106,9 +111,10 @@
 
     /****************************************/
 
-    export interface IFunctionPoint<TX extends Date|number> {
-        x: TX;
+    export interface IFunctionPoint {
+        x: number;
         y: number;
+        xLabel?: string;
     }
 
     /****************************************/
@@ -118,7 +124,6 @@
         data: T;
         isSuccess: boolean;
     }
-
 }
 
 

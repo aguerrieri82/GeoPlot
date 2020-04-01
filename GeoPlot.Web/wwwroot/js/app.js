@@ -598,14 +598,14 @@ var WebApp;
                             if (value === "")
                                 value = $string("<$(empty)>");
                             if (!(value in curGroup.groups))
-                                curGroup.groups[value] = { name: value };
+                                curGroup.groups[value] = { name: value, colId: col.id };
                             curGroup = curGroup.groups[value];
                         }
                         else if (col.type == ColumnType.Serie) {
                             if (!curGroup.series)
                                 curGroup.series = {};
                             if (!(col.id in curGroup.series))
-                                curGroup.series[col.id] = { name: col.id, values: [] };
+                                curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
                             curGroup.series[col.id].values.push({ x: xValue, y: value });
                         }
                     }
@@ -742,6 +742,53 @@ var WebApp;
                 return true;
             }
             /****************************************/
+            getSelectedData() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const result = [];
+                    yield this.getSelectedDataWork(this.treeView.root(), [], result);
+                    return result;
+                });
+            }
+            /****************************************/
+            getSelectedDataWork(node, groups, result) {
+                return __awaiter(this, void 0, void 0, function* () {
+                    if (!node.isVisible())
+                        return;
+                    if (node.value() instanceof SerieItem) {
+                        const serie = node.value().value;
+                        const source = {
+                            type: "data-import",
+                            options: this._options,
+                            serie: serie,
+                            groups: groups
+                        };
+                        result.push(source);
+                        return;
+                    }
+                    if (!node.isExpanded())
+                        yield node.loadChildNodes();
+                    if (node.value() instanceof GroupItem) {
+                        const group = node.value().value;
+                        let newGroups = groups.slice(0, groups.length);
+                        newGroups.push({ id: group.colId, value: group.name });
+                        groups = newGroups;
+                    }
+                    for (let childNode of node.nodes())
+                        yield this.getSelectedDataWork(childNode, groups, result);
+                });
+            }
+            /****************************************/
+            executeImport() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const data = yield this.getSelectedData();
+                    if (this._onGetData) {
+                        this._onGetData(data);
+                        this._onGetData = null;
+                    }
+                    this._model.close();
+                });
+            }
+            /****************************************/
             applyChanges() {
                 this._options.hasHeader = this.hasHeader();
                 this._options.columnSeparator = this.columnSeparator();
@@ -813,9 +860,16 @@ var WebApp;
             }
             /****************************************/
             show() {
-                if (!this._model)
-                    this._model = M.Modal.init(document.getElementById("dataImport"));
+                if (!this._model) {
+                    this._model = M.Modal.init(document.getElementById("dataImport"), {
+                        onCloseEnd: el => {
+                            if (this._onGetData)
+                                this._onGetData([]);
+                        }
+                    });
+                }
                 this._model.open();
+                return new Promise(res => this._onGetData = res);
             }
         }
         GeoPlot.DataImportControl = DataImportControl;
@@ -3299,6 +3353,27 @@ var WebApp;
                 }
             }
             /****************************************/
+            importValues(points) {
+                if (points && points.length > 0) {
+                    if (points[0].x instanceof Date) {
+                        const startDate = points[0].x;
+                        return WebApp.linq(points).select(a => ({
+                            x: Math.round(WebApp.DateUtils.diff(a.x, startDate).totalDays),
+                            xLabel: a.x,
+                            y: a.y
+                        })).toArray();
+                    }
+                    if (isNaN(points[0].x)) {
+                        return WebApp.linq(points).select((a, i) => ({
+                            x: i,
+                            xLabel: a.x,
+                            y: a.y
+                        })).toArray();
+                    }
+                }
+                return points;
+            }
+            /****************************************/
             writeData(transfer) {
                 var data = {
                     version: 1,
@@ -3467,7 +3542,7 @@ var WebApp;
                 if (state.source)
                     this.source = state.source;
                 if (state.values != undefined)
-                    this.values = state.values;
+                    this.values = this.importValues(state.values);
             }
             /****************************************/
             getState() {
@@ -3485,15 +3560,19 @@ var WebApp;
             /****************************************/
             updateSerie() {
                 return __awaiter(this, void 0, void 0, function* () {
-                    if (!this._graphCtx.serieCalculator) {
-                        M.toast({ html: $string("$(msg-downloading-data)") });
-                        const model = yield GeoPlot.Api.loadStudioData();
-                        this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(model.data, GeoPlot.InfectionDataSet, model.geo);
+                    if (this.source.type == "geoplot") {
+                        if (!this._graphCtx.serieCalculator) {
+                            M.toast({ html: $string("$(msg-downloading-data)") });
+                            const model = yield GeoPlot.Api.loadStudioData();
+                            this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(model.data, GeoPlot.InfectionDataSet, model.geo);
+                        }
+                        this.values = this.importValues(this._graphCtx.serieCalculator.getSerie(this.source));
+                        this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+                        this.children.foreach(a => a.onParentChanged());
+                        M.toast({ html: $string("$(msg-update-complete)") });
                     }
-                    this.values = this._graphCtx.serieCalculator.getSerie(this.source);
-                    this._graphCtx.updateTable(this.getGraphId("table"), this.values);
-                    this.children.foreach(a => a.onParentChanged());
-                    M.toast({ html: $string("$(msg-update-complete)") });
+                    else
+                        M.toast({ html: $string("$(msg-update-not-supported)") });
                 });
             }
             /****************************************/
@@ -3661,10 +3740,10 @@ var WebApp;
                 const root = new GeoPlot.TreeNodeViewModel();
                 root.actions(actions);
                 this.items.setRoot(root);
-                document.body.addEventListener("paste", ev => {
-                    if (this.onPaste(ev.clipboardData))
+                document.body.addEventListener("paste", (ev) => __awaiter(this, void 0, void 0, function* () {
+                    if (yield this.onPaste(ev.clipboardData))
                         ev.preventDefault();
-                });
+                }));
                 M.Modal.init(document.getElementById("options"), {
                     onCloseEnd: () => this.updateOptions()
                 });
@@ -3790,10 +3869,14 @@ var WebApp;
             }
             /****************************************/
             onPaste(data) {
-                let project = this.getSelectedProject();
-                if (!project && !this.projects.any())
-                    project = this.newProject();
-                if (project) {
+                return __awaiter(this, void 0, void 0, function* () {
+                    let project = this.getSelectedProject();
+                    if (!project && !this.projects.any())
+                        project = this.newProject();
+                    if (!project) {
+                        M.toast({ html: $string("$(msg-select-project)") });
+                        return false;
+                    }
                     const text = data.getData("text/plain").toString();
                     if (text) {
                         const serie = StudioSerie.fromText(text);
@@ -3807,15 +3890,43 @@ var WebApp;
                             reg.node.isSelected(true);
                             return true;
                         }
-                        if (this.dataImport.import(text)) {
-                            this.dataImport.show();
-                            return;
+                        try {
+                            if (this.dataImport.import(text)) {
+                                const data = yield this.dataImport.show();
+                                if (data.length == 1) {
+                                    if (this.items.selectedNode() && this.items.selectedNode().value() instanceof StudioSerie) {
+                                        if (confirm("Sostituire la serie selezionata con i nuovi dati?")) {
+                                            const serie = this.items.selectedNode().value();
+                                            serie.source = data[0];
+                                            serie.importValues(data[0].serie.values);
+                                            serie.updateGraph(true);
+                                            return true;
+                                        }
+                                    }
+                                }
+                                project.node.isExpanded(true);
+                                for (let item of data) {
+                                    const serie = new StudioSerie({
+                                        name: item.serie.name,
+                                        values: item.serie.values,
+                                        source: item
+                                    });
+                                    project.addSerie(serie);
+                                    serie.node.isExpanded(true);
+                                    const reg = serie.addRegression(null, false);
+                                    reg.updateGraph();
+                                    reg.node.isSelected(true);
+                                }
+                                return true;
+                            }
+                        }
+                        catch (e) {
+                            console.error(e);
                         }
                     }
                     M.toast({ html: $string("$(msg-format-not-reconized)") });
-                }
-                else
-                    M.toast({ html: $string("$(msg-select-project)") });
+                    return false;
+                });
             }
             /****************************************/
             get projects() {
