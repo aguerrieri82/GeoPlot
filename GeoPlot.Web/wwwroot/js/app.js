@@ -2151,6 +2151,7 @@ var WebApp;
                         version: 1,
                         color: this.selectedIndicator().colorLight,
                         serie: {
+                            type: "geoplot",
                             areaId: this.selectedArea.id,
                             indicatorId: this.selectedIndicator().id,
                             xAxis: "dayNumber",
@@ -2485,6 +2486,7 @@ var WebApp;
                 this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
                 this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
                 this._chart.data.datasets[0].data = this._calculator.getSerie({
+                    type: "geoplot",
                     areaId: area.id,
                     indicatorId: this.selectedIndicator().id,
                     xAxis: "date",

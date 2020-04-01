@@ -224,9 +224,9 @@
 
         /****************************************/
 
-        getSerie<TX extends Date|number>(source: IDayAreaSerieSource) : IFunctionPoint<TX>[] {
+        getSerie<TX extends Date|number>(source: IDayAreaSerieSource) : IFunctionPoint[] {
 
-            const result: IFunctionPoint<TX>[] = [];
+            const result: IFunctionPoint[] = [];
             if (source.groupSize > 1) {
 
                 let count = source.groupSize;
@@ -235,7 +235,7 @@
                     group.push(i);
                     count--;
                     if (count == 0) {
-                        const item: IFunctionPoint<TX> = {
+                        const item: IFunctionPoint = {
                             x: <any>(source.xAxis == "date" ? new Date(this._data.days[i].date) : i),
                             y: this.getFactorValue({ 
                                 dayNumberOrGroup: source.isDelta ? group : i,
