@@ -1101,7 +1101,7 @@
 
         /****************************************/
 
-        importValues(points: IDataSeriePoint[]): IFunctionPoint[] {
+        importValues(points: IDaSeriePoint[]): IFunctionPoint[] {
 
             if (points && points.length > 0) {
 
@@ -1888,7 +1888,7 @@
         /****************************************/
 
         async test() {
-            var text = await Http.getStringAsync("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv");
+            var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
             this.dataImport.import(text);
             this.dataImport.show();
         }

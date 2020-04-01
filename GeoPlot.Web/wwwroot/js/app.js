@@ -321,333 +321,8 @@ var WebApp;
 (function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
-        class SplitEnumerator {
-            constructor(value, separator, startIndex = 0) {
-                this._value = value;
-                this._separator = separator;
-                this._startIndex = startIndex;
-            }
-            /****************************************/
-            get current() {
-                if (!this._current)
-                    this._current = this._value.substring(this._currentStartIndex, this._curIndex - this._separator.length);
-                return this._current;
-            }
-            /****************************************/
-            moveNext() {
-                if (this._curIndex > this._value.length)
-                    return false;
-                this._currentStartIndex = this._curIndex;
-                var index = this._value.indexOf(this._separator, this._curIndex);
-                if (index == -1) {
-                    this._curIndex = this._value.length + 1;
-                }
-                else
-                    this._curIndex = index + this._separator.length;
-                this._current = null;
-                return true;
-            }
-            /****************************************/
-            reset() {
-                this._curIndex = this._startIndex;
-                this._currentStartIndex = this._curIndex;
-                this._current = null;
-            }
-        }
-        let ColumnType;
-        (function (ColumnType) {
-            ColumnType[ColumnType["Exclude"] = 0] = "Exclude";
-            ColumnType[ColumnType["XAxis"] = 1] = "XAxis";
-            ColumnType[ColumnType["Serie"] = 2] = "Serie";
-            ColumnType[ColumnType["Group"] = 3] = "Group";
-        })(ColumnType || (ColumnType = {}));
         /****************************************/
-        class BaseDataAdapter {
-            constructor() {
-            }
-        }
-        /****************************************/
-        class TextTableDataAdapter extends BaseDataAdapter {
-            constructor() {
-                super();
-            }
-            /****************************************/
-            createIdentifier(value) {
-                let state = 0;
-                let result = "";
-                for (let i = 0; i < value.length; i++) {
-                    const c = value[i];
-                    switch (state) {
-                        case 0:
-                            result += c.toLowerCase();
-                            state = 1;
-                            break;
-                        case 1:
-                            if (c == " " || c == "-" || c == "_")
-                                state = 2;
-                            else
-                                result += c;
-                            break;
-                        case 2:
-                            result += c.toUpperCase();
-                            state = 1;
-                            break;
-                    }
-                }
-                return result;
-            }
-            /****************************************/
-            extractHeader(text, options) {
-                const firstRow = WebApp.linq(new SplitEnumerator(text, options.rowSeparator)).first();
-                const cols = firstRow.split(options.columnSeparator);
-                let headers;
-                if (options.hasHeader !== false) {
-                    const rowAnal = [];
-                    this.analyzeRow(cols, rowAnal);
-                    const stringCount = WebApp.linq(rowAnal).sum(a => a.stringCount);
-                    const emptyCount = WebApp.linq(rowAnal).sum(a => a.emptyCount);
-                    if (stringCount > 0 && stringCount + emptyCount == cols.length) {
-                        options.hasHeader = true;
-                        headers = WebApp.linq(cols).select((a, i) => {
-                            if (a == "")
-                                return "col" + i;
-                            return a;
-                        }).toArray();
-                    }
-                }
-                if (!headers) {
-                    options.hasHeader = false;
-                    headers = WebApp.linq(cols).select((a, i) => "col" + i).toArray();
-                }
-                if (!options.columns)
-                    options.columns = WebApp.linq(headers).select(a => ({ id: this.createIdentifier(a), name: a, type: ColumnType.Exclude })).toArray();
-            }
-            /****************************************/
-            extractRowSeparator(text, options) {
-                if (options.rowSeparator)
-                    return;
-                const items = ["\r\n", "\n"];
-                for (var item of items) {
-                    if (text.indexOf(item) != -1) {
-                        options.rowSeparator = item;
-                        return;
-                    }
-                }
-            }
-            /****************************************/
-            extractColumnSeparator(text, options) {
-                if (options.columnSeparator)
-                    return;
-                const items = ["\t", ";", ",", " "];
-                const stats = {};
-                const rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator)).take(10);
-                for (let row of rows) {
-                    for (let item of items) {
-                        if (stats[item] === false)
-                            continue;
-                        const cols = WebApp.linq(new SplitEnumerator(row, item)).count();
-                        if (cols > 1 && !(item in stats))
-                            stats[item] = cols;
-                        else {
-                            if (stats[item] != cols)
-                                stats[item] = false;
-                        }
-                    }
-                }
-                for (var key in stats) {
-                    if (stats[key] !== false) {
-                        options.columnSeparator = key;
-                        return;
-                    }
-                }
-            }
-            /****************************************/
-            analyzeRow(cols, result) {
-                if (result.length == 0) {
-                    for (let i = 0; i < cols.length; i++) {
-                        result.push({
-                            values: {},
-                            booleanCount: 0,
-                            dateCount: 0,
-                            emptyCount: 0,
-                            numberCount: 0,
-                            stringCount: 0
-                        });
-                    }
-                }
-                for (let i = 0; i < cols.length; i++)
-                    this.analyzeColumn(cols[i], result[i]);
-            }
-            /****************************************/
-            analyzeColumn(value, result) {
-                value in result.values ? result.values[value]++ : result.values[value] = 1;
-                if (value == null || value.length == 0 || value.trim().length == 0)
-                    result.emptyCount++;
-                else if (!isNaN(value))
-                    result.numberCount++;
-                else if (Date.parse(value))
-                    result.dateCount++;
-                else if (value == "true" || value == "false")
-                    result.booleanCount++;
-                else
-                    result.stringCount++;
-            }
-            /****************************************/
-            createParser(anal) {
-                if (anal.numberCount > 0 && anal.stringCount == 0)
-                    return a => isNaN(a) ? null : parseFloat(a);
-                if (anal.booleanCount > 0 && anal.stringCount == 0)
-                    return a => a == "true";
-                if (anal.dateCount > 0 && anal.stringCount == 0)
-                    return a => !a ? null : new Date(a);
-                if (anal.stringCount > 0)
-                    return a => {
-                        if (!a)
-                            return "";
-                        if (a.startsWith("\"") && a.endsWith("\""))
-                            return a.substr(1, a.length - 2);
-                        return a;
-                    };
-                return a => null;
-            }
-            /****************************************/
-            analyze(text, options) {
-                if (!options)
-                    options = {};
-                //Separators
-                this.extractRowSeparator(text, options);
-                this.extractColumnSeparator(text, options);
-                //Header
-                this.extractHeader(text, options);
-                //Rows
-                let rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator));
-                if (options.hasHeader)
-                    rows = rows.skip(1);
-                //col analysis
-                const colAnalysis = [];
-                rows.foreach(row => this.analyzeRow(row.split(options.columnSeparator), colAnalysis));
-                const columns = WebApp.linq(options.columns);
-                //Parser
-                colAnalysis.forEach((col, i) => {
-                    if (!options.columns[i].parser)
-                        options.columns[i].parser = this.createParser(col);
-                });
-                //X-axis
-                if (!columns.any(a => a.type == ColumnType.XAxis))
-                    columns.first(a => a.type == ColumnType.Exclude).type = ColumnType.XAxis;
-                //Y-axis
-                if (!columns.any(a => a.type == ColumnType.Serie)) {
-                    colAnalysis.forEach((col, i) => {
-                        if (col.numberCount > 0 && col.stringCount == 0)
-                            options.columns[i].type = ColumnType.Serie;
-                    });
-                }
-                //groups
-                if (!columns.any(a => a.type == ColumnType.Group)) {
-                    colAnalysis.forEach((col, i) => {
-                        if (col.stringCount > 0 && col.emptyCount == 0) {
-                            var values = WebApp.linq(col.values);
-                            if (values.count() > 1 && values.any(a => a.value > 1))
-                                options.columns[i].type = ColumnType.Group;
-                        }
-                    });
-                }
-                return options;
-            }
-            /****************************************/
-            loadTable(text, options, maxItems) {
-                var result = [];
-                var rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator));
-                if (options.hasHeader)
-                    rows = rows.skip(1);
-                for (var row of rows) {
-                    var cols = row.split(options.columnSeparator);
-                    var item = {};
-                    for (let i = 0; i < cols.length; i++) {
-                        const col = options.columns[i];
-                        if (col.type == ColumnType.Exclude)
-                            continue;
-                        item[col.id] = col.parser(cols[i]);
-                    }
-                    result.push(item);
-                    if (maxItems && result.length >= maxItems)
-                        break;
-                }
-                return result;
-            }
-            /****************************************/
-            loadGroup(text, options) {
-                var result = { name: "main" };
-                var rows = WebApp.linq(new SplitEnumerator(text, options.rowSeparator));
-                if (options.hasHeader)
-                    rows = rows.skip(1);
-                const xColumnIndex = WebApp.linq(options.columns).where(a => a.type == ColumnType.XAxis).select((a, i) => i).first();
-                for (var row of rows) {
-                    const values = row.split(options.columnSeparator);
-                    const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
-                    const item = {};
-                    let curGroup = result;
-                    for (let i = 0; i < values.length; i++) {
-                        const col = options.columns[i];
-                        if (col.type == ColumnType.Exclude || col.type == ColumnType.XAxis)
-                            continue;
-                        let value = col.parser(values[i]);
-                        if (col.type == ColumnType.Group) {
-                            if (!curGroup.groups)
-                                curGroup.groups = {};
-                            if (value === "")
-                                value = $string("<$(empty)>");
-                            if (!(value in curGroup.groups))
-                                curGroup.groups[value] = { name: value, colId: col.id };
-                            curGroup = curGroup.groups[value];
-                        }
-                        else if (col.type == ColumnType.Serie) {
-                            if (!curGroup.series)
-                                curGroup.series = {};
-                            if (!(col.id in curGroup.series))
-                                curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
-                            curGroup.series[col.id].values.push({ x: xValue, y: value });
-                        }
-                    }
-                }
-                return result;
-            }
-        }
-        GeoPlot.TextTableDataAdapter = TextTableDataAdapter;
-        /****************************************/
-        class JsonDataAdapter extends BaseDataAdapter {
-            constructor() {
-                super();
-            }
-            /****************************************/
-            loadGroup(text, options) {
-                return null;
-            }
-            /****************************************/
-            loadTable(text, options, maxItems) {
-                return null;
-            }
-            /****************************************/
-            analyze(text, options) {
-                return null;
-            }
-        }
-        /****************************************/
-        class ColumnViewModel {
-            constructor(value) {
-                this.alias = ko.observable();
-                this.type = ko.observable();
-                this.types = [
-                    { text: $string("$(exclude)"), value: ColumnType.Exclude },
-                    { text: $string("$(x-axis)"), value: ColumnType.XAxis },
-                    { text: $string("$(serie)"), value: ColumnType.Serie },
-                    { text: $string("$(group)"), value: ColumnType.Group }
-                ];
-                this.value = value;
-                this.type(value.type);
-                this.alias(value.name);
-            }
-        }
+        /* BaseTreeItem
         /****************************************/
         class BaseTreeItem {
             constructor() {
@@ -682,212 +357,17 @@ var WebApp;
                 return false;
             }
         }
+        GeoPlot.BaseTreeItem = BaseTreeItem;
         /****************************************/
-        class GroupItem extends BaseTreeItem {
-            constructor(value) {
-                super();
-                this.value = value;
-                this.icon = "folder";
-                this.itemType = "group";
-                this.color("#ffc107");
-                this.name(value.name);
-            }
-        }
-        /****************************************/
-        class SerieItem extends BaseTreeItem {
-            constructor(value) {
-                super();
-                this.value = value;
-                this.icon = "insert_chart";
-                this.itemType = "serie";
-                this.color("#4caf50");
-                this.name(value.name);
-            }
-        }
-        /****************************************/
-        class DataImportControl {
-            constructor() {
-                /****************************************/
-                this.hasHeader = ko.observable();
-                this.columnSeparator = ko.observable();
-                this.columns = ko.observable();
-                this.table = ko.observable();
-                this.treeView = new GeoPlot.TreeViewModel();
-                this.columnSeparators = [
-                    { text: $string("$(tab-key)"), value: "\t" },
-                    { text: ",", value: "," },
-                    { text: ";", value: ";" },
-                    { text: $string("$(sapce-key)"), value: " " }
-                ];
-                const root = new GeoPlot.TreeNodeViewModel();
-                this.treeView.setRoot(root);
-                this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
-            }
-            /****************************************/
-            import(text, options) {
-                this._text = text;
-                this._adapter = new TextTableDataAdapter();
-                this._options = this._adapter.analyze(this._text, options);
-                if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
-                    return false;
-                this.hasHeader(this._options.hasHeader);
-                this.columnSeparator(this._options.columnSeparator);
-                const cols = [];
-                for (let col of this._options.columns) {
-                    var model = new ColumnViewModel(col);
-                    cols.push(model);
-                }
-                this.columns(cols);
-                this.updatePreview();
-                return true;
-            }
-            /****************************************/
-            getSelectedData() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const result = [];
-                    yield this.getSelectedDataWork(this.treeView.root(), [], result);
-                    return result;
-                });
-            }
-            /****************************************/
-            getSelectedDataWork(node, groups, result) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (!node.isVisible())
-                        return;
-                    if (node.value() instanceof SerieItem) {
-                        const serie = node.value().value;
-                        const source = {
-                            type: "data-import",
-                            options: this._options,
-                            serie: serie,
-                            groups: groups
-                        };
-                        result.push(source);
-                        return;
-                    }
-                    if (!node.isExpanded())
-                        yield node.loadChildNodes();
-                    if (node.value() instanceof GroupItem) {
-                        const group = node.value().value;
-                        let newGroups = groups.slice(0, groups.length);
-                        newGroups.push({ id: group.colId, value: group.name });
-                        groups = newGroups;
-                    }
-                    for (let childNode of node.nodes())
-                        yield this.getSelectedDataWork(childNode, groups, result);
-                });
-            }
-            /****************************************/
-            executeImport() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const data = yield this.getSelectedData();
-                    if (this._onGetData) {
-                        this._onGetData(data);
-                        this._onGetData = null;
-                    }
-                    this._model.close();
-                });
-            }
-            /****************************************/
-            applyChanges() {
-                this._options.hasHeader = this.hasHeader();
-                this._options.columnSeparator = this.columnSeparator();
-                this._options.columns.forEach((col, i) => {
-                    col.name = this.columns()[i].alias();
-                    col.type = this.columns()[i].type();
-                });
-                this.updatePreview();
-            }
-            /****************************************/
-            updateGroups() {
-                const group = this._adapter.loadGroup(this._text, this._options);
-                this.updateNode(this.treeView.root(), group);
-            }
-            /****************************************/
-            updateNode(node, group) {
-                node.clear();
-                if (group.groups) {
-                    for (let item of WebApp.linq(group.groups)) {
-                        let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(item.value));
-                        childNode.loadChildNodes = () => __awaiter(this, void 0, void 0, function* () { return this.updateNode(childNode, item.value); });
-                        node.addNode(childNode);
-                    }
-                }
-                if (group.series) {
-                    for (let item of WebApp.linq(group.series)) {
-                        let childNode = new GeoPlot.TreeNodeViewModel(new SerieItem(item.value));
-                        node.addNode(childNode);
-                    }
-                }
-            }
-            /****************************************/
-            updateTable() {
-                const result = this._adapter.loadTable(this._text, this._options, 50);
-                const table = {
-                    header: WebApp.linq(this._options.columns).where(a => a.type != ColumnType.Exclude).select(a => a.name).toArray(),
-                    rows: WebApp.linq(result).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
-                };
-                this.table(table);
-            }
-            /****************************************/
-            format(value) {
-                if (typeof value == "number")
-                    return formatNumber(value);
-                if (typeof value == "boolean")
-                    return $string(value ? "$(yes)" : "$(no)");
-                if (value instanceof Date)
-                    return WebApp.DateUtils.format(value, $string("$(date-format)"));
-                return value;
-            }
-            /****************************************/
-            updatePreview() {
-                this.updateGroups();
-                this.updateTable();
-            }
-            /****************************************/
-            onNodeSelected(node) {
-                if (node && node.value() instanceof SerieItem) {
-                    const serie = node.value().value;
-                    const xColumn = WebApp.linq(this._options.columns).where(a => a.type == ColumnType.XAxis).select(a => a.name).first();
-                    const table = {
-                        header: [xColumn, serie.name],
-                        rows: WebApp.linq(serie.values).take(50).select(a => [this.format(a.x), this.format(a.y)]).toArray()
-                    };
-                    this.table(table);
-                }
-                else
-                    this.table(null);
-            }
-            /****************************************/
-            show() {
-                if (!this._model) {
-                    this._model = M.Modal.init(document.getElementById("dataImport"), {
-                        onCloseEnd: el => {
-                            if (this._onGetData)
-                                this._onGetData([]);
-                        }
-                    });
-                }
-                this._model.open();
-                return new Promise(res => this._onGetData = res);
-            }
-        }
-        GeoPlot.DataImportControl = DataImportControl;
-    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
-})(WebApp || (WebApp = {}));
-var WebApp;
-(function (WebApp) {
-    var GeoPlot;
-    (function (GeoPlot) {
-        /****************************************/
-        /* TreeViewModel
-        /****************************************/
+        /* ActionViewModel
         /****************************************/
         class ActionViewModel {
             execute() {
             }
         }
         GeoPlot.ActionViewModel = ActionViewModel;
+        /****************************************/
+        /* TreeNodeViewModel
         /****************************************/
         class TreeNodeViewModel {
             constructor(value) {
@@ -1048,6 +528,8 @@ var WebApp;
         }
         GeoPlot.TreeNodeViewModel = TreeNodeViewModel;
         /****************************************/
+        /* TreeViewModel
+        /****************************************/
         class TreeViewModel {
             constructor() {
                 /****************************************/
@@ -1071,6 +553,241 @@ var WebApp;
             }
         }
         GeoPlot.TreeViewModel = TreeViewModel;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+/// <reference path="treeview.ts" />
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        /****************************************/
+        /* DataImportControl
+        /****************************************/
+        /****************************************/
+        class ColumnViewModel {
+            constructor(value) {
+                this.alias = ko.observable();
+                this.type = ko.observable();
+                this.types = [
+                    { text: $string("$(exclude)"), value: WebApp.DaColumnType.Exclude },
+                    { text: $string("$(x-axis)"), value: WebApp.DaColumnType.XAxis },
+                    { text: $string("$(serie)"), value: WebApp.DaColumnType.Serie },
+                    { text: $string("$(group)"), value: WebApp.DaColumnType.Group }
+                ];
+                this.value = value;
+                this.type(value.type);
+                this.alias(value.name);
+            }
+        }
+        /****************************************/
+        class GroupItem extends GeoPlot.BaseTreeItem {
+            constructor(value) {
+                super();
+                this.value = value;
+                this.icon = "folder";
+                this.itemType = "group";
+                this.color("#ffc107");
+                this.name(value.name);
+            }
+            /****************************************/
+            attachNode(node) {
+                super.attachNode(node);
+                node.isVisible.subscribe(value => {
+                    for (var childNode of this.node.nodes())
+                        childNode.isVisible(value);
+                });
+            }
+        }
+        /****************************************/
+        class SerieItem extends GeoPlot.BaseTreeItem {
+            constructor(value) {
+                super();
+                this.value = value;
+                this.icon = "insert_chart";
+                this.itemType = "serie";
+                this.color("#4caf50");
+                this.name(value.name);
+            }
+        }
+        /****************************************/
+        class DataImportControl {
+            constructor() {
+                /****************************************/
+                this.hasHeader = ko.observable();
+                this.columnSeparator = ko.observable();
+                this.columns = ko.observable();
+                this.table = ko.observable();
+                this.treeView = new GeoPlot.TreeViewModel();
+                this.columnSeparators = [
+                    { text: $string("$(tab-key)"), value: "\t" },
+                    { text: ",", value: "," },
+                    { text: ";", value: ";" },
+                    { text: $string("$(sapce-key)"), value: " " }
+                ];
+                this.treeView.setRoot(new GeoPlot.TreeNodeViewModel());
+                this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
+            }
+            /****************************************/
+            import(text, options) {
+                WebApp.linq(new WebApp.CsvSplitEnumerator(",,", ",")).toArray();
+                this._text = text;
+                this._adapter = new WebApp.TextTableDataAdapter();
+                this._options = this._adapter.analyze(this._text, options, 5000);
+                if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
+                    return false;
+                this.hasHeader(this._options.hasHeader);
+                this.columnSeparator(this._options.columnSeparator);
+                const cols = [];
+                for (let col of this._options.columns) {
+                    var model = new ColumnViewModel(col);
+                    cols.push(model);
+                }
+                this.columns(cols);
+                this.updatePreview();
+                return true;
+            }
+            /****************************************/
+            getSelectedData() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const result = [];
+                    yield this.getSelectedDataWork(this.treeView.root(), [], result);
+                    return result;
+                });
+            }
+            /****************************************/
+            getSelectedDataWork(node, groups, result) {
+                return __awaiter(this, void 0, void 0, function* () {
+                    if (!node.isVisible())
+                        return;
+                    if (node.value() instanceof SerieItem) {
+                        const serie = node.value().value;
+                        const source = {
+                            type: "data-import",
+                            options: this._options,
+                            serie: serie,
+                            groups: groups
+                        };
+                        result.push(source);
+                        return;
+                    }
+                    if (!node.isExpanded())
+                        yield node.loadChildNodes();
+                    if (node.value() instanceof GroupItem) {
+                        const group = node.value().value;
+                        let newGroups = groups.slice(0, groups.length);
+                        newGroups.push({ id: group.colId, value: group.name });
+                        groups = newGroups;
+                    }
+                    for (let childNode of node.nodes())
+                        yield this.getSelectedDataWork(childNode, groups, result);
+                });
+            }
+            /****************************************/
+            executeImport() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const data = yield this.getSelectedData();
+                    if (this._onGetData) {
+                        this._onGetData(data);
+                        this._onGetData = null;
+                    }
+                    this._model.close();
+                });
+            }
+            /****************************************/
+            applyChanges() {
+                this._options.hasHeader = this.hasHeader();
+                this._options.columnSeparator = this.columnSeparator();
+                this._options.columns.forEach((col, i) => {
+                    col.name = this.columns()[i].alias();
+                    col.type = this.columns()[i].type();
+                });
+                this.updatePreview(true);
+            }
+            /****************************************/
+            updateGroups() {
+                const group = this._adapter.loadGroup(this._text, this._options);
+                let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(group));
+                this.treeView.root().clear();
+                this.treeView.root().addNode(childNode);
+                childNode.value().attachNode(childNode);
+                this.updateNode(childNode, group);
+                childNode.isExpanded(true);
+            }
+            /****************************************/
+            updateNode(node, group) {
+                node.clear();
+                if (group.groups) {
+                    for (let item of WebApp.linq(group.groups)) {
+                        let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(item.value));
+                        childNode.loadChildNodes = () => __awaiter(this, void 0, void 0, function* () { return this.updateNode(childNode, item.value); });
+                        node.addNode(childNode);
+                        childNode.value().attachNode(childNode);
+                    }
+                }
+                if (group.series) {
+                    for (let item of WebApp.linq(group.series)) {
+                        let childNode = new GeoPlot.TreeNodeViewModel(new SerieItem(item.value));
+                        node.addNode(childNode);
+                        childNode.value().attachNode(childNode);
+                    }
+                }
+            }
+            /****************************************/
+            updateTable() {
+                const result = this._adapter.loadTable(this._text, this._options, 50);
+                const table = {
+                    header: WebApp.linq(this._options.columns).where(a => a.type != WebApp.DaColumnType.Exclude).select(a => a.name).toArray(),
+                    rows: WebApp.linq(result).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
+                };
+                this.table(table);
+            }
+            /****************************************/
+            format(value) {
+                if (typeof value == "number")
+                    return formatNumber(value);
+                if (typeof value == "boolean")
+                    return $string(value ? "$(yes)" : "$(no)");
+                if (value instanceof Date)
+                    return WebApp.DateUtils.format(value, $string("$(date-format)"));
+                return value;
+            }
+            /****************************************/
+            updatePreview(force = false) {
+                if (force || this._options.rowsCount < 5000 - 1)
+                    this.updateGroups();
+                else
+                    this.treeView.root().clear();
+                this.updateTable();
+            }
+            /****************************************/
+            onNodeSelected(node) {
+                if (node && node.value() instanceof SerieItem) {
+                    const serie = node.value().value;
+                    const xColumn = WebApp.linq(this._options.columns).where(a => a.type == WebApp.DaColumnType.XAxis).select(a => a.name).first();
+                    const table = {
+                        header: [xColumn, serie.name],
+                        rows: WebApp.linq(serie.values).take(50).select(a => [this.format(a.x), this.format(a.y)]).toArray()
+                    };
+                    this.table(table);
+                }
+                else
+                    this.table(null);
+            }
+            /****************************************/
+            show() {
+                if (!this._model) {
+                    this._model = M.Modal.init(document.getElementById("dataImport"), {
+                        onCloseEnd: el => {
+                            if (this._onGetData)
+                                this._onGetData([]);
+                        }
+                    });
+                }
+                this._model.open();
+                return new Promise(res => this._onGetData = res);
+            }
+        }
+        GeoPlot.DataImportControl = DataImportControl;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
 /// <reference path="../indicators.ts" />
@@ -1309,6 +1026,309 @@ if (window["ko"]) {
 }
 var WebApp;
 (function (WebApp) {
+    /****************************************/
+    /* IDataAdapter
+    /****************************************/
+    /****************************************/
+    let DaColumnType;
+    (function (DaColumnType) {
+        DaColumnType[DaColumnType["Exclude"] = 0] = "Exclude";
+        DaColumnType[DaColumnType["XAxis"] = 1] = "XAxis";
+        DaColumnType[DaColumnType["Serie"] = 2] = "Serie";
+        DaColumnType[DaColumnType["Group"] = 3] = "Group";
+    })(DaColumnType = WebApp.DaColumnType || (WebApp.DaColumnType = {}));
+    /****************************************/
+    class BaseDataAdapter {
+        constructor() {
+        }
+    }
+    /****************************************/
+    class TextTableDataAdapter extends BaseDataAdapter {
+        constructor() {
+            super();
+        }
+        /****************************************/
+        createIdentifier(value) {
+            let state = 0;
+            let result = "";
+            for (let i = 0; i < value.length; i++) {
+                const c = value[i];
+                switch (state) {
+                    case 0:
+                        result += c.toLowerCase();
+                        state = 1;
+                        break;
+                    case 1:
+                        if (c == " " || c == "-" || c == "_")
+                            state = 2;
+                        else
+                            result += c;
+                        break;
+                    case 2:
+                        result += c.toUpperCase();
+                        state = 1;
+                        break;
+                }
+            }
+            return result;
+        }
+        /****************************************/
+        extractHeader(text, options) {
+            const firstRow = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator)).first();
+            const cols = WebApp.linq(new WebApp.CsvSplitEnumerator(firstRow, options.columnSeparator)).toArray();
+            let headers;
+            if (options.hasHeader !== false) {
+                const rowAnal = [];
+                this.analyzeRow(cols, rowAnal);
+                const stringCount = WebApp.linq(rowAnal).sum(a => a.stringCount);
+                const emptyCount = WebApp.linq(rowAnal).sum(a => a.emptyCount);
+                if (stringCount > 0 && stringCount + emptyCount == cols.length) {
+                    options.hasHeader = true;
+                    headers = WebApp.linq(cols).select((a, i) => {
+                        if (a == "")
+                            return "col" + i;
+                        return a;
+                    }).toArray();
+                }
+            }
+            if (!headers) {
+                options.hasHeader = false;
+                headers = WebApp.linq(cols).select((a, i) => "col" + i).toArray();
+            }
+            if (!options.columns)
+                options.columns = WebApp.linq(headers).select(a => ({ id: this.createIdentifier(a), name: a, type: DaColumnType.Exclude })).toArray();
+        }
+        /****************************************/
+        extractRowSeparator(text, options) {
+            if (options.rowSeparator)
+                return;
+            const items = ["\r\n", "\n"];
+            for (var item of items) {
+                if (text.indexOf(item) != -1) {
+                    options.rowSeparator = item;
+                    return;
+                }
+            }
+        }
+        /****************************************/
+        extractColumnSeparator(text, options) {
+            if (options.columnSeparator)
+                return;
+            const items = ["\t", ";", ",", " "];
+            const stats = {};
+            const rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator)).take(10);
+            for (let row of rows) {
+                for (let item of items) {
+                    if (stats[item] === false)
+                        continue;
+                    const cols = WebApp.linq(new WebApp.CsvSplitEnumerator(row, item)).count();
+                    if (cols > 1 && !(item in stats))
+                        stats[item] = cols;
+                    else {
+                        if (stats[item] != cols)
+                            stats[item] = false;
+                    }
+                }
+            }
+            for (var key in stats) {
+                if (stats[key] !== false) {
+                    options.columnSeparator = key;
+                    return;
+                }
+            }
+        }
+        /****************************************/
+        analyzeRow(cols, result) {
+            if (result.length == 0) {
+                for (let i = 0; i < cols.length; i++) {
+                    result.push({
+                        values: {},
+                        booleanCount: 0,
+                        dateCount: 0,
+                        emptyCount: 0,
+                        numberCount: 0,
+                        stringCount: 0
+                    });
+                }
+            }
+            for (let i = 0; i < cols.length; i++)
+                this.analyzeColumn(cols[i], result[i]);
+        }
+        /****************************************/
+        analyzeColumn(value, result) {
+            if (!result.values || Object.keys(result.values).length < 150)
+                value in result.values ? result.values[value]++ : result.values[value] = 1;
+            if (value == null || value.length == 0 || value.trim().length == 0)
+                result.emptyCount++;
+            else if (!isNaN(value))
+                result.numberCount++;
+            else if (Date.parse(value))
+                result.dateCount++;
+            else if (value == "true" || value == "false")
+                result.booleanCount++;
+            else
+                result.stringCount++;
+        }
+        /****************************************/
+        createParser(anal) {
+            if (anal.numberCount > 0 && anal.stringCount == 0)
+                return a => isNaN(a) ? null : parseFloat(a);
+            if (anal.booleanCount > 0 && anal.stringCount == 0)
+                return a => a == "true";
+            if (anal.dateCount > 0 && anal.stringCount == 0)
+                return a => !a ? null : new Date(a);
+            if (anal.stringCount > 0)
+                return a => {
+                    if (!a)
+                        return "";
+                    if (a.startsWith("\"") && a.endsWith("\""))
+                        return a.substr(1, a.length - 2);
+                    return a;
+                };
+            return a => null;
+        }
+        /****************************************/
+        analyze(text, options, maxRows) {
+            if (!options)
+                options = {};
+            //Separators
+            this.extractRowSeparator(text, options);
+            this.extractColumnSeparator(text, options);
+            //Header
+            this.extractHeader(text, options);
+            //Rows
+            let rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+            if (maxRows)
+                rows = rows.take(maxRows);
+            if (options.hasHeader)
+                rows = rows.skip(1);
+            let curOp = WebApp.Operation.begin("Analazing rows...");
+            //col analysis
+            const colAnalysis = [];
+            let rowCount = 0;
+            rows.foreach(row => {
+                rowCount++;
+                this.analyzeRow(WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray(), colAnalysis);
+                if (rowCount % 200 == 0)
+                    curOp.progress = { current: rowCount };
+            });
+            options.rowsCount = rowCount;
+            curOp.end();
+            const columns = WebApp.linq(options.columns);
+            //Parser
+            colAnalysis.forEach((col, i) => {
+                if (!options.columns[i].parser)
+                    options.columns[i].parser = this.createParser(col);
+            });
+            //X-axis
+            if (!columns.any(a => a.type == DaColumnType.XAxis))
+                columns.first(a => a.type == DaColumnType.Exclude).type = DaColumnType.XAxis;
+            //Y-axis
+            if (!columns.any(a => a.type == DaColumnType.Serie)) {
+                colAnalysis.forEach((col, i) => {
+                    if (col.numberCount > 0 && col.stringCount == 0)
+                        options.columns[i].type = DaColumnType.Serie;
+                });
+            }
+            //groups
+            if (!columns.any(a => a.type == DaColumnType.Group)) {
+                colAnalysis.forEach((col, i) => {
+                    if (col.stringCount > 0 && col.emptyCount == 0) {
+                        var values = WebApp.linq(col.values);
+                        if (values.count() > 1 && values.any(a => a.value > 1))
+                            options.columns[i].type = DaColumnType.Group;
+                    }
+                });
+            }
+            return options;
+        }
+        /****************************************/
+        loadTable(text, options, maxItems) {
+            var result = [];
+            var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+            if (options.hasHeader)
+                rows = rows.skip(1);
+            for (var row of rows) {
+                const cols = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
+                const item = {};
+                for (let i = 0; i < cols.length; i++) {
+                    const col = options.columns[i];
+                    if (col.type == DaColumnType.Exclude)
+                        continue;
+                    item[col.id] = col.parser(cols[i]);
+                }
+                result.push(item);
+                if (maxItems && result.length >= maxItems)
+                    break;
+            }
+            return result;
+        }
+        /****************************************/
+        loadGroup(text, options) {
+            var result = { name: $string("$(da-main-group)") };
+            var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+            if (options.hasHeader)
+                rows = rows.skip(1);
+            const xColumnIndex = WebApp.linq(options.columns).where(a => a.type == DaColumnType.XAxis).select((a, i) => i).first();
+            let curOp = WebApp.Operation.begin("Loading groups...");
+            let rowCount = 0;
+            for (var row of rows) {
+                const values = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
+                const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
+                const item = {};
+                let curGroup = result;
+                for (let i = 0; i < values.length; i++) {
+                    const col = options.columns[i];
+                    if (col.type == DaColumnType.Exclude || col.type == DaColumnType.XAxis)
+                        continue;
+                    let value = col.parser(values[i]);
+                    if (col.type == DaColumnType.Group) {
+                        if (!curGroup.groups)
+                            curGroup.groups = {};
+                        if (value === "")
+                            value = $string("<$(empty)>");
+                        if (!(value in curGroup.groups))
+                            curGroup.groups[value] = { name: value, colId: col.id };
+                        curGroup = curGroup.groups[value];
+                    }
+                    else if (col.type == DaColumnType.Serie) {
+                        if (!curGroup.series)
+                            curGroup.series = {};
+                        if (!(col.id in curGroup.series))
+                            curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
+                        curGroup.series[col.id].values.push({ x: xValue, y: value });
+                    }
+                }
+                rowCount++;
+                curOp.progress = { current: rowCount, totCount: options.rowsCount };
+            }
+            curOp.end();
+            return result;
+        }
+    }
+    WebApp.TextTableDataAdapter = TextTableDataAdapter;
+    /****************************************/
+    class JsonDataAdapter extends BaseDataAdapter {
+        constructor() {
+            super();
+        }
+        /****************************************/
+        loadGroup(text, options) {
+            return null;
+        }
+        /****************************************/
+        loadTable(text, options, maxItems) {
+            return null;
+        }
+        /****************************************/
+        analyze(text, options, maxRows) {
+            return null;
+        }
+    }
+    WebApp.JsonDataAdapter = JsonDataAdapter;
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
         class Geo {
@@ -1427,6 +1447,255 @@ var WebApp;
         }
     }
     WebApp.Graphics = Graphics;
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        class BaseOperation {
+            /****************************************/
+            constructor(config) {
+                /****************************************/
+                this.message = null;
+                this.parentOperation = null;
+                if (!config.type)
+                    this._type = WebApp.OperationType.Global;
+                else
+                    this._type = config.type;
+                this.parentOperation = config.parentOperation;
+            }
+            /****************************************/
+            end() {
+                WebApp.Operation.end(this);
+            }
+            /****************************************/
+            get type() {
+                return this._type;
+            }
+            /****************************************/
+            get progress() {
+                return this._progress;
+            }
+            /****************************************/
+            set progress(value) {
+                this._progress = value;
+                if (this._progress) {
+                    console.log(this.getProgressDescription(this._progress));
+                    if (this._progress.message)
+                        this.message = this._progress.message;
+                }
+                else
+                    this.message = undefined;
+            }
+            /****************************************/
+            addSubOperation(op) {
+            }
+            /****************************************/
+            removeSubOperation(op) {
+            }
+            /****************************************/
+            getProgressDescription(value) {
+                let msg = "Progress (" + this.message + "): ";
+                if (value.message)
+                    msg += "'" + value.message + "'";
+                if (value.current != null && value.totCount != null)
+                    msg += " - " + value.current + "/" + value.totCount + " (" + Math.round(100 / value.totCount * value.current) + "%)";
+                else if (value.current != null)
+                    msg += value.current;
+                return msg;
+            }
+        }
+        /****************************************/
+        class BaseOperationManager {
+            constructor() {
+                this._oprations = [];
+            }
+            progress(progress) {
+                if (WebApp.ObjectUtils.isString(progress))
+                    progress = { message: progress };
+                if (this.current)
+                    this.current.progress = progress;
+            }
+            /****************************************/
+            begin(configOrMessge) {
+                var _a;
+                if (WebApp.ObjectUtils.isString(configOrMessge))
+                    configOrMessge = { message: configOrMessge };
+                let operation = new BaseOperation(configOrMessge);
+                console.group("Begin operation: ", $string((_a = operation.message) !== null && _a !== void 0 ? _a : ""));
+                operation.progress = configOrMessge;
+                if (operation.parentOperation === undefined)
+                    operation.parentOperation = this.current;
+                this._oprations.push(operation);
+                if (!operation.parentOperation) {
+                    if (operation.type == WebApp.OperationType.Global) {
+                    }
+                }
+                else
+                    operation.parentOperation.addSubOperation(operation);
+                return operation;
+            }
+            /****************************************/
+            end(operation) {
+                var _a;
+                console.groupEnd();
+                console.log("End operation: ", $string((_a = operation.message) !== null && _a !== void 0 ? _a : ""));
+                const index = this._oprations.indexOf(operation);
+                this._oprations.splice(index, 1);
+                if (operation.parentOperation)
+                    operation.parentOperation.removeSubOperation(operation);
+                else {
+                    if (operation.type == WebApp.OperationType.Global) {
+                    }
+                }
+            }
+            /****************************************/
+            get current() {
+                return this._oprations.length > 0 ? this._oprations[this._oprations.length - 1] : null;
+            }
+            /****************************************/
+            get operations() {
+                return this._oprations;
+            }
+        }
+        GeoPlot.BaseOperationManager = BaseOperationManager;
+        /****************************************/
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+(function (WebApp) {
+    WebApp.Operation = new WebApp.GeoPlot.BaseOperationManager();
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    class SplitEnumerator {
+        constructor(value, separator, startIndex = 0) {
+            this._value = value;
+            this._separator = separator;
+            this._startIndex = startIndex;
+        }
+        /****************************************/
+        get current() {
+            if (!this._current)
+                this._current = this._value.substring(this._currentStartIndex, this._curIndex - this._separator.length);
+            return this._current;
+        }
+        /****************************************/
+        moveNext() {
+            if (this._curIndex > this._value.length)
+                return false;
+            this._currentStartIndex = this._curIndex;
+            var index = this._value.indexOf(this._separator, this._curIndex);
+            if (index == -1) {
+                this._curIndex = this._value.length + 1;
+            }
+            else
+                this._curIndex = index + this._separator.length;
+            this._current = null;
+            return true;
+        }
+        /****************************************/
+        reset() {
+            this._curIndex = this._startIndex;
+            this._currentStartIndex = this._curIndex;
+            this._current = null;
+        }
+    }
+    WebApp.SplitEnumerator = SplitEnumerator;
+    /****************************************/
+    class CsvSplitEnumerator {
+        /****************************************/
+        constructor(value, separator, startIndex = 0) {
+            this._state = 0;
+            this._wordLength = 0;
+            this._value = value;
+            this._separator = separator;
+            this._startIndex = startIndex;
+        }
+        /****************************************/
+        get current() {
+            if (!this._current) {
+                this._current = this._value.substr(this._wordStartIndex, this._wordLength);
+                if (this._hasEscape)
+                    this._current = this._current.replace("\"\"", "\"");
+            }
+            return this._current;
+        }
+        /****************************************/
+        moveNext() {
+            let found = false;
+            while (true) {
+                const c = this._curIndex >= this._value.length ? "" : this._value[this._curIndex];
+                switch (this._state) {
+                    case 0:
+                        if (c == "\"") {
+                            this._state = 1;
+                            this._hasEscape = false;
+                            this._wordLength = 0;
+                            this._wordStartIndex = this._curIndex + 1;
+                        }
+                        else if (c == this._separator || !c) {
+                            this._wordStartIndex = this._curIndex;
+                            this._wordLength = 0;
+                            found = this._curIndex <= this._value.length;
+                        }
+                        else {
+                            this._state = 2;
+                            this._wordLength = 1;
+                            this._wordStartIndex = this._curIndex;
+                        }
+                        break;
+                    case 1:
+                        if (c == "\"")
+                            this._state = 3;
+                        else
+                            this._wordLength++;
+                        break;
+                    case 2:
+                        if (c == this._separator || !c) {
+                            this._state = 0;
+                            found = true;
+                        }
+                        else
+                            this._wordLength++;
+                        break;
+                    case 3:
+                        if (c == "\"") {
+                            this._hasEscape = true;
+                            this._wordLength += 2;
+                            this._state = 1;
+                        }
+                        else if (c == this._separator || !c) {
+                            found = true;
+                            this._state = 0;
+                        }
+                        else
+                            this._state = 4;
+                        break;
+                    case 4:
+                        if (c == this._separator || !c) {
+                            found = true;
+                            this._state = 0;
+                        }
+                        break;
+                }
+                this._curIndex++;
+                if (!c || found)
+                    break;
+            }
+            this._current = null;
+            return found;
+        }
+        /****************************************/
+        reset() {
+            this._hasEscape = false;
+            this._curIndex = this._startIndex;
+            this._wordStartIndex = this._curIndex;
+            this._wordLength = 0;
+            this._current = null;
+            this._state = 0;
+        }
+    }
+    WebApp.CsvSplitEnumerator = CsvSplitEnumerator;
 })(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
@@ -3948,7 +4217,7 @@ var WebApp;
             /****************************************/
             test() {
                 return __awaiter(this, void 0, void 0, function* () {
-                    var text = yield WebApp.Http.getStringAsync("https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv");
+                    var text = yield (yield fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
                     this.dataImport.import(text);
                     this.dataImport.show();
                 });

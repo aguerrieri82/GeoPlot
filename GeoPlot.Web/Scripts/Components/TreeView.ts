@@ -1,8 +1,69 @@
 ﻿namespace WebApp.GeoPlot {
 
+    /****************************************/
+    /* BaseTreeItem
+    /****************************************/
+
+    export class BaseTreeItem implements ITreeItem {
+
+        constructor() {
+            this.canDrag = false;
+        }
+
+        /****************************************/
+
+        canReadData(transfer: DataTransfer): boolean {
+            return false;
+        }
+
+        /****************************************/
+
+        readData(transfer: DataTransfer) {
+
+        }
+
+        /****************************************/
+
+        writeData(transfer: DataTransfer): boolean {
+            return false;
+        }
+
+        /****************************************/
+
+        attachNode(node: TreeNodeViewModel<ITreeItem>) {
+            this.node = node;
+        }
+
+        /****************************************/
+
+        remove(): void {
+
+        }
+
+        /****************************************/
+
+        onParentChanged(): void {
+
+        }
+
+        /****************************************/
+
+        canAccept(value: object): boolean {
+            return false;
+        }
+
+        /****************************************/
+
+        name = ko.observable<string>();
+        color = ko.observable<string>();
+        canDrag: boolean;
+        itemType: string;
+        icon: string;
+        node: TreeNodeViewModel<ITreeItem>;
+    }
 
     /****************************************/
-    /* TreeViewModel
+    /* ITreeItem
     /****************************************/
 
     export interface IDataTransferReader {
@@ -31,6 +92,8 @@
     }
 
     /****************************************/
+    /* ActionViewModel
+    /****************************************/
 
     export class ActionViewModel {
         execute() {
@@ -44,6 +107,8 @@
     }
 
     /****************************************/
+    /* TreeNodeViewModel
+    /****************************************/
 
     export class TreeNodeViewModel<T extends ITreeItem> {
 
@@ -55,7 +120,9 @@
 
         constructor(value?: T) {
 
+
             this.value(value);
+
             this.isExpanded.subscribe(async value => {
 
                 if (value && !this._childLoaded) {
@@ -271,6 +338,8 @@
         actions = ko.observable<ActionViewModel[]>();
     }
 
+    /****************************************/
+    /* TreeViewModel
     /****************************************/
 
     export class TreeViewModel<T extends ITreeItem> {

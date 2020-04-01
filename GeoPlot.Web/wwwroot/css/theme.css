@@ -598,7 +598,9 @@ svg.map {
     height: 500px; }
     #dataImport .main > .content {
       flex-grow: 1;
-      overflow: hidden; }
+      overflow: hidden;
+      display: flex;
+      flex-direction: column; }
   #dataImport .section-preview {
     max-height: 300px;
     overflow: auto; }
