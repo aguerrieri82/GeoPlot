@@ -315,6 +315,28 @@ var WebApp;
             GeoAreaType[GeoAreaType["Region"] = 2] = "Region";
             GeoAreaType[GeoAreaType["District"] = 3] = "District";
         })(GeoAreaType = GeoPlot.GeoAreaType || (GeoPlot.GeoAreaType = {}));
+        /****************************************/
+        GeoPlot.MATERIAL_COLORS = {
+            "red": { "600": "#f44336" },
+            "pink": { "600": "#e91e63" },
+            "purple": { "600": "#9c27b0" },
+            "deep_purple": { "600": "#673ab7" },
+            "indigo": { "600": "#3f51b5" },
+            "blue": { "600": "#2196f3" },
+            "light_blue": { "600": "#03a9f4" },
+            "cyan": { "600": "#00bcd4" },
+            "teal": { "600": "#009688" },
+            "green": { "600": "#4caf50" },
+            "light_green": { "600": "#8bc34a" },
+            "lime": { "600": "#cddc39" },
+            "yellow": { "600": "#ffeb3b" },
+            "amber": { "600": "#ffc107" },
+            "orange": { "600": "#ff9800" },
+            "depp_orange": { "600": "#ff5722" },
+            "brown": { "600": "#795548" },
+            "grey": { "600": "#9e9e9e" },
+            "blue_gray": { "600": "#607d8b" },
+        };
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
 var WebApp;
@@ -517,9 +539,16 @@ var WebApp;
                 this.isVisible(!this.isVisible());
             }
             /****************************************/
-            select() {
+            select(expand = false) {
                 this.isSelected(true);
                 this._element.focus();
+                if (expand) {
+                    let curNode = this;
+                    while (curNode) {
+                        curNode.isExpanded(true);
+                        curNode = curNode.parentNode;
+                    }
+                }
             }
             /****************************************/
             expandCollapse() {
@@ -3064,6 +3093,75 @@ var WebApp;
             return value.toString();
         }
         /****************************************/
+        class ColorPickerViewModel {
+            /****************************************/
+            constructor() {
+                /****************************************/
+                this.isOpened = ko.observable(false);
+                this.colors = [];
+                for (var color in GeoPlot.MATERIAL_COLORS)
+                    this.addColor(GeoPlot.MATERIAL_COLORS[color][600]);
+                this._mouseDown = ev => this.onMouseDown(ev);
+            }
+            /****************************************/
+            attachNode(element) {
+                this._element = element;
+                document.body.appendChild(this._element);
+            }
+            /****************************************/
+            pick() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield this.open();
+                    return new Promise(res => this._onSelected = res);
+                });
+            }
+            /****************************************/
+            addColor(color) {
+                this.colors.push({
+                    value: color,
+                    select: () => {
+                        if (this._onSelected)
+                            this._onSelected(color);
+                        this._onSelected = null;
+                        this.close();
+                    }
+                });
+            }
+            /****************************************/
+            open() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    if (this.isOpened())
+                        return;
+                    this.isOpened(true);
+                    if (window.event) {
+                        const mouseEvent = window.event;
+                        const coords = { x: mouseEvent.pageX, y: mouseEvent.pageY };
+                        //await PromiseUtils.delay(0);
+                        this._element.style.left = coords.x + "px";
+                        this._element.style.top = (coords.y - this._element.clientHeight) + "px";
+                    }
+                    document.body.addEventListener("mousedown", this._mouseDown);
+                });
+            }
+            /****************************************/
+            close() {
+                if (!this.isOpened())
+                    return;
+                this.isOpened(false);
+                document.body.removeEventListener("mousedown", this._mouseDown);
+            }
+            /****************************************/
+            onMouseDown(ev) {
+                if (ev.target.parentElement != this._element) {
+                    if (this._onSelected)
+                        this._onSelected(undefined);
+                    this._onSelected = null;
+                    this.close();
+                }
+            }
+        }
+        ColorPickerViewModel.instance = new ColorPickerViewModel();
+        /****************************************/
         class ParameterViewModel {
             constructor(config) {
                 this.min = ko.observable();
@@ -3080,6 +3178,7 @@ var WebApp;
         class GraphContext {
             constructor() {
                 this.vars = {};
+                this.treeItems = {};
             }
             setExpressions(values) {
                 const state = this.calculator.getState();
@@ -3107,6 +3206,12 @@ var WebApp;
                         newList.push(item);
                 state.expressions.list = newList;
                 this.calculator.setState(state);
+            }
+            /****************************************/
+            setSelectedId(id) {
+                if (this.calculator.controller.listModel.selectedItem && this.calculator.controller.listModel.selectedItem.id == id)
+                    return;
+                this.calculator.controller.dispatch({ type: "set-selected-id", id: id });
             }
             /****************************************/
             setColor(id, color) {
@@ -3277,6 +3382,7 @@ var WebApp;
                     return;
                 if (!this.folderId)
                     this.folderId = WebApp.StringUtils.uuidv4();
+                this._graphCtx.treeItems[this.folderId] = this;
                 const values = this.getExpressions();
                 this._graphCtx.setExpressions(values);
                 this.updateGraphWork();
@@ -3340,6 +3446,8 @@ var WebApp;
             }
             /****************************************/
             onSelected() {
+                if (this.mainExpression && this._graphCtx)
+                    this._graphCtx.setSelectedId(this.mainExpression);
             }
             /****************************************/
             onGraphChanged() {
@@ -3495,6 +3603,10 @@ var WebApp;
                 this.selectedFunction(this.functions[0]);
                 if (config)
                     this.setState(config);
+            }
+            /****************************************/
+            get mainExpression() {
+                return this.getGraphId("main-func");
             }
             /****************************************/
             addFunction(value) {
@@ -3776,6 +3888,7 @@ var WebApp;
                 /****************************************/
                 this.color = ko.observable();
                 this.offsetX = ko.observable(0);
+                this.colorPicker = ColorPickerViewModel.instance;
                 this.canDrag = true;
                 this.itemType = "serie";
                 this.icon = "insert_chart";
@@ -3930,6 +4043,10 @@ var WebApp;
                 return values;
             }
             /****************************************/
+            get mainExpression() {
+                return this.getGraphId("offset-x-serie");
+            }
+            /****************************************/
             createParameters(result) {
                 result.push(WebApp.apply(new ParameterViewModel({ value: this.offsetX, name: $string("$(shift)") }), p => {
                     p.max(this.values.length);
@@ -3951,7 +4068,8 @@ var WebApp;
             }
             /****************************************/
             onSelected() {
-                this._graphCtx.expressionZoomFit(this.getGraphId("table"));
+                super.onSelected();
+                //this._graphCtx.expressionZoomFit(this.getGraphId("table"));
             }
             /****************************************/
             updateColor() {
@@ -3996,9 +4114,17 @@ var WebApp;
                 return this.addChildrenWork(configOrState instanceof StudioSerieRegression ? configOrState : new StudioSerieRegression(configOrState), updateGraph);
             }
             /****************************************/
+            changeColor() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const color = yield this.colorPicker.pick();
+                    if (color)
+                        this.color(color);
+                });
+            }
+            /****************************************/
             updateSerie() {
                 return __awaiter(this, void 0, void 0, function* () {
-                    if (this.source.type == "geoplot") {
+                    if (this.source.type == "geoplot" || !this.source.type) {
                         if (!this._graphCtx.serieCalculator) {
                             M.toast({ html: $string("$(msg-downloading-data)") });
                             const model = yield GeoPlot.Api.loadStudioData();
@@ -4154,6 +4280,7 @@ var WebApp;
                     authorIDE: true,
                     advancedStyling: true
                 });
+                this._graphCtx.calculator.controller.listModel.onSelectionChanged = item => this.onGraphSelectionChanged(item);
                 const actions = [];
                 actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
                     action.text = $string("$(new-project)"),
@@ -4193,6 +4320,16 @@ var WebApp;
                     onCloseEnd: () => this.updateOptions()
                 });
                 setTimeout(() => this.init());
+            }
+            /****************************************/
+            onGraphSelectionChanged(item) {
+                if (!item || !item.folderId)
+                    return;
+                const folderGuid = item.folderId.split("/")[0];
+                const treeItem = this._graphCtx.treeItems[folderGuid];
+                if (!treeItem)
+                    return;
+                treeItem.node.select(true);
             }
             /****************************************/
             updateOptions() {

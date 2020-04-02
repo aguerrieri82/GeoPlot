@@ -411,6 +411,35 @@
 }
 
 /****************************************/
+/* ColorPicker                          */
+/****************************************/
+
+.color-picker {
+    visibility: hidden;
+    flex-direction: row;
+    flex-wrap: wrap;
+    display: flex;
+    background-color: white;
+
+    &.visible {
+        position: absolute;
+        width: 160px;
+        visibility: visible;
+    }
+
+    a {
+        width: 32px;
+        height: 32px;
+        border: solid 2px white;
+
+        &:hover {
+            transition-duration: 0.2s;
+            opacity: 0.8;
+        }
+    }
+}
+
+/****************************************/
 /* Progress                            */
 /****************************************/
 

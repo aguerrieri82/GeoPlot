@@ -31,6 +31,109 @@
     }
 
     /****************************************/
+    /* ColorPicker
+    /****************************************/
+
+    interface IColorViewModel {
+        select(): void;
+        value: string;
+    }
+
+    /****************************************/
+
+    class ColorPickerViewModel {
+
+        private _onSelected: (color: string) => void;
+        private _element: HTMLElement;
+        private _mouseDown: (ev: MouseEvent) => void;
+
+        /****************************************/
+
+        constructor() {
+            for (var color in MATERIAL_COLORS)
+                this.addColor(MATERIAL_COLORS[color][600]);
+            this._mouseDown = ev => this.onMouseDown(ev);
+        }
+
+        /****************************************/
+
+        attachNode(element: HTMLElement) {
+            this._element = element;
+            document.body.appendChild(this._element);
+        }
+
+        /****************************************/
+
+        async pick(): Promise<string> {
+            await this.open();
+            return new Promise(res => this._onSelected = res);
+        }
+
+        /****************************************/
+
+        addColor(color: string) {
+            this.colors.push({
+                value: color,
+                select: () => {
+                    if (this._onSelected)
+                        this._onSelected(color);
+                    this._onSelected = null;
+                    this.close();
+                }
+            });
+        }
+
+        /****************************************/
+
+        async open() {
+
+            if (this.isOpened())
+                return;
+
+            this.isOpened(true);
+
+            if (window.event) {
+                const mouseEvent = <MouseEvent>window.event;
+                const coords = { x: mouseEvent.pageX, y: mouseEvent.pageY };
+                //await PromiseUtils.delay(0);
+                this._element.style.left = coords.x + "px";
+                this._element.style.top = (coords.y - this._element.clientHeight) + "px";
+            }
+            document.body.addEventListener("mousedown", this._mouseDown);
+        }
+
+        /****************************************/
+
+        close() {
+            if (!this.isOpened())
+                return;
+
+            this.isOpened(false);
+
+            document.body.removeEventListener("mousedown", this._mouseDown);
+        }
+
+        /****************************************/
+
+        protected onMouseDown(ev: MouseEvent) {
+
+            if ((<HTMLElement>ev.target).parentElement != this._element) {
+                if (this._onSelected)
+                    this._onSelected(undefined);
+                this._onSelected = null;
+                this.close();
+            }
+        }
+
+        /****************************************/
+
+        isOpened = ko.observable(false);
+        colors: IColorViewModel[] = [];
+
+        static readonly instance = new ColorPickerViewModel();
+    }
+
+    /****************************************/
     /* ParameterViewModel
     /****************************************/
 
@@ -99,6 +202,13 @@
             this.calculator.setState(state);
         }
 
+        /****************************************/
+
+        setSelectedId(id: string) {
+            if (this.calculator.controller.listModel.selectedItem && this.calculator.controller.listModel.selectedItem.id == id)
+                return;
+            this.calculator.controller.dispatch({ type: "set-selected-id", id: id});
+        }
 
         /****************************************/
 
@@ -176,6 +286,7 @@
         serieCalculator: IndicatorCalculator<TData>;
         calculator: Desmos.IGraphingCalculator;
         vars: IDictionary<number> = {};
+        treeItems: IDictionary<ITreeItem> = {};
     }
 
     /****************************************/
@@ -369,6 +480,8 @@
             if (!this.folderId)
                 this.folderId = StringUtils.uuidv4();
 
+            this._graphCtx.treeItems[this.folderId] = this;
+
             const values = this.getExpressions();
 
             this._graphCtx.setExpressions(values);
@@ -431,7 +544,7 @@
 
             this.node.addNode(node);
 
-                value.attachNode(node);
+            value.attachNode(node);
 
             value.attachGraph(this._graphCtx);
 
@@ -474,7 +587,8 @@
         /****************************************/
 
         protected onSelected() {
-
+            if (this.mainExpression && this._graphCtx)
+                this._graphCtx.setSelectedId(this.mainExpression);
         }
 
         /****************************************/
@@ -501,6 +615,7 @@
         icon: string;
         optionsTemplateName: string;
         parameters = ko.observableArray<ParameterViewModel>();
+        readonly mainExpression: string;
     }
 
     /****************************************/
@@ -711,6 +826,11 @@
                 this.setState(config);
         }
 
+        /****************************************/
+    
+        get mainExpression(): string {
+            return this.getGraphId("main-func");
+        }
 
         /****************************************/
 
@@ -1266,6 +1386,12 @@
 
         /****************************************/
 
+        get mainExpression(): string {
+            return this.getGraphId("offset-x-serie");
+        }
+
+        /****************************************/
+
         protected createParameters(result: ParameterViewModel[]): boolean {
             result.push(apply(new ParameterViewModel({ value: this.offsetX, name: $string("$(shift)")}), p => {
                 p.max(this.values.length);
@@ -1293,7 +1419,8 @@
         /****************************************/
 
         protected onSelected() {
-            this._graphCtx.expressionZoomFit(this.getGraphId("table"));
+            super.onSelected();
+            //this._graphCtx.expressionZoomFit(this.getGraphId("table"));
         }
 
         /****************************************/
@@ -1357,12 +1484,20 @@
             return this.addChildrenWork(configOrState instanceof StudioSerieRegression ? configOrState : new StudioSerieRegression(configOrState), updateGraph);
         }
 
+        /****************************************/
+
+        async changeColor() {
+
+            const color = await this.colorPicker.pick();
+            if (color)
+                this.color(color);
+        }
 
         /****************************************/
 
         async updateSerie() {
 
-            if (this.source.type == "geoplot") {
+            if (this.source.type == "geoplot" || !this.source.type) {
 
                 if (!this._graphCtx.serieCalculator) {
                     M.toast({ html: $string("$(msg-downloading-data)") })
@@ -1370,7 +1505,7 @@
                     this._graphCtx.serieCalculator = new IndicatorCalculator(model.data, InfectionDataSet, model.geo);
                 }
 
-                this.values = this.importValues(this._graphCtx.serieCalculator.getSerie(this.source));
+                this.values = this.importValues(this._graphCtx.serieCalculator.getSerie(<IDayAreaSerieSource>this.source));
 
                 this._graphCtx.updateTable(this.getGraphId("table"), this.values);
                 this.children.foreach(a => a.onParentChanged());
@@ -1404,6 +1539,7 @@
         offsetX = ko.observable<number>(0);
         source: SerieSource;
         values: IFunctionPoint[];
+        colorPicker = ColorPickerViewModel.instance;
     }
 
     /****************************************/
@@ -1608,6 +1744,8 @@
                 advancedStyling: true
             });
 
+            this._graphCtx.calculator.controller.listModel.onSelectionChanged = item => this.onGraphSelectionChanged(item);
+
             const actions: ActionViewModel[] = [];
             actions.push(apply(new ActionViewModel(), action => {
                 action.text = $string("$(new-project)"),
@@ -1652,6 +1790,18 @@
 
 
             setTimeout(() => this.init());
+        }
+
+        /****************************************/
+
+        protected onGraphSelectionChanged(item: { id: string, folderId?: string }) {
+            if (!item || !item.folderId)
+                return;
+            const folderGuid = item.folderId.split("/")[0];
+            const treeItem = this._graphCtx.treeItems[folderGuid];
+            if (!treeItem)
+                return;
+            treeItem.node.select(true);
         }
 
         /****************************************/

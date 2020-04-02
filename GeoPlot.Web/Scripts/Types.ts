@@ -124,6 +124,30 @@
         data: T;
         isSuccess: boolean;
     }
+
+    /****************************************/
+
+    export const MATERIAL_COLORS = {
+        "red": { "600": "#f44336" },
+        "pink": { "600": "#e91e63" },
+        "purple": { "600": "#9c27b0" },
+        "deep_purple": { "600": "#673ab7" },
+        "indigo": { "600": "#3f51b5" },
+        "blue": { "600": "#2196f3" },
+        "light_blue": { "600": "#03a9f4" },
+        "cyan": { "600": "#00bcd4" },
+        "teal": { "600": "#009688" },
+        "green": { "600": "#4caf50" },
+        "light_green": { "600": "#8bc34a" },
+        "lime": { "600": "#cddc39" },
+        "yellow": { "600": "#ffeb3b" },
+        "amber": { "600": "#ffc107" },
+        "orange": { "600": "#ff9800" },
+        "depp_orange": { "600": "#ff5722" },
+        "brown": { "600": "#795548" },
+        "grey": { "600": "#9e9e9e" },
+        "blue_gray": { "600": "#607d8b" },
+    };
 }
 
 

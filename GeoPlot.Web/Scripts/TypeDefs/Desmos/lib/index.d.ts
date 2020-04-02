@@ -60,7 +60,7 @@ declare namespace Desmos {
     }
 
     type DispatchEvent = {
-        type: "expression-zoom-fit",
+        type: "expression-zoom-fit" | "set-selected-id",
         id: string
     } | {
         type: "set-item-color",
@@ -70,6 +70,7 @@ declare namespace Desmos {
 
 
     interface IModel {
+        id: string;
         regressionParameters: { [name: string]: number };
     }
 
@@ -78,6 +79,12 @@ declare namespace Desmos {
         _setItemHidden(id: string, isHidden: boolean);
         dispatch(event: DispatchEvent);
         getItemModel(id: string): IModel;
+        listModel: IListModel;
+    }
+
+    interface IListModel {
+        onSelectionChanged(model: IModel);
+        selectedItem: IModel;
     }
 
     interface IGraphingCalculator {

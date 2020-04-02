@@ -1,5 +1,7 @@
 ﻿namespace WebApp.GeoPlot {
 
+
+
     /****************************************/
     /* BaseTreeItem
     /****************************************/
@@ -317,9 +319,16 @@
 
         /****************************************/
 
-        select() {
+        select(expand = false) {
             this.isSelected(true);
             this._element.focus();
+            if (expand) {
+                let curNode: TreeNodeViewModel<ITreeItem> = this;
+                while (curNode) {
+                    curNode.isExpanded(true);
+                    curNode = curNode.parentNode;
+                }
+            }
         }
 
         /****************************************/

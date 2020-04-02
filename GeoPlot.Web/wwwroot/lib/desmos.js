@@ -9843,6 +9843,8 @@
 
                         function Z(e, t) {
                             e.selectedItem = t
+                            if ("onSelectionChanged" in e)
+                                e.onSelectionChanged(t);
                         }
 
                         function J(e, t, n, i) {

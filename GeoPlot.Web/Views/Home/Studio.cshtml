@@ -109,7 +109,14 @@
             <label class="active">Colore</label>
             <input type="text" data-bind="value: color" />
         </div>
-        <span class="color-box" data-bind="style: {'background-color': color}"></span>
+        <div class="relative">
+            <a href="#!" class="color-box" data-bind="style: {'background-color': color}, click: changeColor"></a>
+            <!--ko with: colorPicker-->
+            <div class="color-picker z-depth-2" data-bind="css: {visible: isOpened}, foreach: colors, attach: attachNode">
+                <a data-bind="click: select, style: {'background-color': value}"></a>
+            </div>
+            <!--/ko-->
+        </div>
     </div>
 </script>
 
