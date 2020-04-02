@@ -415,16 +415,15 @@
 /****************************************/
 
 .color-picker {
-    visibility: hidden;
-    flex-direction: row;
-    flex-wrap: wrap;
-    display: flex;
+    display: none;
     background-color: white;
 
     &.visible {
         position: absolute;
         width: 160px;
-        visibility: visible;
+        flex-direction: row;
+        flex-wrap: wrap;
+        display: flex;
     }
 
     a {

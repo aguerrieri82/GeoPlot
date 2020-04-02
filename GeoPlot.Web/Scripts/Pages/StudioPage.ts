@@ -41,7 +41,7 @@
 
     /****************************************/
 
-    class ColorPickerViewModel {
+    export class ColorPicker {
 
         private _onSelected: (color: string) => void;
         private _element: HTMLElement;
@@ -130,7 +130,7 @@
         isOpened = ko.observable(false);
         colors: IColorViewModel[] = [];
 
-        static readonly instance = new ColorPickerViewModel();
+        static readonly instance = new ColorPicker();
     }
 
     /****************************************/
@@ -207,7 +207,7 @@
         setSelectedId(id: string) {
             if (this.calculator.controller.listModel.selectedItem && this.calculator.controller.listModel.selectedItem.id == id)
                 return;
-            this.calculator.controller.dispatch({ type: "set-selected-id", id: id});
+            this.calculator.controller.dispatch({ type: "set-selected-id", id: id });
         }
 
         /****************************************/
@@ -335,7 +335,10 @@
                 action.icon = "delete";
                 action.execute = () => this.remove();
             }))
+
         }
+
+
 
         /****************************************/
 
@@ -827,7 +830,7 @@
         }
 
         /****************************************/
-    
+
         get mainExpression(): string {
             return this.getGraphId("main-func");
         }
@@ -1234,7 +1237,7 @@
                     })).toArray();
                 }
 
-                if (isNaN( points[0].x)) {
+                if (isNaN(points[0].x)) {
                     return linq(points).select((a, i) => (<IFunctionPoint>{
                         x: i,
                         xLabel: a.x,
@@ -1266,13 +1269,13 @@
             super.createActions(result);
 
             result.push(apply(new ActionViewModel(), action => {
-                action.text = $string("$(update)"),
+                action.text = $string("$(update)");
                 action.icon = "autorenew";
                 action.execute = () => this.updateSerie();
             }));
 
             result.push(apply(new ActionViewModel(), action => {
-                action.text = $string("$(new-regression)"),
+                action.text = $string("$(new-regression)");
                 action.icon = "add_box";
                 action.execute = () => {
                     const reg = this.addRegression(null, false);
@@ -1283,12 +1286,19 @@
             }));
 
             result.push(apply(new ActionViewModel(), action => {
-                action.text = $string("$(zoom)"),
+                action.text = $string("$(zoom)");
                 action.icon = "zoom_in";
-                action.execute = () => {
-                    this.zoom();
-                }
+                action.execute = () => this.zoom();
 
+            }));
+
+            result.push(apply(new ActionViewModel(), action => {
+                action.text = $string("$(align-with-this)");
+                action.icon = "compare_arrows";
+                action.execute = () => {
+                    let answer = prompt($string("$(tollerance)"), "10");                    
+                    this.alignOthers(isNaN(<any>answer) ? 10 : parseInt(answer));
+                };
             }));
         }
 
@@ -1378,10 +1388,47 @@
                         }
                     ]
                 }];
-
-
-
             return values;
+        }
+
+        /****************************************/
+
+        alignOthers(tollerance: number,  ...series: StudioSerie[]) {
+            if (!series || series.length == 0)
+                series = this.parent.children.where(a => a != this).toArray();
+            for (let serie of series)
+                serie.alignWith(this, tollerance);
+        }
+
+        /****************************************/
+
+        alignWith(other: StudioSerie, tollerance: number) {
+
+            let minOfs = 0;
+            let minValue = Number.NEGATIVE_INFINITY;
+            for (let ofs = -this.values.length; ofs < this.values.length; ofs++) {
+
+                let value = 0;
+                for (let i = 0; i < this.values.length; i++) {
+                    const ofsX = i - ofs;
+
+                    if (ofsX < 0 || ofsX >= this.values.length)
+                        continue;
+
+                    if (i >= other.values.length)
+                        continue;
+
+                    if (Math.abs(this.values[ofsX].y - other.values[i].y) < tollerance)
+                        value++;
+                }
+                if (value > minValue) {
+                    minValue = value;
+                    minOfs = ofs;
+                }
+            }
+
+            other.offsetX(0);
+            this.offsetX(minOfs);
         }
 
         /****************************************/
@@ -1393,7 +1440,7 @@
         /****************************************/
 
         protected createParameters(result: ParameterViewModel[]): boolean {
-            result.push(apply(new ParameterViewModel({ value: this.offsetX, name: $string("$(shift)")}), p => {
+            result.push(apply(new ParameterViewModel({ value: this.offsetX, name: $string("$(shift)") }), p => {
                 p.max(this.values.length);
                 p.min(-this.values.length);
                 p.step(1);
@@ -1488,7 +1535,7 @@
 
         async changeColor() {
 
-            const color = await this.colorPicker.pick();
+            const color = await ColorPicker.instance.pick();
             if (color)
                 this.color(color);
         }
@@ -1539,7 +1586,6 @@
         offsetX = ko.observable<number>(0);
         source: SerieSource;
         values: IFunctionPoint[];
-        colorPicker = ColorPickerViewModel.instance;
     }
 
     /****************************************/
@@ -1572,6 +1618,27 @@
 
             if (config)
                 this.setState(config);
+        }
+
+        /****************************************/
+
+        createActions(result: ActionViewModel[]) {
+
+            super.createActions(result);
+
+            result.push(apply(new ActionViewModel(), action => {
+                action.text = $string("$(update-all-proj)");
+                action.icon = "autorenew";
+                action.execute = () => this.updateAllSerie();
+            }));
+        }
+
+        /****************************************/
+
+        async updateAllSerie() {
+
+            for (let item of this.children)
+                await item.updateSerie();
         }
 
         /****************************************/
@@ -1631,7 +1698,7 @@
         /****************************************/
 
         protected createParameters(result: ParameterViewModel[]): boolean {
-            result.push(apply(new ParameterViewModel({ value: this.time, name: $string("$(day)")}), p => {
+            result.push(apply(new ParameterViewModel({ value: this.time, name: $string("$(day)") }), p => {
                 p.max(100);
                 p.min(0);
                 p.step(1);
@@ -1749,12 +1816,12 @@
             const actions: ActionViewModel[] = [];
             actions.push(apply(new ActionViewModel(), action => {
                 action.text = $string("$(new-project)"),
-                action.icon = "create_new_folder";
+                    action.icon = "create_new_folder";
                 action.execute = () => this.newProject();
             }));
             actions.push(apply(new ActionViewModel(), action => {
                 action.text = $string("$(save)"),
-                action.icon = "save";
+                    action.icon = "save";
                 action.execute = () => this.saveState();
             }));
             actions.push(apply(new ActionViewModel(), action => {
@@ -1764,7 +1831,7 @@
             }));
             actions.push(apply(new ActionViewModel(), action => {
                 action.text = $string("$(share) Studio"),
-                action.icon = "share";
+                    action.icon = "share";
                 action.execute = () => this.share();
             }));
             actions.push(apply(new ActionViewModel(), action => {
@@ -1950,8 +2017,8 @@
 
         /****************************************/
 
-        protected async onPaste(data: DataTransfer) : Promise<boolean> {
-           
+        protected async onPaste(data: DataTransfer): Promise<boolean> {
+
             const text = data.getData("text/plain").toString();
             if (text)
                 return await this.importText(text);
@@ -1961,7 +2028,7 @@
         /****************************************/
 
         async import() {
-//            var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
+            //            var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
 
             let project = this.getSelectedProject();
             const data = await this.dataImport.show();

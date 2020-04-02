@@ -3093,7 +3093,7 @@ var WebApp;
             return value.toString();
         }
         /****************************************/
-        class ColorPickerViewModel {
+        class ColorPicker {
             /****************************************/
             constructor() {
                 /****************************************/
@@ -3160,7 +3160,8 @@ var WebApp;
                 }
             }
         }
-        ColorPickerViewModel.instance = new ColorPickerViewModel();
+        ColorPicker.instance = new ColorPicker();
+        GeoPlot.ColorPicker = ColorPicker;
         /****************************************/
         class ParameterViewModel {
             constructor(config) {
@@ -3888,7 +3889,6 @@ var WebApp;
                 /****************************************/
                 this.color = ko.observable();
                 this.offsetX = ko.observable(0);
-                this.colorPicker = ColorPickerViewModel.instance;
                 this.canDrag = true;
                 this.itemType = "serie";
                 this.icon = "insert_chart";
@@ -3939,13 +3939,13 @@ var WebApp;
             createActions(result) {
                 super.createActions(result);
                 result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(update)"),
-                        action.icon = "autorenew";
+                    action.text = $string("$(update)");
+                    action.icon = "autorenew";
                     action.execute = () => this.updateSerie();
                 }));
                 result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(new-regression)"),
-                        action.icon = "add_box";
+                    action.text = $string("$(new-regression)");
+                    action.icon = "add_box";
                     action.execute = () => {
                         const reg = this.addRegression(null, false);
                         reg.updateGraph();
@@ -3954,10 +3954,16 @@ var WebApp;
                     };
                 }));
                 result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(zoom)"),
-                        action.icon = "zoom_in";
+                    action.text = $string("$(zoom)");
+                    action.icon = "zoom_in";
+                    action.execute = () => this.zoom();
+                }));
+                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                    action.text = $string("$(align-with-this)");
+                    action.icon = "compare_arrows";
                     action.execute = () => {
-                        this.zoom();
+                        let answer = prompt($string("$(tollerance)"), "10");
+                        this.alignOthers(isNaN(answer) ? 10 : parseInt(answer));
                     };
                 }));
             }
@@ -4043,6 +4049,36 @@ var WebApp;
                 return values;
             }
             /****************************************/
+            alignOthers(tollerance, ...series) {
+                if (!series || series.length == 0)
+                    series = this.parent.children.where(a => a != this).toArray();
+                for (let serie of series)
+                    serie.alignWith(this, tollerance);
+            }
+            /****************************************/
+            alignWith(other, tollerance) {
+                let minOfs = 0;
+                let minValue = Number.NEGATIVE_INFINITY;
+                for (let ofs = -this.values.length; ofs < this.values.length; ofs++) {
+                    let value = 0;
+                    for (let i = 0; i < this.values.length; i++) {
+                        const ofsX = i - ofs;
+                        if (ofsX < 0 || ofsX >= this.values.length)
+                            continue;
+                        if (i >= other.values.length)
+                            continue;
+                        if (Math.abs(this.values[ofsX].y - other.values[i].y) < tollerance)
+                            value++;
+                    }
+                    if (value > minValue) {
+                        minValue = value;
+                        minOfs = ofs;
+                    }
+                }
+                other.offsetX(0);
+                this.offsetX(minOfs);
+            }
+            /****************************************/
             get mainExpression() {
                 return this.getGraphId("offset-x-serie");
             }
@@ -4116,7 +4152,7 @@ var WebApp;
             /****************************************/
             changeColor() {
                 return __awaiter(this, void 0, void 0, function* () {
-                    const color = yield this.colorPicker.pick();
+                    const color = yield ColorPicker.instance.pick();
                     if (color)
                         this.color(color);
                 });
@@ -4167,6 +4203,22 @@ var WebApp;
                 };
                 if (config)
                     this.setState(config);
+            }
+            /****************************************/
+            createActions(result) {
+                super.createActions(result);
+                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                    action.text = $string("$(update-all-proj)");
+                    action.icon = "autorenew";
+                    action.execute = () => this.updateAllSerie();
+                }));
+            }
+            /****************************************/
+            updateAllSerie() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    for (let item of this.children)
+                        yield item.updateSerie();
+                });
             }
             /****************************************/
             canAccept(value) {

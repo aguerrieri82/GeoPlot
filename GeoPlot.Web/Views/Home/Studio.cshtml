@@ -93,6 +93,13 @@
 
 <partial name="Templates\_DataImport" />
 
+<!--ko with: WebApp.GeoPlot.ColorPicker.instance -->
+<div class="color-picker z-depth-2" data-bind="css: {visible: isOpened}, foreach: colors, attach: attachNode">
+    <a data-bind="click: select, style: {'background-color': value}"></a>
+</div>
+<!--/ko-->
+
+
 <script type="text/html" id="ActionTemplate">
     <a href="#!" data-bind="attr: {title: text}, click: execute">
         <i class="material-icons" data-bind="text: icon"></i>
@@ -111,11 +118,6 @@
         </div>
         <div class="relative">
             <a href="#!" class="color-box" data-bind="style: {'background-color': color}, click: changeColor"></a>
-            <!--ko with: colorPicker-->
-            <div class="color-picker z-depth-2" data-bind="css: {visible: isOpened}, foreach: colors, attach: attachNode">
-                <a data-bind="click: select, style: {'background-color': value}"></a>
-            </div>
-            <!--/ko-->
         </div>
     </div>
 </script>
@@ -161,10 +163,14 @@
 </script>
 
 @section Scripts {
+
+
     <script src="~/lib/desmos.js"></script>
     <script>
         WebApp.app.baseUrl = '@Url.Content("~/")';
         WebApp.app.initServices();
         ko.applyBindings(new WebApp.GeoPlot.StudioPage( @(Html.Json((Guid?)ViewBag.ProjectId)) ));
     </script>
+
+
 }

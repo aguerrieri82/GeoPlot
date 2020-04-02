@@ -21727,8 +21727,6 @@
                                 })
                             }, e.prototype.handleDispatchedAction = function (e) {
                                 var t = this;
-                                if (e.type != "tick")
-                                    console.log(e);
                                 switch (e.type) {
                                     case "api-method-called":
                                         break;

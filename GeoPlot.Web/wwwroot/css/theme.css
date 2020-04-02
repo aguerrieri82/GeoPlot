@@ -669,15 +669,14 @@ svg.map {
 /* ColorPicker                          */
 /****************************************/
 .color-picker {
-  visibility: hidden;
-  flex-direction: row;
-  flex-wrap: wrap;
-  display: flex;
+  display: none;
   background-color: white; }
   .color-picker.visible {
     position: absolute;
     width: 160px;
-    visibility: visible; }
+    flex-direction: row;
+    flex-wrap: wrap;
+    display: flex; }
   .color-picker a {
     width: 32px;
     height: 32px;
