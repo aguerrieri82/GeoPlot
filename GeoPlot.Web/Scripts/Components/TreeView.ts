@@ -1,7 +1,5 @@
 ﻿namespace WebApp.GeoPlot {
 
-
-
     /****************************************/
     /* BaseTreeItem
     /****************************************/
@@ -32,7 +30,7 @@
 
         /****************************************/
 
-        attachNode(node: TreeNodeViewModel<ITreeItem>) {
+        attachNode(node: TreeNode<ITreeItem>) {
             this.node = node;
         }
 
@@ -61,7 +59,7 @@
         canDrag: boolean;
         itemType: string;
         icon: string;
-        node: TreeNodeViewModel<ITreeItem>;
+        node: TreeNode<ITreeItem>;
     }
 
     /****************************************/
@@ -79,7 +77,7 @@
 
     export interface ITreeItem extends IDataTransferWriter, IDataTransferReader {
 
-        attachNode(node: TreeNodeViewModel<ITreeItem>);
+        attachNode(node: TreeNode<ITreeItem>);
         remove(): void;
         onParentChanged(): void;
         canAccept(value: object): boolean;
@@ -90,14 +88,14 @@
         readonly canDrag: boolean;
         readonly itemType: string;
         readonly icon: string;
-        readonly node: TreeNodeViewModel<ITreeItem>;
+        readonly node: TreeNode<ITreeItem>;
     }
 
     /****************************************/
     /* ActionViewModel
     /****************************************/
 
-    export class ActionViewModel {
+    export class ActionView {
         execute() {
 
         }
@@ -109,13 +107,13 @@
     }
 
     /****************************************/
-    /* TreeNodeViewModel
+    /* TreeNode
     /****************************************/
 
-    export class TreeNodeViewModel<T extends ITreeItem> {
+    export class TreeNode<T extends ITreeItem> {
 
-        protected _treeView: TreeViewModel<T>;
-        protected _parentNode: TreeNodeViewModel<T>;
+        protected _treeView: TreeView<T>;
+        protected _parentNode: TreeNode<T>;
         protected _element: HTMLElement;
         protected _dargEnterCount = 0;
         protected _childLoaded = false;
@@ -255,7 +253,7 @@
             if (elId) {
 
                 const element = document.getElementById(elId);
-                const node = <TreeNodeViewModel<ITreeItem>>element["$model"];
+                const node = <TreeNode<ITreeItem>>element["$model"];
 
                 if (!this.value().canAccept(node.value()))
                     return;
@@ -291,14 +289,14 @@
 
         /****************************************/
 
-        addNode(node: TreeNodeViewModel<T>) {
+        addNode(node: TreeNode<T>) {
             node.attach(this._treeView, this);
             this.nodes.push(node);
         }
 
         /****************************************/
 
-        attach(treeView: TreeViewModel<T>, parent?: TreeNodeViewModel<T>) {
+        attach(treeView: TreeView<T>, parent?: TreeNode<T>) {
             this._treeView = treeView;
             this._parentNode = parent;
             for (let childNode of this.nodes())
@@ -307,7 +305,7 @@
 
         /****************************************/
 
-        get parentNode(): TreeNodeViewModel<T> {
+        get parentNode(): TreeNode<T> {
             return this._parentNode;
         }
 
@@ -323,7 +321,7 @@
             this.isSelected(true);
             this._element.focus();
             if (expand) {
-                let curNode: TreeNodeViewModel<ITreeItem> = this;
+                let curNode: TreeNode<ITreeItem> = this;
                 while (curNode) {
                     curNode.isExpanded(true);
                     curNode = curNode.parentNode;
@@ -339,25 +337,25 @@
 
         /****************************************/
 
-        nodes = ko.observableArray<TreeNodeViewModel<T>>();
+        nodes = ko.observableArray<TreeNode<T>>();
         value = ko.observable<T>();
         isSelected = ko.observable(false);
         isVisible = ko.observable(true);
         isExpanded = ko.observable(false);
-        actions = ko.observable<ActionViewModel[]>();
+        actions = ko.observable<ActionView[]>();
     }
 
     /****************************************/
-    /* TreeViewModel
+    /* TreeView
     /****************************************/
 
-    export class TreeViewModel<T extends ITreeItem> {
+    export class TreeView<T extends ITreeItem> {
 
-        private _selectedNode: TreeNodeViewModel<T>;
+        private _selectedNode: TreeNode<T>;
 
         /****************************************/
 
-        select(node: TreeNodeViewModel<T>) {
+        select(node: TreeNode<T>) {
 
             if (this.selectedNode() == node)
                 return;
@@ -373,14 +371,14 @@
 
         /****************************************/
 
-        setRoot(node: TreeNodeViewModel<T>) {
+        setRoot(node: TreeNode<T>) {
             node.attach(this);
             this.root(node);
         }
 
         /****************************************/
 
-        root = ko.observable<TreeNodeViewModel<T>>();
-        selectedNode = ko.observable<TreeNodeViewModel<T>>();
+        root = ko.observable<TreeNode<T>>();
+        selectedNode = ko.observable<TreeNode<T>>();
     }
 }

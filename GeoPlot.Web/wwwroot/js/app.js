@@ -383,15 +383,15 @@ var WebApp;
         /****************************************/
         /* ActionViewModel
         /****************************************/
-        class ActionViewModel {
+        class ActionView {
             execute() {
             }
         }
-        GeoPlot.ActionViewModel = ActionViewModel;
+        GeoPlot.ActionView = ActionView;
         /****************************************/
-        /* TreeNodeViewModel
+        /* TreeNode
         /****************************************/
-        class TreeNodeViewModel {
+        class TreeNode {
             constructor(value) {
                 this._dargEnterCount = 0;
                 this._childLoaded = false;
@@ -555,11 +555,11 @@ var WebApp;
                 this.isExpanded(!this.isExpanded());
             }
         }
-        GeoPlot.TreeNodeViewModel = TreeNodeViewModel;
+        GeoPlot.TreeNode = TreeNode;
         /****************************************/
-        /* TreeViewModel
+        /* TreeView
         /****************************************/
-        class TreeViewModel {
+        class TreeView {
             constructor() {
                 /****************************************/
                 this.root = ko.observable();
@@ -581,7 +581,266 @@ var WebApp;
                 this.root(node);
             }
         }
-        GeoPlot.TreeViewModel = TreeViewModel;
+        GeoPlot.TreeView = TreeView;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+/// <reference path="treeview.ts" />
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        /****************************************/
+        class BaseStudioItem extends GeoPlot.BaseTreeItem {
+            constructor() {
+                super();
+                this._isUpdating = 0;
+                this.time = ko.observable(0);
+                this.parameters = ko.observableArray();
+            }
+            /****************************************/
+            createActions(result) {
+                result.push(WebApp.apply(new GeoPlot.ActionView(), action => {
+                    action.text = $string("$(delete)");
+                    action.icon = "delete";
+                    action.execute = () => this.remove();
+                }));
+            }
+            /****************************************/
+            setState(state) {
+                this._isUpdating++;
+                if (state.name)
+                    this.name(state.name);
+                if (state.visible != undefined)
+                    this.node.isVisible(state.visible);
+                if (state.color)
+                    this.color(state.color);
+                if (state.opened != undefined)
+                    this.node.isExpanded(state.opened);
+                if (state.folderId)
+                    this.folderId = state.folderId;
+                this.setStateWork(state);
+                this.updateGraph();
+                this.setChildrenStateWork(state);
+                this._isUpdating--;
+            }
+            /****************************************/
+            getState() {
+                return {
+                    name: this.name(),
+                    visible: this.node.isVisible(),
+                    folderId: this.folderId,
+                    color: this.color(),
+                    opened: this.node.isExpanded()
+                };
+            }
+            /****************************************/
+            getVar(name) {
+                return this._varsMap[name];
+            }
+            /****************************************/
+            remove(recursive = true) {
+                if (this._graphCtx) {
+                    this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
+                    this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
+                }
+                this.node.remove();
+                if (recursive)
+                    this.children.foreach(a => a.remove());
+            }
+            /****************************************/
+            attachNode(node) {
+                this.node = node;
+                this.node.isVisible.subscribe(value => this.updateGraphVisibility());
+                this.node.isSelected.subscribe(value => {
+                    if (value)
+                        this.onSelected();
+                });
+                const actions = [];
+                this.createActions(actions);
+                this.node.actions(actions);
+            }
+            /****************************************/
+            attachGraph(ctx) {
+                this._graphCtx = ctx;
+                this._graphCtx.calculator.observe("expressionAnalysis", () => this.onGraphChanged());
+                this.color.subscribe(value => this.updateColor());
+            }
+            /****************************************/
+            isFullVisible() {
+                let curNode = this.node;
+                while (curNode) {
+                    if (!curNode.isVisible())
+                        return false;
+                    curNode = curNode.parentNode;
+                }
+                return true;
+            }
+            /****************************************/
+            updateGraphVisibility(recorsive = true) {
+                const visible = this.isFullVisible();
+                this._graphCtx.setItemVisibile(this.getGraphId("public"), visible);
+                this._graphCtx.setItemVisibile(this.getGraphId("private"), visible);
+                if (recorsive)
+                    this.children.foreach(a => a.updateGraphVisibility());
+                return visible;
+            }
+            /****************************************/
+            updateGraph(recursive = true) {
+                if (!this._graphCtx)
+                    return;
+                if (!this.folderId)
+                    this.folderId = WebApp.StringUtils.uuidv4();
+                this._graphCtx.treeItems[this.folderId] = this;
+                const values = this.getExpressions();
+                this._graphCtx.setExpressions(values);
+                this.updateGraphWork();
+                this.updateGraphVisibility();
+                this.updateParameters();
+                if (recursive)
+                    this.children.foreach(a => a.updateGraph(recursive));
+            }
+            /****************************************/
+            onParentChanged() {
+                this.updateGraphVisibility();
+            }
+            /****************************************/
+            get parent() {
+                return this.node.parentNode.value();
+            }
+            /****************************************/
+            get children() {
+                return WebApp.linq(this.node.nodes()).select(a => a.value());
+            }
+            /****************************************/
+            replaceVars(value) {
+                for (let item in this._varsMap) {
+                    const reg = new RegExp("\\$" + item, "g");
+                    value = value.replace(reg, this._varsMap[item]);
+                }
+                return value;
+            }
+            /****************************************/
+            getGraphId(section) {
+                return this.folderId + "/" + section;
+            }
+            /****************************************/
+            addChildrenWork(value, updateGraph = true) {
+                const node = new GeoPlot.TreeNode(value);
+                this.node.addNode(node);
+                value.attachNode(node);
+                value.attachGraph(this._graphCtx);
+                if (updateGraph)
+                    value.updateGraph();
+                value.onParentChanged();
+                return value;
+            }
+            /****************************************/
+            createParameters(result) {
+                return false;
+            }
+            /****************************************/
+            updateParameters() {
+                const values = [];
+                if (this.createParameters(values)) {
+                    this.parameters.removeAll();
+                    values.forEach(a => this.parameters.push(a));
+                }
+            }
+            /****************************************/
+            updateGraphWork() {
+            }
+            /****************************************/
+            setChildrenStateWork(state) {
+            }
+            /****************************************/
+            onSelected() {
+                if (this.mainExpression && this._graphCtx)
+                    this._graphCtx.setSelectedId(this.mainExpression);
+            }
+            /****************************************/
+            onGraphChanged() {
+            }
+            /****************************************/
+            updateColor() {
+            }
+        }
+        GeoPlot.BaseStudioItem = BaseStudioItem;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        /****************************************/
+        class ColorPicker {
+            /****************************************/
+            constructor() {
+                /****************************************/
+                this.isOpened = ko.observable(false);
+                this.colors = [];
+                for (var color in GeoPlot.MATERIAL_COLORS)
+                    this.addColor(GeoPlot.MATERIAL_COLORS[color][600]);
+                this._mouseDown = ev => this.onMouseDown(ev);
+            }
+            /****************************************/
+            attachNode(element) {
+                this._element = element;
+                document.body.appendChild(this._element);
+            }
+            /****************************************/
+            pick() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    yield this.open();
+                    return new Promise(res => this._onSelected = res);
+                });
+            }
+            /****************************************/
+            addColor(color) {
+                this.colors.push({
+                    value: color,
+                    select: () => {
+                        if (this._onSelected)
+                            this._onSelected(color);
+                        this._onSelected = null;
+                        this.close();
+                    }
+                });
+            }
+            /****************************************/
+            open() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    if (this.isOpened())
+                        return;
+                    this.isOpened(true);
+                    if (window.event) {
+                        const mouseEvent = window.event;
+                        const coords = { x: mouseEvent.pageX, y: mouseEvent.pageY };
+                        //await PromiseUtils.delay(0);
+                        this._element.style.left = coords.x + "px";
+                        this._element.style.top = (coords.y - this._element.clientHeight) + "px";
+                    }
+                    document.body.addEventListener("mousedown", this._mouseDown);
+                });
+            }
+            /****************************************/
+            close() {
+                if (!this.isOpened())
+                    return;
+                this.isOpened(false);
+                document.body.removeEventListener("mousedown", this._mouseDown);
+            }
+            /****************************************/
+            onMouseDown(ev) {
+                if (ev.target.parentElement != this._element) {
+                    if (this._onSelected)
+                        this._onSelected(undefined);
+                    this._onSelected = null;
+                    this.close();
+                }
+            }
+        }
+        ColorPicker.instance = new ColorPicker();
+        GeoPlot.ColorPicker = ColorPicker;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
 /// <reference path="treeview.ts" />
@@ -740,7 +999,7 @@ var WebApp;
                 this.columnSeparator = ko.observable();
                 this.columns = ko.observable();
                 this.table = ko.observable();
-                this.treeView = new GeoPlot.TreeViewModel();
+                this.treeView = new GeoPlot.TreeView();
                 this.progress = new ProgressViewModel();
                 this.hasData = ko.observable(false);
                 this.sourceUrl = ko.observable();
@@ -751,7 +1010,7 @@ var WebApp;
                     { text: ";", value: ";" },
                     { text: $string("$(sapce-key)"), value: " " }
                 ];
-                this.treeView.setRoot(new GeoPlot.TreeNodeViewModel());
+                this.treeView.setRoot(new GeoPlot.TreeNode());
                 this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
                 this.fileDrop.onFileDropped = text => this.importText(text);
             }
@@ -841,7 +1100,7 @@ var WebApp;
             updateGroups() {
                 return __awaiter(this, void 0, void 0, function* () {
                     const group = yield this._adapter.loadGroupAsync(this._text, this._options);
-                    let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(group));
+                    let childNode = new GeoPlot.TreeNode(new GroupItem(group));
                     this.treeView.root().clear();
                     this.treeView.root().addNode(childNode);
                     childNode.value().attachNode(childNode);
@@ -854,7 +1113,7 @@ var WebApp;
                 node.clear();
                 if (group.groups) {
                     for (let item of WebApp.linq(group.groups)) {
-                        let childNode = new GeoPlot.TreeNodeViewModel(new GroupItem(item.value));
+                        let childNode = new GeoPlot.TreeNode(new GroupItem(item.value));
                         childNode.loadChildNodes = () => __awaiter(this, void 0, void 0, function* () { return this.updateNode(childNode, item.value); });
                         node.addNode(childNode);
                         childNode.value().attachNode(childNode);
@@ -862,7 +1121,7 @@ var WebApp;
                 }
                 if (group.series) {
                     for (let item of WebApp.linq(group.series)) {
-                        let childNode = new GeoPlot.TreeNodeViewModel(new SerieItem(item.value));
+                        let childNode = new GeoPlot.TreeNode(new SerieItem(item.value));
                         node.addNode(childNode);
                         childNode.value().attachNode(childNode);
                     }
@@ -958,6 +1217,1127 @@ var WebApp;
             }
         }
         GeoPlot.DataImportControl = DataImportControl;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        /****************************************/
+        class GraphContext {
+            constructor() {
+                this.vars = {};
+                this.treeItems = {};
+            }
+            setExpressions(values) {
+                const state = this.calculator.getState();
+                for (let value of values) {
+                    const curExp = WebApp.linq(state.expressions.list).first(a => a.id == value.id);
+                    if (!curExp)
+                        state.expressions.list.push(value);
+                    else {
+                        for (let prop of Object.getOwnPropertyNames(value))
+                            curExp[prop] = value[prop];
+                    }
+                }
+                const groups = WebApp.linq(state.expressions.list).where(a => a.type != "folder").groupBy(a => a.folderId ? a.folderId : "").toDictionary(a => a.key, a => a.values.toArray());
+                const newList = [];
+                for (let folder of WebApp.linq(state.expressions.list).where(a => a.type == "folder")) {
+                    newList.push(folder);
+                    const items = groups[folder.id];
+                    if (items)
+                        for (let item of items)
+                            newList.push(item);
+                }
+                const items = groups[""];
+                if (items)
+                    for (let item of items)
+                        newList.push(item);
+                state.expressions.list = newList;
+                this.calculator.setState(state);
+            }
+            /****************************************/
+            setSelectedId(id) {
+                if (this.calculator.controller.listModel.selectedItem && this.calculator.controller.listModel.selectedItem.id == id)
+                    return;
+                this.calculator.controller.dispatch({ type: "set-selected-id", id: id });
+            }
+            /****************************************/
+            setColor(id, color) {
+                this.calculator.controller.dispatch({ type: "set-item-color", id: id, color: color });
+            }
+            /****************************************/
+            updateTable(id, values) {
+                const exp = WebApp.linq(this.calculator.getExpressions()).where(a => a.id == id).first();
+                if (exp) {
+                    exp.columns[0].values = WebApp.linq(values).select(a => a.x.toString()).toArray();
+                    exp.columns[1].values = WebApp.linq(values).select(a => a.y.toString()).toArray();
+                    this.calculator.setExpression(exp);
+                }
+                /*
+    
+                this.calculator.setExpression({
+                    id: id,
+                    type: "table",
+                    columns: [
+                        {
+                            values: linq(values).select(a => a.x.toString()).toArray()
+                        },
+                        {
+                            values: linq(values).select(a => a.y.toString()).toArray(),
+                            hidden: false
+                        },
+                    ]
+                });*/
+            }
+            /****************************************/
+            updateExpression(value) {
+                //const exp = <Desmos.IMathExpression>linq(this.calculator.getExpressions()).where(a => a.id == value.id).first();
+                /*if (exp) {
+                    for (let prop of Object.getOwnPropertyNames(value))
+                        exp[prop] = value[prop];
+                    this.calculator.setExpression(exp);
+                }*/
+                this.calculator.setExpression(value);
+            }
+            /****************************************/
+            updateVariable(id, varName, value) {
+                if (!varName)
+                    return;
+                this.updateExpression({ id: id, latex: varName + "=" + value.toString() });
+            }
+            /****************************************/
+            expressionZoomFit(id) {
+                this.calculator.controller.dispatch({ type: "expression-zoom-fit", id: id });
+            }
+            /****************************************/
+            setItemVisibile(id, value) {
+                this.updateExpression({ id: id, hidden: !value });
+                //this.calculator.controller._setItemHidden(id, !value);
+                //this.calculator.updateSettings({});
+            }
+            /****************************************/
+            generateVars(map) {
+                for (let key in map) {
+                    if (!map[key])
+                        map[key] = this.generateVar(key);
+                }
+            }
+            /****************************************/
+            generateVar(prefix = "a") {
+                if (!this.vars[prefix[0]])
+                    this.vars[prefix[0]] = 0;
+                this.vars[prefix[0]]++;
+                return prefix[0] + "_{" + this.vars[prefix[0]] + "}";
+            }
+        }
+        GeoPlot.GraphContext = GraphContext;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        /****************************************/
+        class StudioProject extends GeoPlot.BaseStudioItem {
+            constructor(config) {
+                super();
+                /****************************************/
+                this.time = ko.observable(0);
+                this.aggregationMode = ko.observable("none");
+                this.itemType = "project";
+                this.icon = "folder";
+                this.optionsTemplateName = "ProjectOptionsTemplate";
+                this.aggregationModes = [
+                    {
+                        text: $string("$(none)"),
+                        value: "none"
+                    },
+                    {
+                        text: $string("$(sum)"),
+                        value: "sum"
+                    },
+                    {
+                        text: $string("$(average)"),
+                        value: "avg",
+                    }
+                ];
+                this._varsMap = {
+                    "time": null,
+                    "xagg": null,
+                    "yagg": null
+                };
+                if (config)
+                    this.setState(config);
+            }
+            /****************************************/
+            createActions(result) {
+                super.createActions(result);
+                result.push(WebApp.apply(new GeoPlot.ActionView(), action => {
+                    action.text = $string("$(update-all-proj)");
+                    action.icon = "autorenew";
+                    action.execute = () => this.updateAllSerie();
+                }));
+            }
+            /****************************************/
+            updateAllSerie() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    for (let item of this.children)
+                        yield item.updateSerie();
+                });
+            }
+            /****************************************/
+            canAccept(value) {
+                return (value instanceof GeoPlot.StudioSerie);
+            }
+            /****************************************/
+            canReadData(transfer) {
+                return transfer.types.indexOf("application/json+studio") != -1;
+            }
+            /****************************************/
+            readData(transfer) {
+                const textData = transfer.getData("application/json+studio");
+                let serie = GeoPlot.StudioSerie.fromText(textData);
+                if (serie) {
+                    this.addSerie(serie);
+                    this.node.isExpanded(true);
+                }
+            }
+            /****************************************/
+            getExpressions() {
+                this._graphCtx.generateVars(this._varsMap);
+                const values = [
+                    {
+                        type: "folder",
+                        id: this.getGraphId("public"),
+                        title: this.name(),
+                        collapsed: true
+                    },
+                    {
+                        type: "folder",
+                        id: this.getGraphId("private"),
+                        title: this.name(),
+                        secret: true,
+                        collapsed: true
+                    },
+                    {
+                        type: "expression",
+                        folderId: this.getGraphId("public"),
+                        id: this.getGraphId("time"),
+                        latex: this._varsMap["time"] + "=" + this.time(),
+                        slider: {
+                            hardMin: true,
+                            hardMax: true,
+                            min: "0",
+                            max: "100",
+                            step: "1"
+                        }
+                    },
+                    {
+                        type: "table",
+                        id: this.getGraphId("aggregate"),
+                        folderId: this.getGraphId("private"),
+                        columns: [
+                            {
+                                id: this.getGraphId("table/xagg"),
+                                latex: this._varsMap["xagg"],
+                            },
+                            {
+                                id: this.getGraphId("table/yagg"),
+                                latex: this._varsMap["yagg"],
+                                lines: true,
+                                points: true
+                                //hidden: this.aggregationMode() == "none"
+                            }
+                        ]
+                    }
+                ];
+                if (this.aggregationMode() != "none") {
+                    /*
+                    values.push({
+                        type: "expression",
+                        folderId: this.getGraphId("private"),
+                        id: this.getGraphId("xmax"),
+                        latex: this.getVar("xmax") + " = \\max([" + this.children.select(a => "\\max(" + a.getVar("xofs") + ")").concat(", ") + "])"
+                    });
+                    values.push({
+                        type: "expression",
+                        folderId: this.getGraphId("private"),
+                        id: this.getGraphId("xmin"),
+                        latex: this.getVar("xmin") + " = \\min([" + this.children.select(a => "\\min(" + a.getVar("xofs") + ")").concat(", ") + "])"
+                    });
+                    values.push({
+                        type: "expression",
+                        folderId: this.getGraphId("private"),
+                        id: this.getGraphId("all_x"),
+                        latex: this.getVar("xtot") + "= [" + this.getVar("xmin") + ",..." + this.getVar("xmax") + "]"
+                    });
+                    values.push({
+                        type: "expression",
+                        folderId: this.getGraphId("private"),
+                        id: this.getGraphId("aggregate"),
+                        color: this.color(),
+                        lines: true,
+                        points: true,
+                        latex: "(" + this.getVar("xtot") + "," + this.children.select(a => a.getVar("y")).concat("+") + ")"
+                    });*/
+                }
+                return values;
+            }
+            /****************************************/
+            updateAggregate() {
+                if (this.aggregationMode() == "none") {
+                    //this._graphCtx.setItemVisibile(this.getGraphId("table/yagg"), false);
+                }
+                else {
+                    const values = {};
+                    const children = this.children.toArray();
+                    for (var child of children) {
+                        const ofs = parseInt(child.offsetX());
+                        for (var item of child.values) {
+                            const xReal = item.x + ofs;
+                            if (!(xReal in values))
+                                values[xReal] = item.y;
+                            else
+                                values[xReal] += item.y;
+                        }
+                    }
+                    const funValues = WebApp.linq(values).orderBy(a => a.key).select(a => ({ x: a.key, y: a.value })).toArray();
+                    this._graphCtx.updateTable(this.getGraphId("aggregate"), funValues);
+                    //this._graphCtx.setItemVisibile(this.getGraphId("table/yagg"), true);
+                }
+            }
+            /****************************************/
+            updateColor() {
+                this._graphCtx.setColor(this.getGraphId("aggregate"), this.color());
+            }
+            /****************************************/
+            get mainExpression() {
+                return this.getGraphId("aggregate");
+            }
+            /****************************************/
+            createParameters(result) {
+                result.push(WebApp.apply(new GeoPlot.ParameterViewModel({ value: this.time, name: $string("$(day)") }), p => {
+                    p.max(100);
+                    p.min(0);
+                    p.step(1);
+                }));
+                return true;
+            }
+            /****************************************/
+            setStateWork(state) {
+                if (state.time != undefined)
+                    this.time(state.time);
+                if (state.aggregationMode)
+                    this.aggregationMode(state.aggregationMode);
+                else
+                    this.aggregationMode("none");
+            }
+            /****************************************/
+            setChildrenStateWork(state) {
+                if (state.children != undefined) {
+                    this.children.foreach(a => a.remove());
+                    state.children.forEach(a => {
+                        const item = this.addSerie(null, false);
+                        item.setState(a);
+                    });
+                }
+                if (this.aggregationMode() != "none")
+                    this.updateAggregate();
+            }
+            /****************************************/
+            getState() {
+                const state = super.getState();
+                state.time = this.time();
+                state.children = this.children.select(a => a.getState()).toArray();
+                state.aggregationMode = this.aggregationMode();
+                return state;
+            }
+            /****************************************/
+            onGraphChanged() {
+                /*
+                const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
+                if (item)
+                    this.time(item.evaluation.value);*/
+            }
+            /****************************************/
+            attachGraph(ctx) {
+                super.attachGraph(ctx);
+                this.time.subscribe(value => this._graphCtx.updateVariable(this.getGraphId("time"), this._varsMap["time"], this.time()));
+                this.aggregationMode.subscribe(a => this.updateAggregate());
+            }
+            /****************************************/
+            addSerie(configOrSerie, updateGraph = true) {
+                return this.addChildrenWork(configOrSerie instanceof GeoPlot.StudioSerie ? configOrSerie : new GeoPlot.StudioSerie(configOrSerie), updateGraph);
+            }
+        }
+        GeoPlot.StudioProject = StudioProject;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        function toSafeString(value) {
+            if (value == null || value == undefined)
+                return undefined;
+            return value.toString();
+        }
+        /****************************************/
+        class RegressionFunctionViewModel {
+            constructor() {
+                this.vars = ko.observable();
+            }
+            select() {
+            }
+        }
+        /****************************************/
+        class RegressionFunctionVarViewModel {
+            constructor() {
+                this.curValue = ko.observable();
+                this.autoCompute = ko.observable();
+                this.min = ko.observable();
+                this.max = ko.observable();
+                this.step = ko.observable();
+            }
+        }
+        /****************************************/
+        class StudioSerieRegression extends GeoPlot.BaseStudioItem {
+            /****************************************/
+            constructor(config) {
+                super();
+                this._varsMap = {};
+                this.selectedFunction = ko.observable();
+                this.showIntegration = ko.observable(true);
+                this.maxDay = ko.observable();
+                this.endDay = ko.observable();
+                this._varsMap = {
+                    "fun": null,
+                    "sum": null,
+                    "n1": null,
+                    "n2": null,
+                    "value": null,
+                    "time": null,
+                    "tend": null,
+                    "xp": null
+                };
+                this.itemType = "regression";
+                this.icon = "show_chart";
+                this.optionsTemplateName = "RegressionOptionsTemplate";
+                this.functions = [];
+                this.addFunction({
+                    name: $string("$(log-normal)"),
+                    type: "log-normal",
+                    value: "$y\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
+                    vars: [{
+                            name: "a",
+                            label: $string("$(offset)"),
+                            autoCompute: true,
+                            precision: 0
+                        },
+                        {
+                            name: "c",
+                            label: $string("$(total)"),
+                            autoCompute: true,
+                            precision: 0
+                        },
+                        {
+                            name: "o",
+                            label: $string("$(variance)"),
+                            autoCompute: true,
+                            precision: 5
+                        },
+                        {
+                            name: "u",
+                            label: $string("$(average)"),
+                            autoCompute: true,
+                            precision: 5
+                        }]
+                });
+                this.addFunction({
+                    name: $string("$(normal)"),
+                    type: "normal",
+                    value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
+                    vars: [
+                        {
+                            name: "c",
+                            label: $string("$(total)"),
+                            autoCompute: true,
+                            precision: 0
+                        },
+                        {
+                            name: "o",
+                            label: $string("$(variance)"),
+                            autoCompute: true,
+                            precision: 5
+                        },
+                        {
+                            name: "u",
+                            label: $string("$(avg-peak)"),
+                            autoCompute: true,
+                            precision: 0
+                        }
+                    ]
+                });
+                this.addFunction({
+                    name: $string("$(exponential)"),
+                    type: "exponential",
+                    value: "$y\\sim $a^{\\left($x-$b\\right)}",
+                    vars: [
+                        {
+                            name: "a",
+                            label: $string("$(base)"),
+                            autoCompute: true,
+                            precision: 5
+                        },
+                        {
+                            name: "b",
+                            label: $string("$(offset)"),
+                            autoCompute: true,
+                            precision: 5
+                        }
+                    ]
+                });
+                this.addFunction({
+                    name: $string("$(linear)"),
+                    type: "linear",
+                    value: "$y\\sim $a+$m$x",
+                    vars: [
+                        {
+                            name: "a",
+                            label: $string("$(offset)"),
+                            autoCompute: true,
+                            precision: 5
+                        },
+                        {
+                            name: "m",
+                            label: $string("$(slope)"),
+                            autoCompute: true,
+                            precision: 5
+                        }
+                    ]
+                });
+                this.showIntegration.subscribe(() => {
+                    this._graphCtx.setItemVisibile(this.getGraphId("sum-serie"), this.isFullVisible() && this.showIntegration());
+                    this._graphCtx.setItemVisibile(this.getGraphId("sum-point"), this.isFullVisible() && this.showIntegration());
+                });
+                this.selectedFunction.subscribe(a => {
+                    if (!this.name() && a)
+                        return this.name(a.value.name);
+                });
+                this.endDay.subscribe(a => this.updateEndDay());
+                this.maxDay.subscribe(a => this.updateEndDay());
+                this.selectedFunction(this.functions[0]);
+                if (config)
+                    this.setState(config);
+            }
+            /****************************************/
+            get mainExpression() {
+                return this.getGraphId("main-func");
+            }
+            /****************************************/
+            addFunction(value) {
+                const model = new RegressionFunctionViewModel();
+                model.value = value;
+                model.select = () => {
+                    this.selectedFunction(model);
+                    this.name(model.value.name);
+                    this.updateGraph();
+                };
+                const vars = [];
+                for (let item of value.vars) {
+                    const vModel = new RegressionFunctionVarViewModel();
+                    vModel.value = item;
+                    vModel.curValue(item.value);
+                    vModel.autoCompute(item.autoCompute);
+                    vModel.min(item.minValue);
+                    vModel.max(item.maxValue);
+                    vModel.step(item.step);
+                    vModel.min.subscribe(a => item.minValue = a);
+                    vModel.max.subscribe(a => item.maxValue = a);
+                    vModel.step.subscribe(a => item.step = a);
+                    vModel.curValue.subscribe(a => item.value = a);
+                    vModel.autoCompute.subscribe(a => {
+                        item.autoCompute = a;
+                        this.updateGraph();
+                    });
+                    vModel.curValue.subscribe(value => {
+                        if (!vModel.autoCompute()) {
+                            this._graphCtx.updateVariable(this.getGraphId(item.name + "-value"), this.getVar(item.name), value);
+                        }
+                    });
+                    vars.push(vModel);
+                }
+                model.vars(vars);
+                this.functions.push(model);
+                return model;
+            }
+            /****************************************/
+            onGraphChanged() {
+                /*
+                const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("end-day")];
+                if (item && item.evaluation)
+                    this.endDay(item.evaluation.value);*/
+                this.updateRegressionVars();
+            }
+            /****************************************/
+            updateRegressionVars() {
+                let model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
+                if (model && model.regressionParameters) {
+                    for (let item of this.selectedFunction().vars()) {
+                        const varName = this.getVar(item.value.name).replace("{", "").replace("}", "");
+                        let value = model.regressionParameters[varName];
+                        if (value != undefined) {
+                            if (item.value.precision != undefined)
+                                value = WebApp.MathUtils.round(value, item.value.precision);
+                            item.curValue(value);
+                        }
+                    }
+                }
+            }
+            /****************************************/
+            createParameters(result) {
+                result.push(WebApp.apply(new GeoPlot.ParameterViewModel({ value: this.endDay, name: $string("$(reg-days)") }), p => {
+                    p.max = this.maxDay;
+                    p.min(0);
+                    p.step(1);
+                }));
+                return true;
+            }
+            /****************************************/
+            setStateWork(state) {
+                if (state.function) {
+                    const func = WebApp.linq(this.functions).first(a => a.value.type == state.function.type);
+                    if (func) {
+                        for (let item of state.function.vars) {
+                            const funcVar = WebApp.linq(func.vars()).first(a => a.value.name == item.name);
+                            if (funcVar) {
+                                funcVar.autoCompute(item.autoCompute);
+                                funcVar.max(item.maxValue);
+                                funcVar.min(item.minValue);
+                                funcVar.step(item.step);
+                                funcVar.curValue(item.value);
+                            }
+                        }
+                        this.selectedFunction(func);
+                    }
+                }
+                if (state.showIntegration != undefined)
+                    this.showIntegration(state.showIntegration);
+            }
+            /****************************************/
+            getState() {
+                const state = super.getState();
+                state.function = this.selectedFunction().value;
+                state.showIntegration = this.showIntegration();
+                for (let item of this.selectedFunction().vars()) {
+                    item.value.value = item.curValue();
+                    item.value.maxValue = item.max();
+                    item.value.minValue = item.min();
+                    item.value.step = item.step();
+                    item.value.autoCompute = item.autoCompute();
+                }
+                return state;
+            }
+            /****************************************/
+            onParentChanged() {
+                super.onParentChanged();
+                this.color(this.parent.color());
+                this.maxDay(WebApp.linq(this.parent.values).max(a => a.x));
+                if (this.endDay() == undefined)
+                    this.endDay(this.maxDay());
+            }
+            /****************************************/
+            updateEndDay() {
+                if (!this._varsMap["tend"])
+                    return;
+                this._graphCtx.updateExpression({
+                    type: "expression",
+                    id: this.getGraphId("end-day"),
+                    latex: this._varsMap["tend"] + "=" + this.endDay(),
+                    slider: {
+                        min: "0",
+                        step: "1",
+                        max: (this.maxDay()).toString(),
+                    }
+                });
+            }
+            /****************************************/
+            updateColor() {
+                this._graphCtx.setColor(this.getGraphId("main-func"), this.color());
+                this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
+                this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
+                this._graphCtx.setColor(this.getGraphId("end-day-line"), this.color());
+            }
+            /****************************************/
+            updateGraphWork() {
+                this.updateRegressionVars();
+            }
+            /****************************************/
+            getExpressions() {
+                const values = [];
+                values.push({
+                    type: "folder",
+                    id: this.getGraphId("public"),
+                    title: this.parent.name() + " - " + this.name(),
+                    collapsed: true
+                });
+                values.push({
+                    type: "folder",
+                    id: this.getGraphId("private"),
+                    secret: true,
+                    title: this.parent.name() + " - " + this.name(),
+                    collapsed: true
+                });
+                const func = this.selectedFunction().value;
+                this._varsMap["x"] = "";
+                this._varsMap["y"] = this.parent.getVar("y");
+                this._varsMap["time"] = this.parent.parent.getVar("time");
+                for (let item of func.vars) {
+                    if (!this._varsMap[item.name])
+                        this._varsMap[item.name] = null;
+                }
+                this._graphCtx.generateVars(this._varsMap);
+                this._varsMap["x"] = this.getVar("xp");
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("main"),
+                    folderId: this.getGraphId("private"),
+                    latex: this.replaceVars(func.value),
+                    hidden: true
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("main-func"),
+                    folderId: this.getGraphId("private"),
+                    latex: this.replaceVars(func.value.replace("$y\\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
+                    color: this.parent.color(),
+                    lineStyle: Desmos.Styles.DASHED
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("sum-func"),
+                    folderId: this.getGraphId("private"),
+                    latex: this.replaceVars("$sum\\left(x\\right)=\\sum_{$n1=1}^{x}\\operatorname{round}\\left($fun\\left($n1\\right)\\right)"),
+                    hidden: true
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("sum-x-time"),
+                    folderId: this.getGraphId("private"),
+                    latex: this.replaceVars("$n2=\\left[1,...,$time\\right]"),
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("sum-serie"),
+                    folderId: this.getGraphId("private"),
+                    latex: this.replaceVars("\\left($n2,\\ $sum\\left($n2\\right)\\right)"),
+                    color: this.parent.color(),
+                    lines: true,
+                    hidden: !this.showIntegration(),
+                    lineStyle: Desmos.Styles.SOLID,
+                    pointStyle: "NONE",
+                    points: false
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("sum-value"),
+                    folderId: this.getGraphId("public"),
+                    latex: this.replaceVars("$value=$sum\\left($time\\right)"),
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("sum-point"),
+                    folderId: this.getGraphId("private"),
+                    hidden: !this.showIntegration(),
+                    latex: this.replaceVars("\\left($time,$value\\right)"),
+                    color: this.parent.color(),
+                    label: this.parent.name(),
+                    dragMode: "XY",
+                    showLabel: true
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("end-day"),
+                    latex: this._varsMap["tend"] + "=" + this.endDay(),
+                    folderId: this.getGraphId("public"),
+                    label: "Giorni Previsione",
+                    slider: {
+                        min: (0).toString(),
+                        max: (this.maxDay()).toString(),
+                        hardMax: true,
+                        hardMin: true,
+                        step: "1"
+                    }
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("end-day-line"),
+                    color: this.color(),
+                    latex: "x=" + this._varsMap["tend"],
+                    folderId: this.getGraphId("private"),
+                    lines: true
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("end-day-serie"),
+                    latex: this.replaceVars("$xp=[0,...,$tend]+" + this.parent.getVar("ofs")),
+                    folderId: this.getGraphId("private"),
+                    hidden: true
+                });
+                for (let item of this.selectedFunction().vars()) {
+                    if (item.autoCompute())
+                        this._graphCtx.calculator.removeExpression({ id: this.getGraphId(item.value.name + "-value") });
+                    else {
+                        values.push({
+                            type: "expression",
+                            id: this.getGraphId(item.value.name + "-value"),
+                            latex: this.getVar(item.value.name) + "=" + (item.curValue() ? item.curValue().toString() : "0"),
+                            folderId: this.getGraphId("public"),
+                            label: item.value.name,
+                            slider: {
+                                min: toSafeString(item.value.minValue),
+                                max: toSafeString(item.value.maxValue),
+                                hardMax: true,
+                                hardMin: true,
+                                step: toSafeString(item.value.step)
+                            }
+                        });
+                    }
+                }
+                return values;
+            }
+        }
+        GeoPlot.StudioSerieRegression = StudioSerieRegression;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        /****************************************/
+        class StudioSerie extends GeoPlot.BaseStudioItem {
+            constructor(config) {
+                super();
+                /****************************************/
+                this.color = ko.observable();
+                this.offsetX = ko.observable(0);
+                this.values = [];
+                this.canDrag = true;
+                this.itemType = "serie";
+                this.icon = "insert_chart";
+                this.optionsTemplateName = "StudioOptionsTemplate";
+                this._varsMap = {
+                    "x": null,
+                    "y": null,
+                    "ofs": null,
+                    "xofs": null,
+                };
+                if (config) {
+                    this.setState(config);
+                }
+            }
+            /****************************************/
+            importValues(points) {
+                if (points && points.length > 0) {
+                    if (points[0].x instanceof Date) {
+                        const startDate = points[0].x;
+                        this.values = WebApp.linq(points).select(a => ({
+                            x: Math.round(WebApp.DateUtils.diff(a.x, startDate).totalDays),
+                            xLabel: a.x,
+                            y: a.y
+                        })).toArray();
+                    }
+                    else if (isNaN(points[0].x)) {
+                        this.values = WebApp.linq(points).select((a, i) => ({
+                            x: i,
+                            xLabel: a.x,
+                            y: a.y
+                        })).toArray();
+                        return;
+                    }
+                    else
+                        this.values = points;
+                }
+                else
+                    this.values = [];
+                this.onSerieChanged();
+            }
+            /****************************************/
+            writeData(transfer) {
+                var data = {
+                    version: 1,
+                    type: "serieState",
+                    state: this.getState()
+                };
+                transfer.setData("application/json+studio", JSON.stringify(data));
+                transfer.setData("text/html+id", this.node.element.id);
+                return true;
+            }
+            /****************************************/
+            createActions(result) {
+                super.createActions(result);
+                result.push(WebApp.apply(new GeoPlot.ActionView(), action => {
+                    action.text = $string("$(update)");
+                    action.icon = "autorenew";
+                    action.execute = () => this.updateSerie();
+                }));
+                result.push(WebApp.apply(new GeoPlot.ActionView(), action => {
+                    action.text = $string("$(new-regression)");
+                    action.icon = "add_box";
+                    action.execute = () => {
+                        const reg = this.addRegression(null, false);
+                        reg.updateGraph();
+                        this.node.isExpanded(true);
+                        reg.node.isSelected(true);
+                    };
+                }));
+                result.push(WebApp.apply(new GeoPlot.ActionView(), action => {
+                    action.text = $string("$(zoom)");
+                    action.icon = "zoom_in";
+                    action.execute = () => this.zoom();
+                }));
+                result.push(WebApp.apply(new GeoPlot.ActionView(), action => {
+                    action.text = $string("$(align-with-this)");
+                    action.icon = "compare_arrows";
+                    action.execute = () => {
+                        let answer = prompt($string("$(tollerance)"), "10");
+                        this.alignOthers(isNaN(answer) ? 10 : parseInt(answer));
+                    };
+                }));
+            }
+            /****************************************/
+            static fromText(text) {
+                try {
+                    const obj = JSON.parse(text);
+                    if (obj) {
+                        if (obj.type == "serie")
+                            return new StudioSerie({
+                                name: obj.title,
+                                values: obj.values,
+                                source: obj.serie,
+                                color: obj.color
+                            });
+                        if (obj.type == "serieState")
+                            return new StudioSerie(obj.state);
+                    }
+                }
+                catch (_a) {
+                }
+            }
+            /****************************************/
+            getExpressions() {
+                if (!this.color())
+                    this.color("#0000ff");
+                this._graphCtx.generateVars(this._varsMap);
+                const values = [
+                    {
+                        type: "folder",
+                        id: this.getGraphId("public"),
+                        title: this.parent.name() + " - " + this.name(),
+                        collapsed: true
+                    }, {
+                        type: "folder",
+                        id: this.getGraphId("private"),
+                        title: this.parent.name() + " - " + this.name(),
+                        secret: true,
+                        collapsed: true
+                    }, {
+                        type: "expression",
+                        id: this.getGraphId("offset"),
+                        latex: this._varsMap["ofs"] + "=" + this.offsetX(),
+                        folderId: this.getGraphId("public"),
+                        label: "Scostamento",
+                        slider: {
+                            min: (-this.values.length).toString(),
+                            max: (this.values.length).toString(),
+                            hardMax: true,
+                            hardMin: true,
+                            step: "1"
+                        }
+                    }, {
+                        type: "expression",
+                        id: this.getGraphId("offset-x"),
+                        latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
+                        folderId: this.getGraphId("private"),
+                    }, {
+                        type: "expression",
+                        id: this.getGraphId("offset-x-serie"),
+                        latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
+                        folderId: this.getGraphId("private"),
+                        points: true,
+                        lines: true,
+                        color: this.color()
+                    }, {
+                        type: "table",
+                        id: this.getGraphId("table"),
+                        folderId: this.getGraphId("private"),
+                        columns: [
+                            {
+                                id: this.getGraphId("table/x"),
+                                latex: this._varsMap["x"],
+                            },
+                            {
+                                id: this.getGraphId("table/y"),
+                                latex: this._varsMap["y"],
+                                hidden: true
+                            }
+                        ]
+                    }
+                ];
+                return values;
+            }
+            /****************************************/
+            alignOthers(tollerance, ...series) {
+                if (!series || series.length == 0)
+                    series = this.parent.children.where(a => a != this).toArray();
+                for (let serie of series)
+                    serie.alignWith(this, tollerance);
+            }
+            /****************************************/
+            alignWith(other, tollerance) {
+                let minOfs = 0;
+                let minValue = Number.NEGATIVE_INFINITY;
+                for (let ofs = -this.values.length; ofs < this.values.length; ofs++) {
+                    let value = 0;
+                    for (let i = 0; i < this.values.length; i++) {
+                        const ofsX = i - ofs;
+                        if (ofsX < 0 || ofsX >= this.values.length)
+                            continue;
+                        if (i >= other.values.length)
+                            continue;
+                        if (Math.abs(this.values[ofsX].y - other.values[i].y) < tollerance)
+                            value++;
+                    }
+                    if (value > minValue) {
+                        minValue = value;
+                        minOfs = ofs;
+                    }
+                }
+                other.offsetX(0);
+                this.offsetX(minOfs);
+            }
+            /****************************************/
+            get mainExpression() {
+                return this.getGraphId("offset-x-serie");
+            }
+            /****************************************/
+            createParameters(result) {
+                result.push(WebApp.apply(new GeoPlot.ParameterViewModel({ value: this.offsetX, name: $string("$(shift)") }), p => {
+                    p.max(this.values.length);
+                    p.min(-this.values.length);
+                    p.step(1);
+                }));
+                return true;
+            }
+            /****************************************/
+            updateGraphWork() {
+                this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+            }
+            /****************************************/
+            onGraphChanged() {
+                /*
+                const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
+                if (item && item.evaluation)
+                    this.offsetX(item.evaluation.value);*/
+            }
+            /****************************************/
+            onSelected() {
+                super.onSelected();
+                //this._graphCtx.expressionZoomFit(this.getGraphId("table"));
+            }
+            /****************************************/
+            updateColor() {
+                this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
+                this.children.foreach(a => a.onParentChanged());
+            }
+            /****************************************/
+            attachGraph(ctx) {
+                super.attachGraph(ctx);
+                this.offsetX.subscribe(value => {
+                    this._graphCtx.updateVariable(this.getGraphId("offset"), this._varsMap["ofs"], value);
+                    this.onSerieChanged();
+                });
+            }
+            /****************************************/
+            onSerieChanged() {
+                if (this._isUpdating == 0)
+                    this.parent.updateAggregate();
+            }
+            /****************************************/
+            setChildrenStateWork(state) {
+                if (state.children != undefined) {
+                    this.children.foreach(a => a.remove());
+                    state.children.forEach(a => {
+                        const reg = this.addRegression(null, false);
+                        reg.setState(a);
+                    });
+                }
+            }
+            /****************************************/
+            setStateWork(state) {
+                if (state.offsetX != undefined)
+                    this.offsetX(state.offsetX);
+                if (state.source)
+                    this.source = state.source;
+                if (state.values != undefined)
+                    this.importValues(state.values);
+            }
+            /****************************************/
+            getState() {
+                const state = super.getState();
+                state.offsetX = this.offsetX();
+                state.source = this.source;
+                state.values = this.values;
+                state.children = this.children.select(a => a.getState()).toArray();
+                return state;
+            }
+            /****************************************/
+            addRegression(configOrState, updateGraph = true) {
+                return this.addChildrenWork(configOrState instanceof GeoPlot.StudioSerieRegression ? configOrState : new GeoPlot.StudioSerieRegression(configOrState), updateGraph);
+            }
+            /****************************************/
+            changeColor() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const color = yield GeoPlot.ColorPicker.instance.pick();
+                    if (color)
+                        this.color(color);
+                });
+            }
+            /****************************************/
+            updateSerie() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    if (this.source.type == "geoplot" || !this.source.type) {
+                        if (!this._graphCtx.serieCalculator) {
+                            M.toast({ html: $string("$(msg-downloading-data)") });
+                            const model = yield GeoPlot.Api.loadStudioData();
+                            this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(model.data, GeoPlot.InfectionDataSet, model.geo);
+                        }
+                        this.importValues(this._graphCtx.serieCalculator.getSerie(this.source));
+                        this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+                        this.children.foreach(a => a.onParentChanged());
+                        this.onSerieChanged();
+                        M.toast({ html: $string("$(msg-update-complete)") });
+                    }
+                    else
+                        M.toast({ html: $string("$(msg-update-not-supported)") });
+                });
+            }
+            /****************************************/
+            zoom() {
+                const minX = WebApp.linq(this.values).min(a => a.x);
+                const minY = WebApp.linq(this.values).min(a => a.y);
+                const maxX = WebApp.linq(this.values).max(a => a.x);
+                const maxY = WebApp.linq(this.values).max(a => a.y);
+                this._graphCtx.calculator.setMathBounds({
+                    top: maxY + (maxY - minY) * 0.1,
+                    right: maxX + (maxX - minX) * 0.1,
+                    bottom: minY - (maxY - minY) * 0.1,
+                    left: minX - (maxX - minX) * 0.1,
+                });
+            }
+        }
+        GeoPlot.StudioSerie = StudioSerie;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
 /// <reference path="../indicators.ts" />
@@ -3087,81 +4467,6 @@ var WebApp;
 (function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
-        function toSafeString(value) {
-            if (value == null || value == undefined)
-                return undefined;
-            return value.toString();
-        }
-        /****************************************/
-        class ColorPicker {
-            /****************************************/
-            constructor() {
-                /****************************************/
-                this.isOpened = ko.observable(false);
-                this.colors = [];
-                for (var color in GeoPlot.MATERIAL_COLORS)
-                    this.addColor(GeoPlot.MATERIAL_COLORS[color][600]);
-                this._mouseDown = ev => this.onMouseDown(ev);
-            }
-            /****************************************/
-            attachNode(element) {
-                this._element = element;
-                document.body.appendChild(this._element);
-            }
-            /****************************************/
-            pick() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    yield this.open();
-                    return new Promise(res => this._onSelected = res);
-                });
-            }
-            /****************************************/
-            addColor(color) {
-                this.colors.push({
-                    value: color,
-                    select: () => {
-                        if (this._onSelected)
-                            this._onSelected(color);
-                        this._onSelected = null;
-                        this.close();
-                    }
-                });
-            }
-            /****************************************/
-            open() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (this.isOpened())
-                        return;
-                    this.isOpened(true);
-                    if (window.event) {
-                        const mouseEvent = window.event;
-                        const coords = { x: mouseEvent.pageX, y: mouseEvent.pageY };
-                        //await PromiseUtils.delay(0);
-                        this._element.style.left = coords.x + "px";
-                        this._element.style.top = (coords.y - this._element.clientHeight) + "px";
-                    }
-                    document.body.addEventListener("mousedown", this._mouseDown);
-                });
-            }
-            /****************************************/
-            close() {
-                if (!this.isOpened())
-                    return;
-                this.isOpened(false);
-                document.body.removeEventListener("mousedown", this._mouseDown);
-            }
-            /****************************************/
-            onMouseDown(ev) {
-                if (ev.target.parentElement != this._element) {
-                    if (this._onSelected)
-                        this._onSelected(undefined);
-                    this._onSelected = null;
-                    this.close();
-                }
-            }
-        }
-        ColorPicker.instance = new ColorPicker();
-        GeoPlot.ColorPicker = ColorPicker;
         /****************************************/
         class ParameterViewModel {
             constructor(config) {
@@ -3173,1153 +4478,17 @@ var WebApp;
                 this.name = config.name;
             }
         }
-        /****************************************/
-        /* Regression
-        /****************************************/
-        class GraphContext {
-            constructor() {
-                this.vars = {};
-                this.treeItems = {};
-            }
-            setExpressions(values) {
-                const state = this.calculator.getState();
-                for (let value of values) {
-                    const curExp = WebApp.linq(state.expressions.list).first(a => a.id == value.id);
-                    if (!curExp)
-                        state.expressions.list.push(value);
-                    else {
-                        for (let prop of Object.getOwnPropertyNames(value))
-                            curExp[prop] = value[prop];
-                    }
-                }
-                const groups = WebApp.linq(state.expressions.list).where(a => a.type != "folder").groupBy(a => a.folderId ? a.folderId : "").toDictionary(a => a.key, a => a.values.toArray());
-                const newList = [];
-                for (let folder of WebApp.linq(state.expressions.list).where(a => a.type == "folder")) {
-                    newList.push(folder);
-                    const items = groups[folder.id];
-                    if (items)
-                        for (let item of items)
-                            newList.push(item);
-                }
-                const items = groups[""];
-                if (items)
-                    for (let item of items)
-                        newList.push(item);
-                state.expressions.list = newList;
-                this.calculator.setState(state);
-            }
-            /****************************************/
-            setSelectedId(id) {
-                if (this.calculator.controller.listModel.selectedItem && this.calculator.controller.listModel.selectedItem.id == id)
-                    return;
-                this.calculator.controller.dispatch({ type: "set-selected-id", id: id });
-            }
-            /****************************************/
-            setColor(id, color) {
-                this.calculator.controller.dispatch({ type: "set-item-color", id: id, color: color });
-            }
-            /****************************************/
-            updateTable(id, values) {
-                const exp = WebApp.linq(this.calculator.getExpressions()).where(a => a.id == id).first();
-                if (exp) {
-                    exp.columns[0].values = WebApp.linq(values).select(a => a.x.toString()).toArray();
-                    exp.columns[1].values = WebApp.linq(values).select(a => a.y.toString()).toArray();
-                    this.calculator.setExpression(exp);
-                }
-            }
-            /****************************************/
-            updateExpression(value) {
-                const exp = WebApp.linq(this.calculator.getExpressions()).where(a => a.id == value.id).first();
-                /*if (exp) {
-                    for (let prop of Object.getOwnPropertyNames(value))
-                        exp[prop] = value[prop];
-                    this.calculator.setExpression(exp);
-                }*/
-                this.calculator.setExpression(value);
-            }
-            /****************************************/
-            updateVariable(id, varName, value) {
-                if (!varName)
-                    return;
-                this.updateExpression({ id: id, latex: varName + "=" + value.toString() });
-            }
-            /****************************************/
-            expressionZoomFit(id) {
-                this.calculator.controller.dispatch({ type: "expression-zoom-fit", id: id });
-            }
-            /****************************************/
-            setItemVisibile(id, value) {
-                this.updateExpression({ id: id, hidden: !value });
-                //this.calculator.controller._setItemHidden(id, !value);
-                //this.calculator.updateSettings({});
-            }
-            /****************************************/
-            generateVars(map) {
-                for (let key in map) {
-                    if (!map[key])
-                        map[key] = this.generateVar(key);
-                }
-            }
-            /****************************************/
-            generateVar(prefix = "a") {
-                if (!this.vars[prefix[0]])
-                    this.vars[prefix[0]] = 0;
-                this.vars[prefix[0]]++;
-                return prefix[0] + "_{" + this.vars[prefix[0]] + "}";
-            }
-        }
-        /****************************************/
-        class BaseItem {
-            constructor() {
-                this.canDrag = false;
-                this.name = ko.observable();
-                this.time = ko.observable(0);
-                this.color = ko.observable();
-                this.parameters = ko.observableArray();
-            }
-            /****************************************/
-            createActions(result) {
-                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(delete)");
-                    action.icon = "delete";
-                    action.execute = () => this.remove();
-                }));
-            }
-            /****************************************/
-            canAccept(value) {
-                return false;
-            }
-            /****************************************/
-            canReadData(transfer) {
-                return false;
-            }
-            /****************************************/
-            readData(transfer) {
-            }
-            /****************************************/
-            writeData(transfer) {
-                return false;
-            }
-            /****************************************/
-            setState(state) {
-                if (state.name)
-                    this.name(state.name);
-                if (state.visible != undefined)
-                    this.node.isVisible(state.visible);
-                if (state.color)
-                    this.color(state.color);
-                if (state.opened != undefined)
-                    this.node.isExpanded(state.opened);
-                if (state.folderId)
-                    this.folderId = state.folderId;
-                this.setStateWork(state);
-                this.updateGraph();
-                this.setChildrenStateWork(state);
-            }
-            /****************************************/
-            getState() {
-                return {
-                    name: this.name(),
-                    visible: this.node.isVisible(),
-                    folderId: this.folderId,
-                    color: this.color(),
-                    opened: this.node.isExpanded()
-                };
-            }
-            /****************************************/
-            getVar(name) {
-                return this._varsMap[name];
-            }
-            /****************************************/
-            remove(recursive = true) {
-                if (this._graphCtx) {
-                    this._graphCtx.calculator.removeExpression({ id: this.getGraphId("private") });
-                    this._graphCtx.calculator.removeExpression({ id: this.getGraphId("public") });
-                }
-                this.node.remove();
-                if (recursive)
-                    this.children.foreach(a => a.remove());
-            }
-            /****************************************/
-            attachNode(node) {
-                this.node = node;
-                this.node.isVisible.subscribe(value => this.updateGraphVisibility());
-                this.node.isSelected.subscribe(value => {
-                    if (value)
-                        this.onSelected();
-                });
-                const actions = [];
-                this.createActions(actions);
-                this.node.actions(actions);
-            }
-            /****************************************/
-            attachGraph(ctx) {
-                this._graphCtx = ctx;
-                this._graphCtx.calculator.observe("expressionAnalysis", () => this.onGraphChanged());
-                this.color.subscribe(value => this.updateColor());
-            }
-            /****************************************/
-            isFullVisible() {
-                let curNode = this.node;
-                while (curNode) {
-                    if (!curNode.isVisible())
-                        return false;
-                    curNode = curNode.parentNode;
-                }
-                return true;
-            }
-            /****************************************/
-            updateGraphVisibility(recorsive = true) {
-                const visible = this.isFullVisible();
-                this._graphCtx.setItemVisibile(this.getGraphId("public"), visible);
-                this._graphCtx.setItemVisibile(this.getGraphId("private"), visible);
-                if (recorsive)
-                    this.children.foreach(a => a.updateGraphVisibility());
-                return visible;
-            }
-            /****************************************/
-            updateGraph(recursive = true) {
-                if (!this._graphCtx)
-                    return;
-                if (!this.folderId)
-                    this.folderId = WebApp.StringUtils.uuidv4();
-                this._graphCtx.treeItems[this.folderId] = this;
-                const values = this.getExpressions();
-                this._graphCtx.setExpressions(values);
-                this.updateGraphWork();
-                this.updateGraphVisibility();
-                this.updateParameters();
-                if (recursive)
-                    this.children.foreach(a => a.updateGraph(recursive));
-            }
-            /****************************************/
-            onParentChanged() {
-                this.updateGraphVisibility();
-            }
-            /****************************************/
-            get parent() {
-                return this.node.parentNode.value();
-            }
-            /****************************************/
-            get children() {
-                return WebApp.linq(this.node.nodes()).select(a => a.value());
-            }
-            /****************************************/
-            replaceVars(value) {
-                for (let item in this._varsMap) {
-                    const reg = new RegExp("\\$" + item, "g");
-                    value = value.replace(reg, this._varsMap[item]);
-                }
-                return value;
-            }
-            /****************************************/
-            getGraphId(section) {
-                return this.folderId + "/" + section;
-            }
-            /****************************************/
-            addChildrenWork(value, updateGraph = true) {
-                const node = new GeoPlot.TreeNodeViewModel(value);
-                this.node.addNode(node);
-                value.attachNode(node);
-                value.attachGraph(this._graphCtx);
-                if (updateGraph)
-                    value.updateGraph();
-                value.onParentChanged();
-                return value;
-            }
-            /****************************************/
-            createParameters(result) {
-                return false;
-            }
-            /****************************************/
-            updateParameters() {
-                const values = [];
-                if (this.createParameters(values)) {
-                    this.parameters.removeAll();
-                    values.forEach(a => this.parameters.push(a));
-                }
-            }
-            /****************************************/
-            updateGraphWork() {
-            }
-            /****************************************/
-            setChildrenStateWork(state) {
-            }
-            /****************************************/
-            onSelected() {
-                if (this.mainExpression && this._graphCtx)
-                    this._graphCtx.setSelectedId(this.mainExpression);
-            }
-            /****************************************/
-            onGraphChanged() {
-            }
-            /****************************************/
-            updateColor() {
-            }
-        }
-        /****************************************/
-        class RegressionFunctionViewModel {
-            constructor() {
-                this.vars = ko.observable();
-            }
-            select() {
-            }
-        }
-        /****************************************/
-        class RegressionFunctionVarViewModel {
-            constructor() {
-                this.curValue = ko.observable();
-                this.autoCompute = ko.observable();
-                this.min = ko.observable();
-                this.max = ko.observable();
-                this.step = ko.observable();
-            }
-        }
-        /****************************************/
-        class StudioSerieRegression extends BaseItem {
-            /****************************************/
-            constructor(config) {
-                super();
-                this._varsMap = {};
-                this.selectedFunction = ko.observable();
-                this.showIntegration = ko.observable(true);
-                this.maxDay = ko.observable();
-                this.endDay = ko.observable();
-                this._varsMap = {
-                    "fun": null,
-                    "sum": null,
-                    "n1": null,
-                    "n2": null,
-                    "value": null,
-                    "time": null,
-                    "tend": null,
-                    "xp": null
-                };
-                this.itemType = "regression";
-                this.icon = "show_chart";
-                this.optionsTemplateName = "RegressionOptionsTemplate";
-                this.functions = [];
-                this.addFunction({
-                    name: $string("$(log-normal)"),
-                    type: "log-normal",
-                    value: "$y\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
-                    vars: [{
-                            name: "a",
-                            label: $string("$(offset)"),
-                            autoCompute: true,
-                            precision: 0
-                        },
-                        {
-                            name: "c",
-                            label: $string("$(total)"),
-                            autoCompute: true,
-                            precision: 0
-                        },
-                        {
-                            name: "o",
-                            label: $string("$(variance)"),
-                            autoCompute: true,
-                            precision: 5
-                        },
-                        {
-                            name: "u",
-                            label: $string("$(average)"),
-                            autoCompute: true,
-                            precision: 5
-                        }]
-                });
-                this.addFunction({
-                    name: $string("$(normal)"),
-                    type: "normal",
-                    value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
-                    vars: [
-                        {
-                            name: "c",
-                            label: $string("$(total)"),
-                            autoCompute: true,
-                            precision: 0
-                        },
-                        {
-                            name: "o",
-                            label: $string("$(variance)"),
-                            autoCompute: true,
-                            precision: 5
-                        },
-                        {
-                            name: "u",
-                            label: $string("$(avg-peak)"),
-                            autoCompute: true,
-                            precision: 0
-                        }
-                    ]
-                });
-                this.addFunction({
-                    name: $string("$(exponential)"),
-                    type: "exponential",
-                    value: "$y\\sim $a^{\\left($x-$b\\right)}",
-                    vars: [
-                        {
-                            name: "a",
-                            label: $string("$(base)"),
-                            autoCompute: true,
-                            precision: 5
-                        },
-                        {
-                            name: "b",
-                            label: $string("$(offset)"),
-                            autoCompute: true,
-                            precision: 5
-                        }
-                    ]
-                });
-                this.addFunction({
-                    name: $string("$(linear)"),
-                    type: "linear",
-                    value: "$y\\sim $a+$m$x",
-                    vars: [
-                        {
-                            name: "a",
-                            label: $string("$(offset)"),
-                            autoCompute: true,
-                            precision: 5
-                        },
-                        {
-                            name: "m",
-                            label: $string("$(slope)"),
-                            autoCompute: true,
-                            precision: 5
-                        }
-                    ]
-                });
-                this.showIntegration.subscribe(() => {
-                    this._graphCtx.setItemVisibile(this.getGraphId("sum-serie"), this.isFullVisible() && this.showIntegration());
-                    this._graphCtx.setItemVisibile(this.getGraphId("sum-point"), this.isFullVisible() && this.showIntegration());
-                });
-                this.selectedFunction.subscribe(a => {
-                    if (!this.name() && a)
-                        return this.name(a.value.name);
-                });
-                this.endDay.subscribe(a => this.updateEndDay());
-                this.maxDay.subscribe(a => this.updateEndDay());
-                this.selectedFunction(this.functions[0]);
-                if (config)
-                    this.setState(config);
-            }
-            /****************************************/
-            get mainExpression() {
-                return this.getGraphId("main-func");
-            }
-            /****************************************/
-            addFunction(value) {
-                const model = new RegressionFunctionViewModel();
-                model.value = value;
-                model.select = () => {
-                    this.selectedFunction(model);
-                    this.name(model.value.name);
-                    this.updateGraph();
-                };
-                const vars = [];
-                for (let item of value.vars) {
-                    const vModel = new RegressionFunctionVarViewModel();
-                    vModel.value = item;
-                    vModel.curValue(item.value);
-                    vModel.autoCompute(item.autoCompute);
-                    vModel.min(item.minValue);
-                    vModel.max(item.maxValue);
-                    vModel.step(item.step);
-                    vModel.min.subscribe(a => item.minValue = a);
-                    vModel.max.subscribe(a => item.maxValue = a);
-                    vModel.step.subscribe(a => item.step = a);
-                    vModel.curValue.subscribe(a => item.value = a);
-                    vModel.autoCompute.subscribe(a => {
-                        item.autoCompute = a;
-                        this.updateGraph();
-                    });
-                    vModel.curValue.subscribe(value => {
-                        if (!vModel.autoCompute()) {
-                            this._graphCtx.updateVariable(this.getGraphId(item.name + "-value"), this.getVar(item.name), value);
-                        }
-                    });
-                    vars.push(vModel);
-                }
-                model.vars(vars);
-                this.functions.push(model);
-                return model;
-            }
-            /****************************************/
-            onGraphChanged() {
-                /*
-                const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("end-day")];
-                if (item && item.evaluation)
-                    this.endDay(item.evaluation.value);*/
-                this.updateRegressionVars();
-            }
-            /****************************************/
-            updateRegressionVars() {
-                let model = this._graphCtx.calculator.controller.getItemModel(this.getGraphId("main"));
-                if (model && model.regressionParameters) {
-                    for (let item of this.selectedFunction().vars()) {
-                        const varName = this.getVar(item.value.name).replace("{", "").replace("}", "");
-                        let value = model.regressionParameters[varName];
-                        if (value != undefined) {
-                            if (item.value.precision != undefined)
-                                value = WebApp.MathUtils.round(value, item.value.precision);
-                            item.curValue(value);
-                        }
-                    }
-                }
-            }
-            /****************************************/
-            createParameters(result) {
-                result.push(WebApp.apply(new ParameterViewModel({ value: this.endDay, name: $string("$(reg-days)") }), p => {
-                    p.max = this.maxDay;
-                    p.min(0);
-                    p.step(1);
-                }));
-                return true;
-            }
-            /****************************************/
-            setStateWork(state) {
-                if (state.function) {
-                    const func = WebApp.linq(this.functions).first(a => a.value.type == state.function.type);
-                    if (func) {
-                        for (let item of state.function.vars) {
-                            const funcVar = WebApp.linq(func.vars()).first(a => a.value.name == item.name);
-                            if (funcVar) {
-                                funcVar.autoCompute(item.autoCompute);
-                                funcVar.max(item.maxValue);
-                                funcVar.min(item.minValue);
-                                funcVar.step(item.step);
-                                funcVar.curValue(item.value);
-                            }
-                        }
-                        this.selectedFunction(func);
-                    }
-                }
-                if (state.showIntegration != undefined)
-                    this.showIntegration(state.showIntegration);
-            }
-            /****************************************/
-            getState() {
-                const state = super.getState();
-                state.function = this.selectedFunction().value;
-                state.showIntegration = this.showIntegration();
-                for (let item of this.selectedFunction().vars()) {
-                    item.value.value = item.curValue();
-                    item.value.maxValue = item.max();
-                    item.value.minValue = item.min();
-                    item.value.step = item.step();
-                    item.value.autoCompute = item.autoCompute();
-                }
-                return state;
-            }
-            /****************************************/
-            onParentChanged() {
-                super.onParentChanged();
-                this.color(this.parent.color());
-                this.maxDay(WebApp.linq(this.parent.values).max(a => a.x));
-                if (this.endDay() == undefined)
-                    this.endDay(this.maxDay());
-            }
-            /****************************************/
-            updateEndDay() {
-                if (!this._varsMap["tend"])
-                    return;
-                this._graphCtx.updateExpression({
-                    type: "expression",
-                    id: this.getGraphId("end-day"),
-                    latex: this._varsMap["tend"] + "=" + this.endDay(),
-                    slider: {
-                        min: "0",
-                        step: "1",
-                        max: (this.maxDay()).toString(),
-                    }
-                });
-            }
-            /****************************************/
-            updateColor() {
-                this._graphCtx.setColor(this.getGraphId("main-func"), this.color());
-                this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
-                this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
-                this._graphCtx.setColor(this.getGraphId("end-day-line"), this.color());
-            }
-            /****************************************/
-            updateGraphWork() {
-                this.updateRegressionVars();
-            }
-            /****************************************/
-            getExpressions() {
-                const values = [];
-                values.push({
-                    type: "folder",
-                    id: this.getGraphId("public"),
-                    title: this.parent.name() + " - " + this.name(),
-                    collapsed: true
-                });
-                values.push({
-                    type: "folder",
-                    id: this.getGraphId("private"),
-                    secret: true,
-                    title: this.parent.name() + " - " + this.name(),
-                    collapsed: true
-                });
-                const func = this.selectedFunction().value;
-                this._varsMap["x"] = "";
-                this._varsMap["y"] = this.parent.getVar("y");
-                this._varsMap["time"] = this.parent.parent.getVar("time");
-                for (let item of func.vars) {
-                    if (!this._varsMap[item.name])
-                        this._varsMap[item.name] = null;
-                }
-                this._graphCtx.generateVars(this._varsMap);
-                this._varsMap["x"] = this.getVar("xp");
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("main"),
-                    folderId: this.getGraphId("private"),
-                    latex: this.replaceVars(func.value),
-                    hidden: true
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("main-func"),
-                    folderId: this.getGraphId("private"),
-                    latex: this.replaceVars(func.value.replace("$y\\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
-                    color: this.parent.color(),
-                    lineStyle: Desmos.Styles.DASHED
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("sum-func"),
-                    folderId: this.getGraphId("private"),
-                    latex: this.replaceVars("$sum\\left(x\\right)=\\sum_{$n1=1}^{x}\\operatorname{round}\\left($fun\\left($n1\\right)\\right)"),
-                    hidden: true
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("sum-x-time"),
-                    folderId: this.getGraphId("private"),
-                    latex: this.replaceVars("$n2=\\left[1,...,$time\\right]"),
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("sum-serie"),
-                    folderId: this.getGraphId("private"),
-                    latex: this.replaceVars("\\left($n2,\\ $sum\\left($n2\\right)\\right)"),
-                    color: this.parent.color(),
-                    lines: true,
-                    hidden: !this.showIntegration(),
-                    lineStyle: Desmos.Styles.SOLID,
-                    pointStyle: "NONE",
-                    points: false
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("sum-value"),
-                    folderId: this.getGraphId("public"),
-                    latex: this.replaceVars("$value=$sum\\left($time\\right)"),
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("sum-point"),
-                    folderId: this.getGraphId("private"),
-                    hidden: !this.showIntegration(),
-                    latex: this.replaceVars("\\left($time,$value\\right)"),
-                    color: this.parent.color(),
-                    label: this.parent.name(),
-                    dragMode: "XY",
-                    showLabel: true
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("end-day"),
-                    latex: this._varsMap["tend"] + "=" + this.endDay(),
-                    folderId: this.getGraphId("public"),
-                    label: "Giorni Previsione",
-                    slider: {
-                        min: (0).toString(),
-                        max: (this.maxDay()).toString(),
-                        hardMax: true,
-                        hardMin: true,
-                        step: "1"
-                    }
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("end-day-line"),
-                    color: this.color(),
-                    latex: "x=" + this._varsMap["tend"],
-                    folderId: this.getGraphId("private"),
-                    lines: true
-                });
-                values.push({
-                    type: "expression",
-                    id: this.getGraphId("end-day-serie"),
-                    latex: this.replaceVars("$xp=[0,...,$tend]+" + this.parent.getVar("ofs")),
-                    folderId: this.getGraphId("private"),
-                    hidden: true
-                });
-                for (let item of this.selectedFunction().vars()) {
-                    if (item.autoCompute())
-                        this._graphCtx.calculator.removeExpression({ id: this.getGraphId(item.value.name + "-value") });
-                    else {
-                        values.push({
-                            type: "expression",
-                            id: this.getGraphId(item.value.name + "-value"),
-                            latex: this.getVar(item.value.name) + "=" + (item.curValue() ? item.curValue().toString() : "0"),
-                            folderId: this.getGraphId("public"),
-                            label: item.value.name,
-                            slider: {
-                                min: toSafeString(item.value.minValue),
-                                max: toSafeString(item.value.maxValue),
-                                hardMax: true,
-                                hardMin: true,
-                                step: toSafeString(item.value.step)
-                            }
-                        });
-                    }
-                }
-                return values;
-            }
-        }
-        /****************************************/
-        class StudioSerie extends BaseItem {
-            constructor(config) {
-                super();
-                /****************************************/
-                this.color = ko.observable();
-                this.offsetX = ko.observable(0);
-                this.canDrag = true;
-                this.itemType = "serie";
-                this.icon = "insert_chart";
-                this.optionsTemplateName = "StudioOptionsTemplate";
-                this._varsMap = {
-                    "x": null,
-                    "y": null,
-                    "ofs": null,
-                    "xofs": null,
-                };
-                if (config) {
-                    this.setState(config);
-                }
-            }
-            /****************************************/
-            importValues(points) {
-                if (points && points.length > 0) {
-                    if (points[0].x instanceof Date) {
-                        const startDate = points[0].x;
-                        return WebApp.linq(points).select(a => ({
-                            x: Math.round(WebApp.DateUtils.diff(a.x, startDate).totalDays),
-                            xLabel: a.x,
-                            y: a.y
-                        })).toArray();
-                    }
-                    if (isNaN(points[0].x)) {
-                        return WebApp.linq(points).select((a, i) => ({
-                            x: i,
-                            xLabel: a.x,
-                            y: a.y
-                        })).toArray();
-                    }
-                }
-                return points;
-            }
-            /****************************************/
-            writeData(transfer) {
-                var data = {
-                    version: 1,
-                    type: "serieState",
-                    state: this.getState()
-                };
-                transfer.setData("application/json+studio", JSON.stringify(data));
-                transfer.setData("text/html+id", this.node.element.id);
-                return true;
-            }
-            /****************************************/
-            createActions(result) {
-                super.createActions(result);
-                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(update)");
-                    action.icon = "autorenew";
-                    action.execute = () => this.updateSerie();
-                }));
-                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(new-regression)");
-                    action.icon = "add_box";
-                    action.execute = () => {
-                        const reg = this.addRegression(null, false);
-                        reg.updateGraph();
-                        this.node.isExpanded(true);
-                        reg.node.isSelected(true);
-                    };
-                }));
-                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(zoom)");
-                    action.icon = "zoom_in";
-                    action.execute = () => this.zoom();
-                }));
-                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(align-with-this)");
-                    action.icon = "compare_arrows";
-                    action.execute = () => {
-                        let answer = prompt($string("$(tollerance)"), "10");
-                        this.alignOthers(isNaN(answer) ? 10 : parseInt(answer));
-                    };
-                }));
-            }
-            /****************************************/
-            static fromText(text) {
-                try {
-                    const obj = JSON.parse(text);
-                    if (obj) {
-                        if (obj.type == "serie")
-                            return new StudioSerie({
-                                name: obj.title,
-                                values: obj.values,
-                                source: obj.serie,
-                                color: obj.color
-                            });
-                        if (obj.type == "serieState")
-                            return new StudioSerie(obj.state);
-                    }
-                }
-                catch (_a) {
-                }
-            }
-            /****************************************/
-            getExpressions() {
-                if (!this.color())
-                    this.color("#0000ff");
-                this._graphCtx.generateVars(this._varsMap);
-                const values = [
-                    {
-                        type: "folder",
-                        id: this.getGraphId("public"),
-                        title: this.parent.name() + " - " + this.name(),
-                        collapsed: true
-                    }, {
-                        type: "folder",
-                        id: this.getGraphId("private"),
-                        title: this.parent.name() + " - " + this.name(),
-                        secret: true,
-                        collapsed: true
-                    }, {
-                        type: "expression",
-                        id: this.getGraphId("offset"),
-                        latex: this._varsMap["ofs"] + "=" + this.offsetX(),
-                        folderId: this.getGraphId("public"),
-                        label: "Scostamento",
-                        slider: {
-                            min: (-this.values.length).toString(),
-                            max: (this.values.length).toString(),
-                            hardMax: true,
-                            hardMin: true,
-                            step: "1"
-                        }
-                    }, {
-                        type: "expression",
-                        id: this.getGraphId("offset-x"),
-                        latex: this._varsMap["xofs"] + "=" + this._varsMap["x"] + "+" + this._varsMap["ofs"],
-                        folderId: this.getGraphId("private"),
-                    }, {
-                        type: "expression",
-                        id: this.getGraphId("offset-x-serie"),
-                        latex: "(" + this._varsMap["xofs"] + "," + this._varsMap["y"] + ")",
-                        folderId: this.getGraphId("private"),
-                        points: true,
-                        lines: true,
-                        color: this.color()
-                    }, {
-                        type: "table",
-                        id: this.getGraphId("table"),
-                        folderId: this.getGraphId("private"),
-                        columns: [
-                            {
-                                id: this.getGraphId("table/x"),
-                                latex: this._varsMap["x"],
-                            },
-                            {
-                                id: this.getGraphId("table/y"),
-                                latex: this._varsMap["y"],
-                                hidden: true
-                            }
-                        ]
-                    }
-                ];
-                return values;
-            }
-            /****************************************/
-            alignOthers(tollerance, ...series) {
-                if (!series || series.length == 0)
-                    series = this.parent.children.where(a => a != this).toArray();
-                for (let serie of series)
-                    serie.alignWith(this, tollerance);
-            }
-            /****************************************/
-            alignWith(other, tollerance) {
-                let minOfs = 0;
-                let minValue = Number.NEGATIVE_INFINITY;
-                for (let ofs = -this.values.length; ofs < this.values.length; ofs++) {
-                    let value = 0;
-                    for (let i = 0; i < this.values.length; i++) {
-                        const ofsX = i - ofs;
-                        if (ofsX < 0 || ofsX >= this.values.length)
-                            continue;
-                        if (i >= other.values.length)
-                            continue;
-                        if (Math.abs(this.values[ofsX].y - other.values[i].y) < tollerance)
-                            value++;
-                    }
-                    if (value > minValue) {
-                        minValue = value;
-                        minOfs = ofs;
-                    }
-                }
-                other.offsetX(0);
-                this.offsetX(minOfs);
-            }
-            /****************************************/
-            get mainExpression() {
-                return this.getGraphId("offset-x-serie");
-            }
-            /****************************************/
-            createParameters(result) {
-                result.push(WebApp.apply(new ParameterViewModel({ value: this.offsetX, name: $string("$(shift)") }), p => {
-                    p.max(this.values.length);
-                    p.min(-this.values.length);
-                    p.step(1);
-                }));
-                return true;
-            }
-            /****************************************/
-            updateGraphWork() {
-                this._graphCtx.updateTable(this.getGraphId("table"), this.values);
-            }
-            /****************************************/
-            onGraphChanged() {
-                /*
-                const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("offset")];
-                if (item && item.evaluation)
-                    this.offsetX(item.evaluation.value);*/
-            }
-            /****************************************/
-            onSelected() {
-                super.onSelected();
-                //this._graphCtx.expressionZoomFit(this.getGraphId("table"));
-            }
-            /****************************************/
-            updateColor() {
-                this._graphCtx.setColor(this.getGraphId("offset-x-serie"), this.color());
-                this.children.foreach(a => a.onParentChanged());
-            }
-            /****************************************/
-            attachGraph(ctx) {
-                super.attachGraph(ctx);
-                this.offsetX.subscribe(value => this._graphCtx.updateVariable(this.getGraphId("offset"), this._varsMap["ofs"], value));
-            }
-            /****************************************/
-            setChildrenStateWork(state) {
-                if (state.children != undefined) {
-                    this.children.foreach(a => a.remove());
-                    state.children.forEach(a => {
-                        const reg = this.addRegression(null, false);
-                        reg.setState(a);
-                    });
-                }
-            }
-            /****************************************/
-            setStateWork(state) {
-                if (state.offsetX != undefined)
-                    this.offsetX(state.offsetX);
-                if (state.source)
-                    this.source = state.source;
-                if (state.values != undefined)
-                    this.values = this.importValues(state.values);
-            }
-            /****************************************/
-            getState() {
-                const state = super.getState();
-                state.offsetX = this.offsetX();
-                state.source = this.source;
-                state.values = this.values;
-                state.children = this.children.select(a => a.getState()).toArray();
-                return state;
-            }
-            /****************************************/
-            addRegression(configOrState, updateGraph = true) {
-                return this.addChildrenWork(configOrState instanceof StudioSerieRegression ? configOrState : new StudioSerieRegression(configOrState), updateGraph);
-            }
-            /****************************************/
-            changeColor() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const color = yield ColorPicker.instance.pick();
-                    if (color)
-                        this.color(color);
-                });
-            }
-            /****************************************/
-            updateSerie() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (this.source.type == "geoplot" || !this.source.type) {
-                        if (!this._graphCtx.serieCalculator) {
-                            M.toast({ html: $string("$(msg-downloading-data)") });
-                            const model = yield GeoPlot.Api.loadStudioData();
-                            this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(model.data, GeoPlot.InfectionDataSet, model.geo);
-                        }
-                        this.values = this.importValues(this._graphCtx.serieCalculator.getSerie(this.source));
-                        this._graphCtx.updateTable(this.getGraphId("table"), this.values);
-                        this.children.foreach(a => a.onParentChanged());
-                        M.toast({ html: $string("$(msg-update-complete)") });
-                    }
-                    else
-                        M.toast({ html: $string("$(msg-update-not-supported)") });
-                });
-            }
-            /****************************************/
-            zoom() {
-                const minX = WebApp.linq(this.values).min(a => a.x);
-                const minY = WebApp.linq(this.values).min(a => a.y);
-                const maxX = WebApp.linq(this.values).max(a => a.x);
-                const maxY = WebApp.linq(this.values).max(a => a.y);
-                this._graphCtx.calculator.setMathBounds({
-                    top: maxY + (maxY - minY) * 0.1,
-                    right: maxX + (maxX - minX) * 0.1,
-                    bottom: minY - (maxY - minY) * 0.1,
-                    left: minX - (maxX - minX) * 0.1,
-                });
-            }
-        }
-        /****************************************/
-        class StudioProject extends BaseItem {
-            constructor(config) {
-                super();
-                /****************************************/
-                this.time = ko.observable(0);
-                this.itemType = "project";
-                this.icon = "folder";
-                this.optionsTemplateName = "ProjectOptionsTemplate";
-                this._varsMap = {
-                    "time": null
-                };
-                if (config)
-                    this.setState(config);
-            }
-            /****************************************/
-            createActions(result) {
-                super.createActions(result);
-                result.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
-                    action.text = $string("$(update-all-proj)");
-                    action.icon = "autorenew";
-                    action.execute = () => this.updateAllSerie();
-                }));
-            }
-            /****************************************/
-            updateAllSerie() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    for (let item of this.children)
-                        yield item.updateSerie();
-                });
-            }
-            /****************************************/
-            canAccept(value) {
-                return (value instanceof StudioSerie);
-            }
-            /****************************************/
-            canReadData(transfer) {
-                return transfer.types.indexOf("application/json+studio") != -1;
-            }
-            /****************************************/
-            readData(transfer) {
-                const textData = transfer.getData("application/json+studio");
-                let serie = StudioSerie.fromText(textData);
-                if (serie) {
-                    this.addSerie(serie);
-                    this.node.isExpanded(true);
-                }
-            }
-            /****************************************/
-            getExpressions() {
-                this._graphCtx.generateVars(this._varsMap);
-                const values = [
-                    {
-                        type: "folder",
-                        id: this.getGraphId("public"),
-                        title: this.name(),
-                        collapsed: true
-                    }, {
-                        type: "expression",
-                        folderId: this.getGraphId("public"),
-                        id: this.getGraphId("time"),
-                        latex: this._varsMap["time"] + "=" + this.time(),
-                        slider: {
-                            hardMin: true,
-                            hardMax: true,
-                            min: "0",
-                            max: "100",
-                            step: "1"
-                        }
-                    }
-                ];
-                return values;
-            }
-            /****************************************/
-            createParameters(result) {
-                result.push(WebApp.apply(new ParameterViewModel({ value: this.time, name: $string("$(day)") }), p => {
-                    p.max(100);
-                    p.min(0);
-                    p.step(1);
-                }));
-                return true;
-            }
-            /****************************************/
-            setStateWork(state) {
-                if (state.time != undefined)
-                    this.time(state.time);
-            }
-            /****************************************/
-            setChildrenStateWork(state) {
-                if (state.children != undefined) {
-                    this.children.foreach(a => a.remove());
-                    state.children.forEach(a => {
-                        const item = this.addSerie(null, false);
-                        item.setState(a);
-                    });
-                }
-            }
-            /****************************************/
-            getState() {
-                const state = super.getState();
-                state.time = this.time();
-                state.children = this.children.select(a => a.getState()).toArray();
-                return state;
-            }
-            /****************************************/
-            onGraphChanged() {
-                /*
-                const item = this._graphCtx.calculator.expressionAnalysis[this.getGraphId("time")];
-                if (item)
-                    this.time(item.evaluation.value);*/
-            }
-            /****************************************/
-            attachGraph(ctx) {
-                super.attachGraph(ctx);
-                this.time.subscribe(value => this._graphCtx.updateVariable(this.getGraphId("time"), this._varsMap["time"], this.time()));
-            }
-            /****************************************/
-            addSerie(configOrSerie, updateGraph = true) {
-                return this.addChildrenWork(configOrSerie instanceof StudioSerie ? configOrSerie : new StudioSerie(configOrSerie), updateGraph);
-            }
-        }
+        GeoPlot.ParameterViewModel = ParameterViewModel;
         /****************************************/
         class StudioPage {
             constructor(projectId) {
                 /****************************************/
-                this.items = new GeoPlot.TreeViewModel();
+                this.items = new GeoPlot.TreeView();
                 this.maxX = ko.observable();
                 this.maxY = ko.observable();
                 this.dataImport = new GeoPlot.DataImportControl();
                 this._projectId = projectId;
-                this._graphCtx = new GraphContext();
+                this._graphCtx = new GeoPlot.GraphContext();
                 this._graphCtx.calculator = Desmos.GraphingCalculator(document.getElementById("calculator"), {
                     //xAxisArrowMode: Desmos.AxisArrowModes.BOTH,
                     pasteGraphLink: false,
@@ -4334,32 +4503,32 @@ var WebApp;
                 });
                 this._graphCtx.calculator.controller.listModel.onSelectionChanged = item => this.onGraphSelectionChanged(item);
                 const actions = [];
-                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionView(), action => {
                     action.text = $string("$(new-project)"),
                         action.icon = "create_new_folder";
                     action.execute = () => this.newProject();
                 }));
-                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionView(), action => {
                     action.text = $string("$(save)"),
                         action.icon = "save";
                     action.execute = () => this.saveState();
                 }));
-                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionView(), action => {
                     action.text = $string("$(import)"),
                         action.icon = "import_export";
                     action.execute = () => this.import();
                 }));
-                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionView(), action => {
                     action.text = $string("$(share) Studio"),
                         action.icon = "share";
                     action.execute = () => this.share();
                 }));
-                actions.push(WebApp.apply(new GeoPlot.ActionViewModel(), action => {
+                actions.push(WebApp.apply(new GeoPlot.ActionView(), action => {
                     action.text = $string("$(options)"),
                         action.icon = "settings";
                     action.execute = () => this.showOptions();
                 }));
-                const root = new GeoPlot.TreeNodeViewModel();
+                const root = new GeoPlot.TreeNode();
                 root.actions(actions);
                 this.items.setRoot(root);
                 document.body.addEventListener("paste", (ev) => __awaiter(this, void 0, void 0, function* () {
@@ -4432,8 +4601,8 @@ var WebApp;
             }
             /****************************************/
             addProject(config, updateGraph = true) {
-                const project = new StudioProject(config);
-                const node = new GeoPlot.TreeNodeViewModel(project);
+                const project = new GeoPlot.StudioProject(config);
+                const node = new GeoPlot.TreeNode(project);
                 this.items.root().addNode(node);
                 project.attachNode(node);
                 project.attachGraph(this._graphCtx);
@@ -4513,7 +4682,7 @@ var WebApp;
             /****************************************/
             import() {
                 return __awaiter(this, void 0, void 0, function* () {
-                    //            var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
+                    //var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
                     let project = this.getSelectedProject();
                     const data = yield this.dataImport.show();
                     this.addImportedData(data, project);
@@ -4530,7 +4699,7 @@ var WebApp;
                         M.toast({ html: $string("$(msg-select-project)") });
                         return false;
                     }
-                    const serie = StudioSerie.fromText(text);
+                    const serie = GeoPlot.StudioSerie.fromText(text);
                     if (serie) {
                         project.addSerie(serie);
                         project.node.isExpanded(true);
@@ -4555,8 +4724,8 @@ var WebApp;
             /****************************************/
             addImportedData(data, project) {
                 if (data.length == 1) {
-                    if (this.items.selectedNode() && this.items.selectedNode().value() instanceof StudioSerie) {
-                        if (confirm("Sostituire la serie selezionata con i nuovi dati?")) {
+                    if (this.items.selectedNode() && this.items.selectedNode().value() instanceof GeoPlot.StudioSerie) {
+                        if (confirm($string("$(msg-replace-serie)"))) {
                             const serie = this.items.selectedNode().value();
                             serie.source = data[0];
                             serie.importValues(data[0].serie.values);
@@ -4567,7 +4736,7 @@ var WebApp;
                 }
                 project.node.isExpanded(true);
                 for (let item of data) {
-                    const serie = new StudioSerie({
+                    const serie = new GeoPlot.StudioSerie({
                         name: item.serie.name,
                         values: item.serie.values,
                         source: item

@@ -127,6 +127,13 @@
 
     /****************************************/
 
+    export interface ITextValue<TValue> {
+        text: string;
+        value: TValue;
+    }
+
+    /****************************************/
+
     export const MATERIAL_COLORS = {
         "red": { "600": "#f44336" },
         "pink": { "600": "#e91e63" },

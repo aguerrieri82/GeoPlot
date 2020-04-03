@@ -146,10 +146,6 @@ namespace WebApp.GeoPlot {
         source?: string;
     }
 
-    interface ITextValue<TValue> {
-        text: string;
-        value: TValue;
-    }
 
     /****************************************/
 
@@ -199,7 +195,7 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
-        attachNode(node: TreeNodeViewModel<ITreeItem>) {
+        attachNode(node: TreeNode<ITreeItem>) {
             super.attachNode(node);
             node.isVisible.subscribe(value => {
                 for (var childNode of this.node.nodes())
@@ -251,7 +247,7 @@ namespace WebApp.GeoPlot {
                 { text: $string("$(sapce-key)"), value: " " }
             ];
             
-            this.treeView.setRoot(new TreeNodeViewModel<any>());
+            this.treeView.setRoot(new TreeNode<any>());
             this.treeView.selectedNode.subscribe(a => this.onNodeSelected(a));
 
             this.fileDrop.onFileDropped = text => this.importText(text);
@@ -302,7 +298,7 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
-        protected async getSelectedDataWork(node: TreeNodeViewModel<ITreeItem>, groups: { id: string, value: string }[], result: IDataImportSerieSource[]) {
+        protected async getSelectedDataWork(node: TreeNode<ITreeItem>, groups: { id: string, value: string }[], result: IDataImportSerieSource[]) {
 
             if (!node.isVisible())
                 return;
@@ -367,7 +363,7 @@ namespace WebApp.GeoPlot {
 
             const group = await this._adapter.loadGroupAsync(this._text, this._options);
 
-            let childNode = new TreeNodeViewModel<ITreeItem>(new GroupItem(group));
+            let childNode = new TreeNode<ITreeItem>(new GroupItem(group));
 
             this.treeView.root().clear();
             this.treeView.root().addNode(childNode);
@@ -380,13 +376,13 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
-        protected updateNode(node: TreeNodeViewModel<ITreeItem>, group: IDaGroup) {
+        protected updateNode(node: TreeNode<ITreeItem>, group: IDaGroup) {
 
             node.clear();
 
             if (group.groups) {
                 for (let item of linq(group.groups)) {
-                    let childNode = new TreeNodeViewModel<ITreeItem>(new GroupItem(item.value));
+                    let childNode = new TreeNode<ITreeItem>(new GroupItem(item.value));
                     childNode.loadChildNodes = async () => this.updateNode(childNode, item.value);
                     node.addNode(childNode);
                     childNode.value().attachNode(childNode);
@@ -395,7 +391,7 @@ namespace WebApp.GeoPlot {
 
             if (group.series) {
                 for (let item of linq(group.series)) {
-                    let childNode = new TreeNodeViewModel<ITreeItem>(new SerieItem(item.value));
+                    let childNode = new TreeNode<ITreeItem>(new SerieItem(item.value));
                     node.addNode(childNode);
                     childNode.value().attachNode(childNode);
 
@@ -443,7 +439,7 @@ namespace WebApp.GeoPlot {
 
         /****************************************/
 
-        protected onNodeSelected(node: TreeNodeViewModel<ITreeItem>) {
+        protected onNodeSelected(node: TreeNode<ITreeItem>) {
 
             if (node && node.value() instanceof SerieItem) {
 
@@ -517,7 +513,7 @@ namespace WebApp.GeoPlot {
         columns = ko.observable<ColumnViewModel<any>[]>();
         columnSeparators: ITextValue<string>[];
         table = ko.observable<ITableViewModel>();
-        treeView = new TreeViewModel<ITreeItem>();
+        treeView = new TreeView<ITreeItem>();
         progress = new ProgressViewModel();
         hasData = ko.observable(false);
         sourceUrl = ko.observable<string>();

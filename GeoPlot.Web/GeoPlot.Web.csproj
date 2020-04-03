@@ -17,7 +17,13 @@
 
 
   <ItemGroup>
+    <None Remove="Scripts\Components\BaseStudioItem.ts" />
+    <None Remove="Scripts\Components\ColorPicker.ts" />
+    <None Remove="Scripts\Components\GraphContext.ts" />
     <None Remove="Scripts\Components\SplitEnumerator.ts" />
+    <None Remove="Scripts\Components\StudioProject.ts" />
+    <None Remove="Scripts\Components\StudioRegression.ts" />
+    <None Remove="Scripts\Components\StudioSerie.ts" />
     <None Remove="Scripts\Components\TreeView.ts" />
     <None Remove="Scripts\Framework\DataAdapter.ts" />
     <None Remove="Scripts\Framework\Operation.ts" />
