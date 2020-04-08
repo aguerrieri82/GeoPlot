@@ -47,6 +47,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Eusoft\WebApp\src\Eusoft.WebApp.Localization\Eusoft.WebApp.Localization.csproj" />
     <ProjectReference Include="..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj" />
+    <ProjectReference Include="..\Geo.Data\Geo.Data.csproj" />
     <ProjectReference Include="..\GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj" />
   </ItemGroup>
 

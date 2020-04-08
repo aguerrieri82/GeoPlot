@@ -10,6 +10,7 @@ namespace WebApp.GeoPlot {
         totalHospedalized: number;
         totalHealed: number;
         toatlTests: number;
+        historicDeaths: Dictionary<number>;
     }
 
     /****************************************/
@@ -24,6 +25,7 @@ namespace WebApp.GeoPlot {
                 name: $string("$(total-positive)"),
                 colorLight: "#f44336",
                 colorDark: "#b71c1c",
+                showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalPositive)
             },
             {
@@ -32,6 +34,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 colorLight: "#e91e63",
                 colorDark: "#880e4f",
+                showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.currentPositive)
             },
             {
@@ -40,6 +43,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
+                showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalDeath)
             },
             {
@@ -48,6 +52,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 colorLight: "#ff9800",
                 colorDark: "#e65100",
+                showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalSevere)
             },
             {
@@ -56,6 +61,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 colorLight: "#fdd835",
                 colorDark: "#fbc02d",
+                showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalHospedalized)
             },
             {
@@ -64,6 +70,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 colorLight: "#4caf50",
                 colorDark: "#1b5e20",
+                showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalHealed)
             },
             {
@@ -72,6 +79,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 colorLight: "#03a9f4",
                 colorDark: "#01579b",
+                showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.toatlTests)
             },
             {
@@ -80,6 +88,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
+                showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => MathUtils.round(a.surface, 0))
             },
             {
@@ -88,6 +97,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
+                showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => MathUtils.round(a.demography.total / a.surface, 0))
             },
             {
@@ -96,6 +106,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
+                showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => a.demography.total)
             },
             {
@@ -104,8 +115,52 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "district"],
                 colorLight: "#777",
                 colorDark: "#222",
+                showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => a.demography.over65)
-            }/*,
+            },
+            {
+                id: "death2017",
+                name: $string("$(total-death) +65 (2017)"),
+                validFor: ["region", "district"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c",      
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a =>
+                    a.historicDeaths ? a.historicDeaths["2017"] : undefined)
+            },
+            {
+                id: "death2018",
+                name: $string("$(total-death) +65 (2018)"),
+                validFor: ["region", "district"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c",
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a =>
+                    a.historicDeaths ? a.historicDeaths["2018"] : undefined)
+            },
+            {
+                id: "death2019",
+                name: $string("$(total-death) +65 (2019)"),
+                validFor: ["region", "district"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c",
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a =>
+                    a.historicDeaths ? a.historicDeaths["2019"] : undefined)
+            },
+            {
+                id: "death2020",
+                name: $string("$(total-death) +65 (2020)*"),
+                validFor: ["region", "district"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c",
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a =>
+                    a.historicDeaths ? a.historicDeaths["2020"] : undefined)
+            },
+
+            /*,
+            /*,
             {
                 id: "extimated-death",
                 name: $string("Morti stimati"),

@@ -21,10 +21,19 @@
     }    
 
     export enum GeoAreaType {
-        Country,
-        State,
-        Region,
-        District
+        Continent = 0,
+        CountryGroup = 1,
+        Country = 2,
+        State = 3,
+        Region = 4,
+        District = 5,
+        Municipality = 6
+    }
+
+    export enum Gender {
+        All,
+        Male,
+        Female
     }
 
     export interface IAggregateDemography {
@@ -68,6 +77,7 @@
         validFor?: ViewMode[];
         colorLight?: string;
         colorDark?: string;
+        showInFavorites?: boolean;
         compute: IIndicatorFunction<TData>;
     }
 

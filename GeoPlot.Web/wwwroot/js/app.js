@@ -310,11 +310,20 @@ var WebApp;
         })(AggregationFunc = GeoPlot.AggregationFunc || (GeoPlot.AggregationFunc = {}));
         let GeoAreaType;
         (function (GeoAreaType) {
-            GeoAreaType[GeoAreaType["Country"] = 0] = "Country";
-            GeoAreaType[GeoAreaType["State"] = 1] = "State";
-            GeoAreaType[GeoAreaType["Region"] = 2] = "Region";
-            GeoAreaType[GeoAreaType["District"] = 3] = "District";
+            GeoAreaType[GeoAreaType["Continent"] = 0] = "Continent";
+            GeoAreaType[GeoAreaType["CountryGroup"] = 1] = "CountryGroup";
+            GeoAreaType[GeoAreaType["Country"] = 2] = "Country";
+            GeoAreaType[GeoAreaType["State"] = 3] = "State";
+            GeoAreaType[GeoAreaType["Region"] = 4] = "Region";
+            GeoAreaType[GeoAreaType["District"] = 5] = "District";
+            GeoAreaType[GeoAreaType["Municipality"] = 6] = "Municipality";
         })(GeoAreaType = GeoPlot.GeoAreaType || (GeoPlot.GeoAreaType = {}));
+        let Gender;
+        (function (Gender) {
+            Gender[Gender["All"] = 0] = "All";
+            Gender[Gender["Male"] = 1] = "Male";
+            Gender[Gender["Female"] = 2] = "Female";
+        })(Gender = GeoPlot.Gender || (GeoPlot.Gender = {}));
         /****************************************/
         GeoPlot.MATERIAL_COLORS = {
             "red": { "600": "#f44336" },
@@ -2318,6 +2327,7 @@ var WebApp;
                     name: $string("$(total-positive)"),
                     colorLight: "#f44336",
                     colorDark: "#b71c1c",
+                    showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalPositive)
                 },
                 {
@@ -2326,6 +2336,7 @@ var WebApp;
                     validFor: ["region", "country"],
                     colorLight: "#e91e63",
                     colorDark: "#880e4f",
+                    showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.currentPositive)
                 },
                 {
@@ -2334,6 +2345,7 @@ var WebApp;
                     validFor: ["region", "country"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
+                    showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalDeath)
                 },
                 {
@@ -2342,6 +2354,7 @@ var WebApp;
                     validFor: ["region", "country"],
                     colorLight: "#ff9800",
                     colorDark: "#e65100",
+                    showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalSevere)
                 },
                 {
@@ -2350,6 +2363,7 @@ var WebApp;
                     validFor: ["region", "country"],
                     colorLight: "#fdd835",
                     colorDark: "#fbc02d",
+                    showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalHospedalized)
                 },
                 {
@@ -2358,6 +2372,7 @@ var WebApp;
                     validFor: ["region", "country"],
                     colorLight: "#4caf50",
                     colorDark: "#1b5e20",
+                    showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalHealed)
                 },
                 {
@@ -2366,6 +2381,7 @@ var WebApp;
                     validFor: ["region", "country"],
                     colorLight: "#03a9f4",
                     colorDark: "#01579b",
+                    showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.toatlTests)
                 },
                 {
@@ -2374,6 +2390,7 @@ var WebApp;
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
+                    showInFavorites: false,
                     compute: new GeoPlot.ConstIndicatorFunction((v, a) => WebApp.MathUtils.round(a.surface, 0))
                 },
                 {
@@ -2382,6 +2399,7 @@ var WebApp;
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
+                    showInFavorites: false,
                     compute: new GeoPlot.ConstIndicatorFunction((v, a) => WebApp.MathUtils.round(a.demography.total / a.surface, 0))
                 },
                 {
@@ -2390,6 +2408,7 @@ var WebApp;
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
+                    showInFavorites: false,
                     compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.total)
                 },
                 {
@@ -2398,31 +2417,45 @@ var WebApp;
                     validFor: ["region", "district"],
                     colorLight: "#777",
                     colorDark: "#222",
+                    showInFavorites: false,
                     compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.over65)
-                } /*,
-                {
-                    id: "extimated-death",
-                    name: $string("Morti stimati"),
-                    validFor: ["country"],
-                    colorLight: "#f44336",
-                    colorDark: "#b71c1c",
-                    compute: new CombineIndicatorFunction({
-                        totalPositive: new SimpleIndicatorFunction(a => a.totalPositive),
-                        toatlTests: new SimpleIndicatorFunction(a => a.toatlTests),
-                        dailyDeath: new ConstIndicatorFunction((v, a) => 1450)
-                    }, values => Math.round((values.totalPositive / values.toatlTests) * values.dailyDeath))
                 },
                 {
-                    id: "healed-death",
-                    name: $string("$(death) + $(healed)"),
-                    validFor: ["country", "region"],
-                    colorLight: "#4caf50",
-                    colorDark: "#1b5e20",
-                    compute: new CombineIndicatorFunction({
-                        totalHealed: new SimpleIndicatorFunction(a => a.totalHealed),
-                        totalDeath: new SimpleIndicatorFunction(a => a.totalDeath)
-                    }, values => values.totalHealed + values.totalDeath)
-                }*/
+                    id: "death2017",
+                    name: $string("$(total-death) +65 (2017)"),
+                    validFor: ["region", "district"],
+                    colorLight: "#9c27b0",
+                    colorDark: "#4a148c",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2017"] : undefined)
+                },
+                {
+                    id: "death2018",
+                    name: $string("$(total-death) +65 (2018)"),
+                    validFor: ["region", "district"],
+                    colorLight: "#9c27b0",
+                    colorDark: "#4a148c",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2018"] : undefined)
+                },
+                {
+                    id: "death2019",
+                    name: $string("$(total-death) +65 (2019)"),
+                    validFor: ["region", "district"],
+                    colorLight: "#9c27b0",
+                    colorDark: "#4a148c",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2019"] : undefined)
+                },
+                {
+                    id: "death2020",
+                    name: $string("$(total-death) +65 (2020)*"),
+                    validFor: ["region", "district"],
+                    colorLight: "#9c27b0",
+                    colorDark: "#4a148c",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2020"] : undefined)
+                },
             ],
             factors: [
                 {
@@ -4134,6 +4167,8 @@ var WebApp;
                 if (!this.currentArea().indicators()) {
                     const items = [];
                     for (let indicator of this.indicators()) {
+                        if (indicator.showInFavorites === false)
+                            continue;
                         let item = new IndicatorViewModel();
                         item.indicator = indicator;
                         item.select = () => {

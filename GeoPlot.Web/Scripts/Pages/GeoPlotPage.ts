@@ -947,6 +947,10 @@
             if (!this.currentArea().indicators()) {
                 const items: IndicatorViewModel[] = [];
                 for (let indicator of this.indicators()) {
+
+                    if (indicator.showInFavorites === false)
+                        continue;
+
                     let item = new IndicatorViewModel();
                     item.indicator = indicator;
                     item.select = () => {

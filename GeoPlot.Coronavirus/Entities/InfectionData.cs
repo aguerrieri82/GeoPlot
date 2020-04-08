@@ -41,5 +41,7 @@ namespace GeoPlot.Coronavirus
         public int? TotalHealed { get; set; }
 
         public int? ToatlTests { get; set; }
+
+        public Dictionary<int, int?> HistoricDeaths { get; set; }
     }
 }

@@ -32,5 +32,7 @@ namespace Geo.Data.Entities
         public decimal? Value { get; set; }
 
         public virtual Indicator Indicator { get; set; }
-}
+
+        public virtual GeoArea GeoArea { get; set; }
+    }
 }

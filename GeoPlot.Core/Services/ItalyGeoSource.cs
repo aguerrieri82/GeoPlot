@@ -27,11 +27,11 @@ namespace GeoPlot.Core
             var districtSurface = (await new ItalyDistrictSurfaceSource(_districtSurfaceDemoSrc).LoadAsync()).ToDictionary(a => a.AreaId, a => a.Value);
 
             var result = new List<GeoArea>();
-
+            /*
             var municipality = (await new ItalyMunicipalitySource().LoadAsync()).ToArray();
 
             foreach (var item in municipality)
-                result.Add(item);
+                result.Add(item);*/
 
             foreach (var item in district)
             {
