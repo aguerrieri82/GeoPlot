@@ -132,7 +132,7 @@ namespace GeoPlot.Web.Controllers
                 var item = new EnvironmentItemViewModel()
                 {
                     Value = a,
-                    Position = Geo.Project(a.Location),
+                    Position = GeoUtils.Project(a.Location),
                     Radius = 100
                 };
                 if (a.Value < 20)

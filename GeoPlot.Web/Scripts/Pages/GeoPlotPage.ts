@@ -1029,6 +1029,9 @@
             let result = Number.NEGATIVE_INFINITY;
             let curView = ViewModes[this.viewMode()];
 
+
+            let count = 0;
+            let list = [];
             for (let i = 0; i < this._data.days.length; i++) {
                 const day = this._data.days[i];
                 for (let areaId in day.values) {
@@ -1037,8 +1040,15 @@
                     const factor = this.getFactorValue(i, areaId);
                     if (factor > result && factor != Number.POSITIVE_INFINITY)
                         result = factor;
+
+                    if (factor != 0)
+                        list.push(factor);
                 }
             }
+            /*
+            list = linq(list).orderBy(a => a).toArray();
+            var index = Math.floor(list.length / 2);
+            result = list[index];*/
 
             this.maxFactor(parseFloat(result.toFixed(1)));
         }

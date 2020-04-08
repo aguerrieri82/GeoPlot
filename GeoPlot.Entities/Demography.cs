@@ -1,16 +1,11 @@
-﻿using System;
+﻿using Geo.Data.Types;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace GeoPlot.Entities
 {
-    public enum Gender
-    {
-        All,
-        Male,
-        Female
-    }
 
     public class Demography
     {

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace GeoPlot.Core
 {
-    public static class Geo
+    public static class GeoUtils
     {
         private const int EarthRadius = 6378137;
         private const double OriginShift = 2 * Math.PI * EarthRadius / 2;

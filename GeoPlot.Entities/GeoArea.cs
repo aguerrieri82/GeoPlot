@@ -1,19 +1,11 @@
-﻿using System;
+﻿using Geo.Data.Types;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace GeoPlot.Entities
 {
-    public enum GeoAreaType
-    {
-        Country,
-        State,
-        Region,
-        District,
-        Municipality
-    }
-
     public interface IGeoAreaItem<out TValue>
     {
         string AreaId { get;  }

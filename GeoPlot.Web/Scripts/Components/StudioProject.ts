@@ -148,37 +148,6 @@
                 }
             ];
 
-            if (this.aggregationMode() != "none") {          
-                /*
-                values.push({
-                    type: "expression",
-                    folderId: this.getGraphId("private"),
-                    id: this.getGraphId("xmax"),
-                    latex: this.getVar("xmax") + " = \\max([" + this.children.select(a => "\\max(" + a.getVar("xofs") + ")").concat(", ") + "])"
-                });
-                values.push({
-                    type: "expression", 
-                    folderId: this.getGraphId("private"),
-                    id: this.getGraphId("xmin"),
-                    latex: this.getVar("xmin") + " = \\min([" + this.children.select(a => "\\min(" + a.getVar("xofs") + ")").concat(", ") + "])"
-                });
-                values.push({
-                    type: "expression",
-                    folderId: this.getGraphId("private"),
-                    id: this.getGraphId("all_x"),
-                    latex: this.getVar("xtot") + "= [" + this.getVar("xmin") + ",..." + this.getVar("xmax") + "]"
-                });
-                values.push({
-                    type: "expression",
-                    folderId: this.getGraphId("private"),
-                    id: this.getGraphId("aggregate"),
-                    color: this.color(),
-                    lines: true,
-                    points: true,
-                    latex: "(" + this.getVar("xtot") + "," + this.children.select(a => a.getVar("y")).concat("+") + ")"
-                });*/
-            }
-
             return values;
         }
 
@@ -186,31 +155,24 @@
 
         updateAggregate() {
 
-            if (this.aggregationMode() == "none") {
-                //this._graphCtx.setItemVisibile(this.getGraphId("table/yagg"), false);
-            }
-            else {
+            const values: { [key: number]: number } = {};
 
-                const values: { [key: number]: number } = {};
+            const children = this.children.toArray();
 
-                const children = this.children.toArray();
-
-                for (var child of children) {
-                    const ofs = parseInt(<any>child.offsetX());
-                    for (var item of child.values) {
-                        const xReal = item.x + ofs;
-                        if (!(xReal in values))
-                            values[xReal] = item.y;
-                        else
-                            values[xReal] += item.y;
-                    }
+            for (var child of children) {
+                const ofs = parseInt(<any>child.offsetX());
+                for (var item of child.values) {
+                    const xReal = item.x + ofs;
+                    if (!(xReal in values))
+                        values[xReal] = item.y;
+                    else
+                        values[xReal] += item.y;
                 }
-
-                const funValues = linq(values).orderBy(a => a.key).select(a => (<IFunctionPoint>{ x: <any>a.key, y: a.value })).toArray();
-                this._graphCtx.updateTable(this.getGraphId("aggregate"), funValues);
-
-                //this._graphCtx.setItemVisibile(this.getGraphId("table/yagg"), true);
             }
+
+            const funValues = linq(values).orderBy(a => a.key).select(a => (<IFunctionPoint>{ x: <any>a.key, y: a.value })).toArray();
+            this._graphCtx.updateTable(this.getGraphId("aggregate"), funValues);
+
         }
 
         /****************************************/

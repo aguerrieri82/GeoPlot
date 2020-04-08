@@ -4,4 +4,8 @@
     <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Geo.Data.Types\Geo.Data.Types.csproj" />
+  </ItemGroup>
+
 </Project>

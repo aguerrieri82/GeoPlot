@@ -1,4 +1,5 @@
-﻿using GeoPlot.Entities;
+﻿using Geo.Data.Types;
+using GeoPlot.Entities;
 using NetTopologySuite.Features;
 using System;
 using System.Collections.Generic;
@@ -10,13 +11,13 @@ namespace GeoPlot.Core
 {
     public class ItalyDistrictSource : BaseGeoJsonDataSource
     {
-        public ItalyDistrictSource()
-            : base("https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_provinces.geojson")
+        public ItalyDistrictSource(double tollerance = 0.01)
+            : base("https://raw.githubusercontent.com/openpolis/geojson-italy/master/geojson/limits_IT_provinces.geojson", tollerance)
         {
         }
 
-        public ItalyDistrictSource(string src)
-            : base(src)
+        public ItalyDistrictSource(string src, double tollerance = 0.01)
+            : base(src, tollerance)
         {
         }
 

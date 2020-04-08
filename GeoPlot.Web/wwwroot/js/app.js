@@ -1452,60 +1452,24 @@ var WebApp;
                         ]
                     }
                 ];
-                if (this.aggregationMode() != "none") {
-                    /*
-                    values.push({
-                        type: "expression",
-                        folderId: this.getGraphId("private"),
-                        id: this.getGraphId("xmax"),
-                        latex: this.getVar("xmax") + " = \\max([" + this.children.select(a => "\\max(" + a.getVar("xofs") + ")").concat(", ") + "])"
-                    });
-                    values.push({
-                        type: "expression",
-                        folderId: this.getGraphId("private"),
-                        id: this.getGraphId("xmin"),
-                        latex: this.getVar("xmin") + " = \\min([" + this.children.select(a => "\\min(" + a.getVar("xofs") + ")").concat(", ") + "])"
-                    });
-                    values.push({
-                        type: "expression",
-                        folderId: this.getGraphId("private"),
-                        id: this.getGraphId("all_x"),
-                        latex: this.getVar("xtot") + "= [" + this.getVar("xmin") + ",..." + this.getVar("xmax") + "]"
-                    });
-                    values.push({
-                        type: "expression",
-                        folderId: this.getGraphId("private"),
-                        id: this.getGraphId("aggregate"),
-                        color: this.color(),
-                        lines: true,
-                        points: true,
-                        latex: "(" + this.getVar("xtot") + "," + this.children.select(a => a.getVar("y")).concat("+") + ")"
-                    });*/
-                }
                 return values;
             }
             /****************************************/
             updateAggregate() {
-                if (this.aggregationMode() == "none") {
-                    //this._graphCtx.setItemVisibile(this.getGraphId("table/yagg"), false);
-                }
-                else {
-                    const values = {};
-                    const children = this.children.toArray();
-                    for (var child of children) {
-                        const ofs = parseInt(child.offsetX());
-                        for (var item of child.values) {
-                            const xReal = item.x + ofs;
-                            if (!(xReal in values))
-                                values[xReal] = item.y;
-                            else
-                                values[xReal] += item.y;
-                        }
+                const values = {};
+                const children = this.children.toArray();
+                for (var child of children) {
+                    const ofs = parseInt(child.offsetX());
+                    for (var item of child.values) {
+                        const xReal = item.x + ofs;
+                        if (!(xReal in values))
+                            values[xReal] = item.y;
+                        else
+                            values[xReal] += item.y;
                     }
-                    const funValues = WebApp.linq(values).orderBy(a => a.key).select(a => ({ x: a.key, y: a.value })).toArray();
-                    this._graphCtx.updateTable(this.getGraphId("aggregate"), funValues);
-                    //this._graphCtx.setItemVisibile(this.getGraphId("table/yagg"), true);
                 }
+                const funValues = WebApp.linq(values).orderBy(a => a.key).select(a => ({ x: a.key, y: a.value })).toArray();
+                this._graphCtx.updateTable(this.getGraphId("aggregate"), funValues);
             }
             /****************************************/
             updateColor() {
@@ -4230,6 +4194,8 @@ var WebApp;
                     return;
                 let result = Number.NEGATIVE_INFINITY;
                 let curView = GeoPlot.ViewModes[this.viewMode()];
+                let count = 0;
+                let list = [];
                 for (let i = 0; i < this._data.days.length; i++) {
                     const day = this._data.days[i];
                     for (let areaId in day.values) {
@@ -4238,8 +4204,14 @@ var WebApp;
                         const factor = this.getFactorValue(i, areaId);
                         if (factor > result && factor != Number.POSITIVE_INFINITY)
                             result = factor;
+                        if (factor != 0)
+                            list.push(factor);
                     }
                 }
+                /*
+                list = linq(list).orderBy(a => a).toArray();
+                var index = Math.floor(list.length / 2);
+                result = list[index];*/
                 this.maxFactor(parseFloat(result.toFixed(1)));
             }
             /****************************************/

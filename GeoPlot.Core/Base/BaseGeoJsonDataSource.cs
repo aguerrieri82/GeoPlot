@@ -12,10 +12,10 @@ namespace GeoPlot.Core
 {
     public class BaseGeoJsonDataSource : BaseFileDataSource<GeoArea>
     {
-        public BaseGeoJsonDataSource(string src)
+        public BaseGeoJsonDataSource(string src, double tollerance)
             : base(src)
         {
-            SimplifyTollerance = 0.01;
+            SimplifyTollerance = tollerance;
         }
 
         protected override IEnumerable<GeoArea> Load(string textData)
@@ -26,16 +26,19 @@ namespace GeoPlot.Core
 
             ProcessFeatures(features, result);
 
-            var min = Geo.Project(new GeoPoint() { Lat = features.BoundingBox.MinY, Lng = features.BoundingBox.MinX });
-            var max = Geo.Project(new GeoPoint() { Lat = features.BoundingBox.MaxY, Lng = features.BoundingBox.MaxX });
-
-            ViewBox = new Rect2D
+            if (features.BoundingBox != null)
             {
-                X = min.X,
-                Y = max.Y,
-                Width = (max.X - min.X),
-                Height = (min.Y - max.Y)
-            };
+                var min = GeoUtils.Project(new GeoPoint() { Lat = features.BoundingBox.MinY, Lng = features.BoundingBox.MinX });
+                var max = GeoUtils.Project(new GeoPoint() { Lat = features.BoundingBox.MaxY, Lng = features.BoundingBox.MaxX });
+
+                ViewBox = new Rect2D
+                {
+                    X = min.X,
+                    Y = max.Y,
+                    Width = (max.X - min.X),
+                    Height = (min.Y - max.Y)
+                };
+            }
 
             return result;
         }
@@ -81,7 +84,7 @@ namespace GeoPlot.Core
                 }
          
                 if (curGeo.IsValid)
-                    result.Add(new Poly2D() { Points = curGeo.Coordinates.Select(a => Geo.Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
+                    result.Add(new Poly2D() { Points = curGeo.Coordinates.Select(a => GeoUtils.Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
             }
             else if (geo is MultiPolygon multiPoly)
             {

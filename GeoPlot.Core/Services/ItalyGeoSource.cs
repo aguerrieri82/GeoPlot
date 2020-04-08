@@ -1,4 +1,5 @@
-﻿using GeoPlot.Entities;
+﻿using Geo.Data.Types;
+using GeoPlot.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,10 +26,13 @@ namespace GeoPlot.Core
             var districtDemo = (await new ItalyDistrictDemographySource(_districtDemoSrc).LoadAsync()).GroupBy(a=> a.DistrictId).ToDictionary(a=> a.Key, a=> a.ToArray());
             var districtSurface = (await new ItalyDistrictSurfaceSource(_districtSurfaceDemoSrc).LoadAsync()).ToDictionary(a => a.AreaId, a => a.Value);
 
-            var regionSource = new ItalyRegionSource();
-            var region = (await regionSource.LoadAsync()).ToArray();
-
             var result = new List<GeoArea>();
+
+            var municipality = (await new ItalyMunicipalitySource().LoadAsync()).ToArray();
+
+            foreach (var item in municipality)
+                result.Add(item);
+
             foreach (var item in district)
             {
                 item.Demography = new AggregateDemografy()
@@ -42,6 +46,8 @@ namespace GeoPlot.Core
                 result.Add(item);
             }
 
+            var regionSource = new ItalyRegionSource();
+            var region = (await regionSource.LoadAsync()).ToArray();
             foreach (var item in region)
             {
                 var districts = result.Where(a => a.ParentId == item.Id);
