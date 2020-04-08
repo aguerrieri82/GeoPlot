@@ -1,0 +1,83 @@
+﻿/****************************************/
+/* TreeView                             */
+/****************************************/
+
+.tree-view {
+    ul {
+        list-style: none;
+        margin: 0;
+
+        > li {
+            position: relative;
+            transition-duration: 0.3s;
+
+            &.drop {
+                > header {
+                    border: dashed 2px #333;
+                }
+            }
+
+            > header {
+                display: flex;
+                white-space: nowrap;
+                z-index: 1;
+
+                .expand-collapse i {
+                    transition-duration: 0.3s;
+                    transform: rotate(-90deg);
+                }
+
+                .visibility {
+                    color: #ddd;
+                }
+
+                .label {
+                    color: #000;
+                }
+            }
+
+            > .child-nodes {
+                position: relative;
+                opacity: 0;
+                top: -20px;
+                height: 0;
+                pointer-events: none;
+                transition-duration: 0.3s;
+            }
+
+            &.selected {
+                > header {
+                    .label {
+                        font-weight: bold;
+                    }
+                }
+            }
+
+            &.visible {
+                > header {
+                    .visibility {
+                    }
+                }
+            }
+
+            &.expanded {
+                > .child-nodes {
+                    opacity: 1;
+                    top: 0;
+                    height: auto;
+                    pointer-events: all;
+                }
+
+                > header {
+                    .expand-collapse i {
+                        transform: rotate(0);
+                    }
+                }
+            }
+        }
+    }
+
+    .child-nodes {
+        margin-left: 40px;
+    }
+}

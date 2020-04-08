@@ -1,0 +1,102 @@
+﻿/****************************************/
+/* DataImport                           */
+/****************************************/
+
+#dataImport {
+    max-height: none;
+
+    .main {
+        display: flex;
+        flex-direction: row;
+        overflow: hidden;
+        height: 500px;
+
+        > .content {
+            flex-grow: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+    }
+
+    .section-preview {
+        max-height: 300px;
+        overflow: auto;
+    }
+
+    .side-bar {
+        width: 30%;
+        margin-right: 16px;
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+
+        .actions {
+            margin-top: 8px;
+            flex-shrink: 0;
+        }
+
+        .section-tree {
+            border: solid 1px #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            overflow: auto;
+            flex-grow: 1;
+        }
+    }
+
+
+    .options {
+        border: solid 1px #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 16px;
+
+        .col-separator select {
+            max-width: 10em;
+        }
+    }
+
+    .section-preview {
+        border: solid 1px #ddd;
+        border-radius: 4px;
+        padding: 8px;
+    }
+
+    .columns {
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        border: solid 1px #ddd;
+        border-radius: 4px;
+        margin-bottom: 16px;
+
+        > * {
+            padding: 8px;
+            border-right: solid 1px #ddd;
+            flex-shrink: 0;
+            margin-right: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+    }
+
+    .import-url {
+        border: solid 1px #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 8px;
+    }
+
+    .drop-file {
+        border: dashed 1px #333;
+        border-radius: 4px;
+        padding: 16px;
+        text-align: center;
+
+        &.drop {
+            border-width: 3px;
+        }
+    }
+}

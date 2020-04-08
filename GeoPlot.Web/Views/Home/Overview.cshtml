@@ -6,9 +6,7 @@
     var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region };
 }
     <div class="container">
-        <section class="main title">
-            <h6><string>$(day)</string> <span data-bind="text: currentData"></span></h6>
-        </section>
+
         <div class="row">
             <div class="main col s12 m6 l7">
                 <section class="card card-map">
@@ -110,7 +108,7 @@
 
                 <section class="main day">
                     <div class="stack-horizontal">
-                        <span data-bind="text: dayNumber"></span>
+						<span class="current-day" data-bind="text: currentData"></span>
                         <div class="range-field stack-fit">
                             <input type="range" min="0" data-bind="value: dayNumber, attr: {max: totalDays}, valueUpdate: 'input'" />
                         </div>

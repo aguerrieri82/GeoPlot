@@ -2422,7 +2422,7 @@ var WebApp;
                 },
                 {
                     id: "death2017",
-                    name: $string("$(total-death) +65 (2017)"),
+                    name: $string("$(total-death) +60 (2017)"),
                     validFor: ["region", "district"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
@@ -2431,7 +2431,7 @@ var WebApp;
                 },
                 {
                     id: "death2018",
-                    name: $string("$(total-death) +65 (2018)"),
+                    name: $string("$(total-death) +60 (2018)"),
                     validFor: ["region", "district"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
@@ -2440,7 +2440,7 @@ var WebApp;
                 },
                 {
                     id: "death2019",
-                    name: $string("$(total-death) +65 (2019)"),
+                    name: $string("$(total-death) +60 (2019)"),
                     validFor: ["region", "district"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
@@ -2449,7 +2449,7 @@ var WebApp;
                 },
                 {
                     id: "death2020",
-                    name: $string("$(total-death) +65 (2020)*"),
+                    name: $string("$(total-death) +60 (2020)*"),
                     validFor: ["region", "district"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",

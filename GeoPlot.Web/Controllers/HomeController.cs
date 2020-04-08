@@ -205,7 +205,7 @@ namespace GeoPlot.Web.Controllers
 
             using (var ctx = DataContextFactory.Instance.CreateDbContext(null))
             {
-                var deathRawItems = await ctx.TimeSeries.Where(a => a.IndicatorId == Guid.Parse("26bfda4a-7d11-465c-afe9-73a2dae7ac62") && a.Value != null && a.FromAge >= 65)
+                var deathRawItems = await ctx.TimeSeries.Where(a => a.IndicatorId == Guid.Parse("26bfda4a-7d11-465c-afe9-73a2dae7ac62") && a.Value != null && a.FromAge >= 60)
                             .GroupBy(a => new { Date = a.StartDate, Code = a.GeoArea.Parent.Parent.Code })
                             .Select(a => new DayAreaItem<int>()
                             {
@@ -215,8 +215,8 @@ namespace GeoPlot.Web.Controllers
                             })
                             .ToListAsync();
 
-                deathRawItems.AddRange(await ctx.TimeSeries.Where(a => a.IndicatorId == Guid.Parse("26bfda4a-7d11-465c-afe9-73a2dae7ac62") && a.Value != null && a.FromAge >= 65)
-                           .GroupBy(a => new { Date = a.StartDate, Code = a.GeoArea.Parent.Code })
+                deathRawItems.AddRange(await ctx.TimeSeries.Where(a => a.IndicatorId == Guid.Parse("26bfda4a-7d11-465c-afe9-73a2dae7ac62") && a.Value != null && a.FromAge >= 60)
+                           .GroupBy(a => new { Date = a.StartDate, Code = a.GeoArea.Parent.CodeAlt })
                            .Select(a => new DayAreaItem<int>()
                            {
                                Date = a.Key.Date,

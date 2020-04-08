@@ -3,6 +3,10 @@
 /* PlotPage                            */
 /****************************************/
 
+.current-day{
+    font-weight: 500;
+}
+
 .data-source {
     .note {
         margin-left: 24px;
@@ -49,6 +53,10 @@
         position: relative;
         height: 30vh;
         transition-duration: 0.3s;
+
+        @media only screen and (min-width: 1024px) and (max-width: 1380px)  {
+            height: 40vh;
+        }
 
         canvas {
             background-color: white;

@@ -1,0 +1,48 @@
+﻿/****************************************/
+/* ColorPicker                          */
+/****************************************/
+
+.color-picker {
+    display: none;
+    background-color: white;
+
+    &.visible {
+        position: absolute;
+        width: 160px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        display: flex;
+    }
+
+    a {
+        width: 32px;
+        height: 32px;
+        border: solid 2px white;
+
+        &:hover {
+            transition-duration: 0.2s;
+            opacity: 0.8;
+        }
+    }
+}
+
+/****************************************/
+/* ColorEdit                            */
+/****************************************/
+
+.color-edit {
+    display: flex;
+    align-items: center;
+
+    .input-field {
+        flex-grow: 1;
+    }
+
+    .color-box {
+        width: 24px;
+        height: 24px;
+        border: solid 1px #ccc;
+        margin-left: 8px;
+        display: block;
+    }
+}

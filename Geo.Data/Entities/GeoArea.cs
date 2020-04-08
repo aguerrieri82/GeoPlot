@@ -25,6 +25,8 @@ namespace Geo.Data.Entities
 
         public string Code { get; set; }
 
+        public string CodeAlt { get; set; }
+
         public string NationalCode { get; set; }
 
         public string InternationalCode { get; set; }

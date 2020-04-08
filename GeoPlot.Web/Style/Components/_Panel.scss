@@ -1,0 +1,62 @@
+﻿/****************************************/
+/* Panel                                */
+/****************************************/
+
+.panel {
+    border-bottom: solid 4px #ccc;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+
+    > header {
+        padding: 8px;
+        background-color: #1565c0;
+        color: white;
+        display: flex;
+        flex-shrink: 0;
+
+        h6 {
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .actions {
+            margin-left: 8px;
+
+            a {
+                margin-right: 8px;
+
+                i {
+                    color: #eee;
+                }
+
+                &:last-of-type {
+                    margin-right: 0;
+                }
+            }
+        }
+    }
+
+    > .content {
+        padding: 8px;
+        flex-grow: 1;
+        position: relative;
+    }
+
+    &:last-of-type {
+        border-bottom: none;
+    }
+
+    &.scroll {
+        > .content {
+            overflow: scroll;
+        }
+    }
+
+    &.scroll-v {
+        > .content {
+            overflow-y: scroll;
+        }
+    }
+}

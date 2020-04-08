@@ -1,0 +1,154 @@
+﻿@import "../_Vars.scss";
+@import "../Components/_Panel.scss";
+@import "../Components/_ColorPicker.scss";
+@import "../Components/_ProgressBar.scss";
+@import "../Components/_TreeView.scss";
+@import "../Components/_DataImport.scss";
+
+
+/****************************************/
+/* StudioPage                           */
+/****************************************/
+
+.dev-message {
+    font-weight: bold;
+    padding: 16px;
+    text-align: center;
+    color: #777;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: center;
+
+    i {
+        color: #ffc107;
+    }
+
+    @media #{$medium-and-up} {
+        display: none;
+    }
+}
+
+.parameter{
+    .name{
+        font-weight: bold;
+
+        &:after{
+            content: ':';
+        }
+    }
+}
+
+.studio-page {
+    display: flex;
+    flex-direction: row;
+    border-bottom: solid 1px #ccc;
+    height: calc(100vh - 80px);
+
+    .tree-view {
+        height: 100%;
+
+        .visible > header {
+            &.project {
+                .visibility {
+                    color: #ffc107;
+                }
+            }
+
+            &.regression {
+                .visibility {
+                    color: #4caf50;
+                }
+            }
+        }
+    }
+
+    .side-bar {
+        width: 300px;
+        max-width: 30%;
+        display: flex;
+        flex-direction: column;
+        border-right: solid 4px #ccc;
+        border-left: solid 1px #ccc;
+
+        .series {
+            flex-grow: 1;
+            flex-shrink: 1;
+
+            .help {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                right: 0;
+                height: 100%;
+                padding: 16px;
+                flex-direction: column;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                > * {
+                    text-align: center;
+                }
+            }
+        }
+
+        .options {
+            max-height: 50%;
+        }
+    }
+
+    .content {
+        flex-grow: 1;
+    }
+
+    #calculator {
+        height: 100%;
+    }
+}
+
+.function-selector {
+    margin-bottom: 16px;
+    margin-top: 16px;
+
+    > * {
+        border: solid 1px #ccc;
+        padding: 8px;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        height: 32px;
+        width: 32px;
+
+        &.active {
+            background-color: #90caf9;
+        }
+
+        a {
+            display: block;
+            content: ' ';
+            height: 100%;
+        }
+    }
+
+    .linear {
+        background-image: url('../image/linear.png');
+    }
+
+    .exponential {
+        background-image: url('../image/exponential.png');
+    }
+
+    .normal {
+        background-image: url('../image/normal.png');
+    }
+
+    .log-normal {
+        background-image: url('../image/log-normal.png');
+    }
+}
+
+
+
+
+

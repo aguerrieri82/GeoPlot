@@ -1,0 +1,37 @@
+﻿/****************************************/
+/* Progress                            */
+/****************************************/
+
+.progress-section {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+
+    .message {
+        font-size: 13px;
+        color: #444;
+        margin-bottom: 8px;
+    }
+
+    .progress-container {
+        height: 6px;
+        background-color: #eee;
+
+        .progress-bar {
+            background-color: #1565c0;
+            height: 100%;
+        }
+    }
+
+
+    &.hidden {
+        display: none;
+    }
+
+    &.indefinite {
+        .progress-container {
+
+            .progress {
+            }
+        }
+    }
+}
