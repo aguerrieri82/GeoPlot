@@ -2323,7 +2323,107 @@ var WebApp;
         GeoPlot.StudioSerie = StudioSerie;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    /****************************************/
+    class LinearGradient {
+        constructor(...values) {
+            if (values.length > 0) {
+                if (typeof values[0] == "string")
+                    this.colors = WebApp.linq(values).select(a => new RgbColor(a)).toArray();
+                else
+                    this.colors = values;
+            }
+            else
+                this.colors = [];
+        }
+        /****************************************/
+        valueAt(pos) {
+            if (pos < 0)
+                return this.colors[0];
+            if (pos > 1)
+                this.colors[this.colors.length - 1];
+            const stepSize = 1 / (this.colors.length - 1);
+            const minX = Math.floor(pos / stepSize);
+            const maxX = Math.ceil(pos / stepSize);
+            const minOfs = (pos - minX * stepSize) / stepSize;
+            const c1 = this.colors[minX];
+            const c2 = this.colors[maxX];
+            const c3 = new RgbColor();
+            c3.r = c1.r + (c2.r - c1.r) * minOfs;
+            c3.g = c1.g + (c2.g - c1.g) * minOfs;
+            c3.b = c1.b + (c2.b - c1.b) * minOfs;
+            return c3;
+        }
+    }
+    WebApp.LinearGradient = LinearGradient;
+    /****************************************/
+    class RgbColor {
+        constructor(value) {
+            /****************************************/
+            this.r = 0;
+            this.g = 0;
+            this.b = 0;
+            if (value)
+                this.fromHex(value);
+        }
+        /****************************************/
+        fromHex(value) {
+            if (value.length == 4) {
+                this.r = parseInt("0x" + value[1] + value[1]) / 255;
+                this.g = parseInt("0x" + value[2] + value[2]) / 255;
+                this.b = parseInt("0x" + value[3] + value[3]) / 255;
+            }
+            else {
+                this.r = parseInt("0x" + value[1] + value[2]) / 255;
+                this.g = parseInt("0x" + value[3] + value[4]) / 255;
+                this.b = parseInt("0x" + value[5] + value[6]) / 255;
+            }
+        }
+        /****************************************/
+        toString() {
+            function toHex(value) {
+                let res = Math.round(value * 255).toString(16);
+                if (res.length == 1)
+                    return "0" + res;
+                return res;
+            }
+            return "#" + toHex(this.r) + toHex(this.g) + toHex(this.b);
+        }
+    }
+    WebApp.RgbColor = RgbColor;
+    /****************************************/
+    class Graphics {
+        constructor(svg) {
+            this._svg = svg;
+        }
+        /****************************************/
+        setViewPort(minX, minY, maxX, maxY) {
+            this._svg.viewBox.baseVal.x = minX;
+            this._svg.viewBox.baseVal.y = minY;
+            this._svg.viewBox.baseVal.width = maxX - minX;
+            this._svg.viewBox.baseVal.height = maxY - minY;
+        }
+        /****************************************/
+        drawPoly(poly) {
+            var polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            polygon.style.fill = poly.fillColor;
+            polygon.style.stroke = poly.strokeColor;
+            polygon.style.strokeWidth = poly.strokeSize + "%";
+            polygon.id = poly.id;
+            for (let i = 0; i < poly.geometry.points.length; i++) {
+                let point = this._svg.createSVGPoint();
+                point.x = poly.geometry.points[i].x;
+                point.y = poly.geometry.points[i].y;
+                polygon.points.appendItem(point);
+            }
+            this._svg.appendChild(polygon);
+        }
+    }
+    WebApp.Graphics = Graphics;
+})(WebApp || (WebApp = {}));
 /// <reference path="../indicators.ts" />
+/// <reference path="../Framework/Graphics.ts" />
 var WebApp;
 (function (WebApp) {
     var GeoPlot;
@@ -2424,40 +2524,13 @@ var WebApp;
                     compute: new GeoPlot.ConstIndicatorFunction((v, a) => WebApp.MathUtils.round(a.demography.total / a.surface, 0))
                 },
                 {
-                    id: "population",
-                    name: $string("$(population) ($(geo))"),
-                    validFor: ["region", "district"],
-                    colorLight: "#777",
-                    colorDark: "#222",
-                    showInFavorites: false,
-                    compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.total)
-                },
-                {
-                    id: "populationOld",
-                    name: $string("$(population) +65 ($(geo))"),
-                    validFor: ["region", "district"],
-                    colorLight: "#777",
-                    colorDark: "#222",
-                    showInFavorites: false,
-                    compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.over65)
-                },
-                {
-                    id: "death2017",
-                    name: $string("$(total-death) +60 (2017)"),
+                    id: "death2020",
+                    name: $string("$(total-death) +60 (2020)*"),
                     validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
                     showInFavorites: true,
-                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2017"] : undefined)
-                },
-                {
-                    id: "death2018",
-                    name: $string("$(total-death) +60 (2018)"),
-                    validFor: ["region", "district", "details"],
-                    colorLight: "#9c27b0",
-                    colorDark: "#4a148c",
-                    showInFavorites: true,
-                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2018"] : undefined)
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2020"] : undefined)
                 },
                 {
                     id: "death2019",
@@ -2469,14 +2542,78 @@ var WebApp;
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2019"] : undefined)
                 },
                 {
-                    id: "death2020",
-                    name: $string("$(total-death) +60 (2020)*"),
+                    id: "death2018",
+                    name: $string("$(total-death) +60 (2018)"),
                     validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
                     showInFavorites: true,
-                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2020"] : undefined)
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2018"] : undefined)
                 },
+                {
+                    id: "death2017",
+                    name: $string("$(total-death) +60 (2017)"),
+                    validFor: ["region", "district", "details"],
+                    colorLight: "#9c27b0",
+                    colorDark: "#4a148c",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2017"] : undefined)
+                },
+                {
+                    id: "population",
+                    name: $string("$(population) ($(geo))"),
+                    validFor: ["region", "district", "details", "country"],
+                    colorLight: "#777",
+                    colorDark: "#222",
+                    showInFavorites: false,
+                    compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.total)
+                },
+                {
+                    id: "populationOld",
+                    name: $string("$(population) +65 ($(geo))"),
+                    validFor: ["region", "district", "country"],
+                    colorLight: "#777",
+                    colorDark: "#222",
+                    showInFavorites: false,
+                    compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.over65)
+                },
+                {
+                    id: "death-diff-2020-2019",
+                    name: $string("DIff. decessi 2020-19"),
+                    validFor: ["district", "details", "region"],
+                    colorLight: "#f44336",
+                    colorDark: "#b71c1c",
+                    gradient: new WebApp.LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
+                    canBeNegative: true,
+                    compute: new GeoPlot.CombineIndicatorFunction({
+                        death2019: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2019]),
+                        death2020: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2020]),
+                    }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined : values.death2020 - values.death2019)
+                }
+                /*,
+                {
+                    id: "extimated-death",
+                    name: $string("Morti stimati"),
+                    validFor: ["country"],
+                    colorLight: "#f44336",
+                    colorDark: "#b71c1c",
+                    compute: new CombineIndicatorFunction({
+                        totalPositive: new SimpleIndicatorFunction(a => a.totalPositive),
+                        toatlTests: new SimpleIndicatorFunction(a => a.toatlTests),
+                        dailyDeath: new ConstIndicatorFunction((v, a) => 1450)
+                    }, values => Math.round((values.totalPositive / values.toatlTests) * values.dailyDeath))
+                },
+                {
+                    id: "healed-death",
+                    name: $string("$(death) + $(healed)"),
+                    validFor: ["country", "region"],
+                    colorLight: "#4caf50",
+                    colorDark: "#1b5e20",
+                    compute: new CombineIndicatorFunction({
+                        totalHealed: new SimpleIndicatorFunction(a => a.totalHealed),
+                        totalDeath: new SimpleIndicatorFunction(a => a.totalDeath)
+                    }, values => values.totalHealed + values.totalDeath)
+                }*/
             ],
             factors: [
                 {
@@ -2489,6 +2626,7 @@ var WebApp;
                 },
                 {
                     id: "population",
+                    validFor: ["region", "country", "details", "district"],
                     name: $string("$(population)"),
                     compute: new GeoPlot.SimpleFactorFunction((i, v, a) => (i / a.demography.total) * 100000),
                     format: a => formatNumber(a),
@@ -2496,7 +2634,8 @@ var WebApp;
                     description: $string("[indicator] $(every-100k)")
                 },
                 {
-                    id: "population",
+                    id: "populationOld",
+                    validFor: ["region", "country", "district"],
                     name: $string("$(population) +65"),
                     compute: new GeoPlot.SimpleFactorFunction((i, v, a) => (i / a.demography.over65) * 100000),
                     format: a => formatNumber(WebApp.MathUtils.round(a, 1)),
@@ -2506,6 +2645,7 @@ var WebApp;
                 {
                     id: "density",
                     name: $string("$(density)"),
+                    validFor: ["region", "country", "district"],
                     compute: new GeoPlot.SimpleFactorFunction((i, v, a) => (i / (a.demography.total / a.surface)) * 100000),
                     format: a => formatNumber(WebApp.MathUtils.round(a, 1)),
                     reference: (v, a) => formatNumber(WebApp.MathUtils.round(a.demography.total / a.surface, 1)),
@@ -2945,105 +3085,6 @@ var WebApp;
         Geo.OFFSET_Y = 5543162;
         GeoPlot.Geo = Geo;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
-})(WebApp || (WebApp = {}));
-var WebApp;
-(function (WebApp) {
-    /****************************************/
-    class LinearGradient {
-        constructor(...values) {
-            if (values.length > 0) {
-                if (typeof values[0] == "string")
-                    this.colors = WebApp.linq(values).select(a => new RgbColor(a)).toArray();
-                else
-                    this.colors = values;
-            }
-            else
-                this.colors = [];
-        }
-        /****************************************/
-        valueAt(pos) {
-            if (pos < 0)
-                return this.colors[0];
-            if (pos > 1)
-                this.colors[this.colors.length - 1];
-            const stepSize = 1 / (this.colors.length - 1);
-            const minX = Math.floor(pos / stepSize);
-            const maxX = Math.ceil(pos / stepSize);
-            const minOfs = (pos - minX * stepSize) / stepSize;
-            const c1 = this.colors[minX];
-            const c2 = this.colors[maxX];
-            const c3 = new RgbColor();
-            c3.r = c1.r + (c2.r - c1.r) * minOfs;
-            c3.g = c1.g + (c2.g - c1.g) * minOfs;
-            c3.b = c1.b + (c2.b - c1.b) * minOfs;
-            return c3;
-        }
-    }
-    WebApp.LinearGradient = LinearGradient;
-    /****************************************/
-    class RgbColor {
-        constructor(value) {
-            /****************************************/
-            this.r = 0;
-            this.g = 0;
-            this.b = 0;
-            if (value)
-                this.fromHex(value);
-        }
-        /****************************************/
-        fromHex(value) {
-            if (value.length == 4) {
-                this.r = parseInt("0x" + value[1] + value[1]) / 255;
-                this.g = parseInt("0x" + value[2] + value[2]) / 255;
-                this.b = parseInt("0x" + value[3] + value[3]) / 255;
-            }
-            else {
-                this.r = parseInt("0x" + value[1] + value[2]) / 255;
-                this.g = parseInt("0x" + value[3] + value[4]) / 255;
-                this.b = parseInt("0x" + value[5] + value[6]) / 255;
-            }
-        }
-        /****************************************/
-        toString() {
-            function toHex(value) {
-                let res = Math.round(value * 255).toString(16);
-                if (res.length == 1)
-                    return "0" + res;
-                return res;
-            }
-            return "#" + toHex(this.r) + toHex(this.g) + toHex(this.b);
-        }
-    }
-    WebApp.RgbColor = RgbColor;
-    /****************************************/
-    class Graphics {
-        constructor(svg) {
-            this._svg = svg;
-        }
-        /****************************************/
-        setViewPort(minX, minY, maxX, maxY) {
-            this._svg.viewBox.baseVal.x = minX;
-            this._svg.viewBox.baseVal.y = minY;
-            this._svg.viewBox.baseVal.width = maxX - minX;
-            this._svg.viewBox.baseVal.height = maxY - minY;
-        }
-        /****************************************/
-        drawPoly(poly) {
-            var polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-            polygon.style.fill = poly.fillColor;
-            polygon.style.stroke = poly.strokeColor;
-            polygon.style.strokeWidth = poly.strokeSize + "%";
-            polygon.id = poly.id;
-            for (let i = 0; i < poly.geometry.points.length; i++) {
-                let point = this._svg.createSVGPoint();
-                point.x = poly.geometry.points[i].x;
-                point.y = poly.geometry.points[i].y;
-                polygon.points.appendItem(point);
-            }
-            this._svg.appendChild(polygon);
-        }
-    }
-    WebApp.Graphics = Graphics;
 })(WebApp || (WebApp = {}));
 var WebApp;
 (function (WebApp) {
@@ -4295,7 +4336,7 @@ var WebApp;
                     for (let areaId in day.values) {
                         if (!curView.validateId(areaId))
                             continue;
-                        const factor = this.getFactorValue(i, areaId);
+                        const factor = Math.abs(this.getFactorValue(i, areaId));
                         if (!isNaN(factor) && factor > result && factor != Number.POSITIVE_INFINITY)
                             result = factor;
                         if (factor != 0)
@@ -4531,7 +4572,8 @@ var WebApp;
                     return;
                 if (this.viewMode() != "country") {
                     const day = this._calculator.data.days[this.dayNumber()];
-                    const gradient = new WebApp.LinearGradient("#fff", this.selectedIndicator().colorDark);
+                    var indicator = this.selectedIndicator();
+                    const gradient = indicator.gradient ? indicator.gradient : new WebApp.LinearGradient("#fff", indicator.colorDark);
                     for (const key in day.values) {
                         const element = document.getElementById(key.toUpperCase());
                         if (element) {
@@ -4541,19 +4583,25 @@ var WebApp;
                             let factor = this.getFactorValue(this.dayNumber(), area);
                             if (factor == Number.POSITIVE_INFINITY)
                                 factor = NaN;
-                            factor = Math.min(1, factor / this.maxFactor());
+                            if (indicator.canBeNegative)
+                                factor = 0.5 + (factor / (this.maxFactor() * 2));
+                            else
+                                factor = factor / this.maxFactor();
+                            factor = Math.min(1, Math.max(0, factor));
                             if (isNaN(factor)) {
                                 if (element.classList.contains("valid"))
                                     element.classList.remove("valid");
-                                //element.style.fillOpacity = "1";
                                 element.style.removeProperty("fill");
                             }
                             else {
                                 if (!element.classList.contains("valid"))
                                     element.classList.add("valid");
-                                const value = WebApp.MathUtils.discretize(WebApp.MathUtils.exponential(factor), 20);
-                                //element.style.fillOpacity = value.toString();
-                                element.style.fill = gradient.valueAt(0.15 + (factor * 0.85)).toString();
+                                let value;
+                                if (!indicator.canBeNegative)
+                                    value = WebApp.MathUtils.discretize(WebApp.MathUtils.exponential(factor), 20);
+                                else
+                                    value = WebApp.MathUtils.discretize(factor, 20);
+                                element.style.fill = gradient.valueAt(value).toString();
                             }
                         }
                     }

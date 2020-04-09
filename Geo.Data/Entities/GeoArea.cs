@@ -31,6 +31,8 @@ namespace Geo.Data.Entities
 
         public string InternationalCode { get; set; }
 
+        public long? Population { get; set; }
+
         public Geometry Geometry { get; set; }
 
         public GeoArea Parent { get; set; }

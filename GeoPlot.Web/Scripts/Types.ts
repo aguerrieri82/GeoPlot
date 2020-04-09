@@ -77,6 +77,8 @@
         validFor?: ViewMode[];
         colorLight?: string;
         colorDark?: string;
+        gradient?: LinearGradient;
+        canBeNegative?: boolean;
         showInFavorites?: boolean;
         compute: IIndicatorFunction<TData>;
     }

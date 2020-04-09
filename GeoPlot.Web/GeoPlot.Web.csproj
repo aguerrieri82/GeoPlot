@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp5.0</TargetFramework>
     <SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
+    <UserSecretsId>d7fa46ba-1f45-4fbc-b376-bca9f7b05777</UserSecretsId>
   </PropertyGroup>
 
 

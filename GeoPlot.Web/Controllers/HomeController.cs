@@ -321,7 +321,10 @@ namespace GeoPlot.Web.Controllers
                 Name = geoArea.Name,
                 ParentId = CreateId(geoArea.Parent),
                 Type = geoArea.Type,
-                Demography = new AggregateDemografy(),
+                Demography = new AggregateDemografy()
+                {
+                    Total = geoArea.Population
+                },
                 Geometry = includePoly ? GeoUtils.ProjectAndSimplify(geoArea.Geometry, 0) : null
             };
             result.Areas[view.Id] = view;

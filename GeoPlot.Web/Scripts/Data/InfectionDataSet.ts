@@ -1,4 +1,5 @@
 ﻿/// <reference path="../indicators.ts" />
+/// <reference path="../Framework/Graphics.ts" />
 
 namespace WebApp.GeoPlot {
 
@@ -111,43 +112,16 @@ namespace WebApp.GeoPlot {
                 showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => MathUtils.round(a.demography.total / a.surface, 0))
             },
+    
             {
-                id: "population",
-                name: $string("$(population) ($(geo))"),
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                showInFavorites: false,
-                compute: new ConstIndicatorFunction((v, a) => a.demography.total)
-            },
-            {
-                id: "populationOld",
-                name: $string("$(population) +65 ($(geo))"),
-                validFor: ["region", "district"],
-                colorLight: "#777",
-                colorDark: "#222",
-                showInFavorites: false,
-                compute: new ConstIndicatorFunction((v, a) => a.demography.over65)
-            },
-            {
-                id: "death2017",
-                name: $string("$(total-death) +60 (2017)"),
-                validFor: ["region", "district", "details"],
-                colorLight: "#9c27b0",
-                colorDark: "#4a148c",      
-                showInFavorites: true,
-                compute: new SimpleIndicatorFunction(a =>
-                    a.historicDeaths ? a.historicDeaths["2017"] : undefined)
-            },
-            {
-                id: "death2018",
-                name: $string("$(total-death) +60 (2018)"),
+                id: "death2020",
+                name: $string("$(total-death) +60 (2020)*"),
                 validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
                 showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a =>
-                    a.historicDeaths ? a.historicDeaths["2018"] : undefined)
+                    a.historicDeaths ? a.historicDeaths["2020"] : undefined)
             },
             {
                 id: "death2019",
@@ -160,17 +134,56 @@ namespace WebApp.GeoPlot {
                     a.historicDeaths ? a.historicDeaths["2019"] : undefined)
             },
             {
-                id: "death2020",
-                name: $string("$(total-death) +60 (2020)*"),
+                id: "death2018",
+                name: $string("$(total-death) +60 (2018)"),
                 validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
                 showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a =>
-                    a.historicDeaths ? a.historicDeaths["2020"] : undefined)
+                    a.historicDeaths ? a.historicDeaths["2018"] : undefined)
             },
-
-            /*,
+            {
+                id: "death2017",
+                name: $string("$(total-death) +60 (2017)"),
+                validFor: ["region", "district", "details"],
+                colorLight: "#9c27b0",
+                colorDark: "#4a148c",      
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a =>
+                    a.historicDeaths ? a.historicDeaths["2017"] : undefined)
+            },
+            {
+                id: "population",
+                name: $string("$(population) ($(geo))"),
+                validFor: ["region", "district", "details", "country"],
+                colorLight: "#777",
+                colorDark: "#222",
+                showInFavorites: false,
+                compute: new ConstIndicatorFunction((v, a) => a.demography.total)
+            },
+            {
+                id: "populationOld",
+                name: $string("$(population) +65 ($(geo))"),
+                validFor: ["region", "district", "country"],
+                colorLight: "#777",
+                colorDark: "#222",
+                showInFavorites: false,
+                compute: new ConstIndicatorFunction((v, a) => a.demography.over65)
+            },
+            {
+                id: "death-diff-2020-2019",
+                name: $string("DIff. decessi 2020-19"),
+                validFor: ["district", "details", "region"],
+                colorLight: "#f44336",
+                colorDark: "#b71c1c",
+                gradient: new LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
+                canBeNegative: true,
+                compute: new CombineIndicatorFunction({
+                    death2019: new SimpleIndicatorFunction(a => a.historicDeaths[2019]),
+                    death2020: new SimpleIndicatorFunction(a => a.historicDeaths[2020]),
+                }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined :  values.death2020 - values.death2019)
+            }
             /*,
             {
                 id: "extimated-death",
@@ -207,6 +220,7 @@ namespace WebApp.GeoPlot {
             },
             {
                 id: "population",
+                validFor: ["region", "country", "details", "district"],
                 name: $string("$(population)"),
                 compute: new SimpleFactorFunction((i, v, a) => (i / a.demography.total) * 100000),
                 format: a => formatNumber(a),
@@ -214,7 +228,8 @@ namespace WebApp.GeoPlot {
                 description: $string("[indicator] $(every-100k)")
             },
             {
-                id: "population",
+                id: "populationOld",
+                validFor: ["region", "country", "district"],
                 name: $string("$(population) +65"),
                 compute: new SimpleFactorFunction((i, v, a) => (i / a.demography.over65) * 100000),
                 format: a => formatNumber(MathUtils.round(a, 1)),
@@ -224,6 +239,7 @@ namespace WebApp.GeoPlot {
             {
                 id: "density",
                 name: $string("$(density)"),
+                validFor: ["region", "country", "district"],
                 compute: new SimpleFactorFunction((i, v, a) => (i / (a.demography.total / a.surface)) * 100000),
                 format: a => formatNumber(MathUtils.round(a, 1)),
                 reference: (v, a) => formatNumber(MathUtils.round(a.demography.total / a.surface, 1)),

@@ -1079,7 +1079,7 @@
                 for (let areaId in day.values) {
                     if (!curView.validateId(areaId))
                         continue;
-                    const factor = this.getFactorValue(i, areaId);
+                    const factor = Math.abs(this.getFactorValue(i, areaId));
                     if (!isNaN(factor) && factor > result && factor != Number.POSITIVE_INFINITY)
                         result = factor;
 
@@ -1411,7 +1411,9 @@
 
                 const day = this._calculator.data.days[this.dayNumber()];
 
-                const gradient = new LinearGradient("#fff", this.selectedIndicator().colorDark);
+                var indicator = this.selectedIndicator();
+
+                const gradient = indicator.gradient ? indicator.gradient : new LinearGradient("#fff", indicator.colorDark);
 
                 for (const key in day.values) {
                     const element = document.getElementById(key.toUpperCase());
@@ -1422,24 +1424,34 @@
                         if (area.type != ViewModes[this.viewMode()].areaType)
                             continue;
 
+
                         let factor = this.getFactorValue(this.dayNumber(), area);
                         if (factor == Number.POSITIVE_INFINITY)
                             factor = NaN;
 
-                        factor = Math.min(1, factor / this.maxFactor());
+                        if (indicator.canBeNegative)
+                            factor = 0.5 + (factor / (this.maxFactor() * 2));
+                        else 
+                            factor = factor / this.maxFactor();
+
+
+                        factor = Math.min(1, Math.max(0, factor));
 
                         if (isNaN(factor)) {
                             if (element.classList.contains("valid"))
                                 element.classList.remove("valid");
-                            //element.style.fillOpacity = "1";
                             element.style.removeProperty("fill");
                         }
                         else {
                             if (!element.classList.contains("valid"))
                                 element.classList.add("valid");
-                            const value = MathUtils.discretize(MathUtils.exponential(factor), 20);
-                            //element.style.fillOpacity = value.toString();
-                            element.style.fill = gradient.valueAt(0.15 +(factor * 0.85)).toString();
+                             
+                            let value: number;
+                            if (!indicator.canBeNegative) 
+                                value = MathUtils.discretize(MathUtils.exponential(factor), 20);
+                            else
+                                value = MathUtils.discretize(factor, 20);
+                            element.style.fill = gradient.valueAt(value).toString();
 
                         }
                     }

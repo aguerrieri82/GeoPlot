@@ -28,12 +28,12 @@ namespace GeoPlot.Entities
             return result;
         }
 
-        public int Total { get; set; }
+        public long? Total { get; set; }
 
-        public int? Male { get; set; }
+        public long? Male { get; set; }
 
-        public int? Female { get; set; }
+        public long? Female { get; set; }
 
-        public int? Over65 { get; set; }
+        public long? Over65 { get; set; }
     }
 }
