@@ -95,6 +95,7 @@
 
     export interface IDataSet<TData> {
         name: string;
+        empty: TData;
         indicators: IIndicator<TData>[];
         factors: IFactor<TData>[];
     }

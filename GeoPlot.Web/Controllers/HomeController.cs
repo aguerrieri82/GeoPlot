@@ -19,12 +19,18 @@ using GeoPlot.Web.Entities;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Geo.Data;
 using Microsoft.EntityFrameworkCore;
+using Geo.Data.Types;
+using Geo.Data.Entities;
 
 namespace GeoPlot.Web.Controllers
 {
     public class HomeController : Controller
     {
-  
+        public enum RenderMode
+        {
+            Json,
+            Svg
+        }
 
         private readonly ILogger<HomeController> _logger;
         private readonly IWebHostEnvironment _env;
@@ -40,7 +46,6 @@ namespace GeoPlot.Web.Controllers
             return RedirectToAction("Overview");
         }
 
-
         //[ResponseCache(Duration = 3600, VaryByHeader ="X-App-Version")]
         public async Task<IActionResult> Overview(string state)
         {
@@ -48,7 +53,7 @@ namespace GeoPlot.Web.Controllers
 
             var model = new GeoPlotViewModel()
             {
-                Geo = await LoadGeoAreas(),
+                Geo = await LoadGeoAreasFromJson(),
                 Data = await LoadInfectionData(lastUpdate),
                 DebugMode = Debugger.IsAttached,
                 Environment = await LoadEnvironmentData(),
@@ -109,7 +114,7 @@ namespace GeoPlot.Web.Controllers
 
             var model = new StudioViewModel()
             {
-                Geo = await LoadGeoAreas(),
+                Geo = await LoadGeoAreasFromJson(),
                 Data = await LoadInfectionData(lastUpdate),
             };
 
@@ -123,11 +128,61 @@ namespace GeoPlot.Web.Controllers
             });
         }
 
+        public async Task<IActionResult> RegionData(string id)
+        {
+            var cacheFile = _env.WebRootPath + $"\\data\\region_{id}_data.json";
+            if (System.IO.File.Exists(cacheFile))
+                return Content(await System.IO.File.ReadAllTextAsync(cacheFile), "application/json");
+
+            var model = new StudioViewModel()
+            {
+                Geo = await LoadGeoRegionFromDb(id, false)
+            };
+
+            model.Data = new DayAreaDataSet<InfectionData>()
+            {
+                Days = new List<DayAreaGroupItem<InfectionData>>()
+            };
+
+            await FillDeathDataRegional(model.Data, id, 60, false);
+
+      
+            var json = JsonConvert.SerializeObject(model, new JsonSerializerSettings()
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            });
+
+            await System.IO.File.WriteAllTextAsync(cacheFile, json);
+
+            return Content(json, "application/json");
+        }
+
+        public async Task<IActionResult> RegionDataMap(string id)
+        {
+            var cacheFile = _env.WebRootPath + $"\\data\\region_{id}_map.svg";
+            if (System.IO.File.Exists(cacheFile))
+                return Content(await System.IO.File.ReadAllTextAsync(cacheFile), "text/xml+svg");
+
+            var model = new StudioViewModel()
+            {
+                Geo = await LoadGeoRegionFromDb(id, true)
+            };
+
+            var view = await ViewUtils.RenderViewAsync(this, "_SvgMap", model, true);
+            
+            await System.IO.File.WriteAllTextAsync(cacheFile, view);
+
+            return Content(view, "text/xml+svg");
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        #region UTILS
 
         async Task<EnvironmentItemViewModel[]> LoadEnvironmentData()
         {
@@ -203,9 +258,121 @@ namespace GeoPlot.Web.Controllers
                 result.Days.Add(item);
             };
 
+            await FillDeathDataNational(result, 60, true);
+
+            await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
+
+            return result;
+        }
+
+        async Task<GeoAreaViewSet> LoadGeoAreasFromJson(bool includePoly = true)
+        {
+            var cacheFile = _env.WebRootPath + "\\data\\italy_geo.json";
+            if (System.IO.File.Exists(cacheFile))
+                return JsonConvert.DeserializeObject<GeoAreaViewSet>(await System.IO.File.ReadAllTextAsync(cacheFile));
+
+            var source = new ItalyGeoSource(_env.WebRootPath + "\\data\\province_demo.csv", _env.WebRootPath + "\\data\\province_superficie.csv");
+
+            var data = await source.LoadAsync();
+
+            var result = new GeoAreaViewSet
+            {
+                Areas = data.ToDictionary(a => a.Id, a => a),
+                ViewBox = source.ViewBox
+            };
+
+            await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
+
+            return result;
+        }
+
+        static async Task<GeoAreaViewSet> LoadGeoRegionFromDb(string regionCode, bool includePoly = true)
+        {
+            var result = new GeoAreaViewSet
+            {
+                Areas = new Dictionary<string, GeoAreaView>()
+            };
+
             using (var ctx = DataContextFactory.Instance.CreateDbContext(null))
             {
-                var deathRawItems = await ctx.TimeSeries.Where(a => a.IndicatorId == Guid.Parse("26bfda4a-7d11-465c-afe9-73a2dae7ac62") && a.Value != null && a.FromAge >= 60)
+                var region = await ctx.GeoAreas.Include(a=> a.Parent).Where(a => a.Type == GeoAreaType.Region && a.Code == regionCode).AsNoTracking().SingleAsync();
+                var districts = await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.District &&  a.ParentId == region.Id).AsNoTracking().ToArrayAsync();
+                var cities = await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.Municipality && a.Parent.ParentId == region.Id).AsNoTracking().ToArrayAsync();
+
+                var regionView = CreateGeoArea(region, includePoly, result);
+
+                foreach (var district in districts)
+                    CreateGeoArea(district, includePoly, result);
+
+                foreach (var city in cities)
+                    CreateGeoArea(city, includePoly, result);
+
+                if (includePoly)
+                    result.ViewBox = GeoUtils.GetViewBox(regionView.Geometry);
+            }
+            return result;
+        }
+
+        static GeoAreaView CreateGeoArea(GeoArea geoArea, bool includePoly, GeoAreaViewSet result)
+        {
+            var view = new GeoAreaView
+            {
+                Id = CreateId(geoArea),
+                Name = geoArea.Name,
+                ParentId = CreateId(geoArea.Parent),
+                Type = geoArea.Type,
+                Demography = new AggregateDemografy(),
+                Geometry = includePoly ? GeoUtils.ProjectAndSimplify(geoArea.Geometry, 0) : null
+            };
+            result.Areas[view.Id] = view;
+            return view;
+        }
+
+        static string CreateId(GeoArea geoArea)
+        {
+            if (geoArea.Type == GeoAreaType.Country)
+                return geoArea.Code;
+            if (geoArea.Type == GeoAreaType.Region)
+                return "R" + int.Parse(geoArea.Code);
+            if (geoArea.Type == GeoAreaType.District)
+                return "D" + int.Parse(geoArea.Code);
+            if (geoArea.Type == GeoAreaType.Municipality)
+                return "M" + geoArea.NationalCode;
+            return null;
+        }
+
+        static async Task FillDeathDataRegional(DayAreaDataSet<InfectionData> result, string regionCode, int minAge, bool onlyInRange)
+        {
+            using (var ctx = DataContextFactory.Instance.CreateDbContext(null))
+            {
+                var deathRawItems = await ctx.TimeSeries.Where(a => 
+                                a.IndicatorId == Consts.InfectionSerieId && 
+                                a.GeoArea.Type == GeoAreaType.Municipality && 
+                                a.GeoArea.Parent.Parent.Code == regionCode && 
+                                a.Value != null && 
+                                a.FromAge >= minAge)
+                            .GroupBy(a => new 
+                            { 
+                                Date = a.StartDate, 
+                                Code = a.GeoArea.NationalCode 
+                            })
+                            .Select(a => new DayAreaItem<int>()
+                            {
+                                Date = a.Key.Date,
+                                AreaId = "M" + a.Key.Code,
+                                Value = (int)a.Sum(b => b.Value)
+                            })
+                            .ToArrayAsync();
+
+                FillDeathData(result, deathRawItems, onlyInRange);
+            }
+        }
+
+        static async Task FillDeathDataNational(DayAreaDataSet<InfectionData> result, int minAge, bool onlyInRange)
+        {
+            using (var ctx = DataContextFactory.Instance.CreateDbContext(null))
+            {
+                var deathRawItems = await ctx.TimeSeries.Where(a => a.IndicatorId == Consts.InfectionSerieId && a.Value != null && a.FromAge >= minAge)
                             .GroupBy(a => new { Date = a.StartDate, Code = a.GeoArea.Parent.Parent.Code })
                             .Select(a => new DayAreaItem<int>()
                             {
@@ -215,7 +382,7 @@ namespace GeoPlot.Web.Controllers
                             })
                             .ToListAsync();
 
-                deathRawItems.AddRange(await ctx.TimeSeries.Where(a => a.IndicatorId == Guid.Parse("26bfda4a-7d11-465c-afe9-73a2dae7ac62") && a.Value != null && a.FromAge >= 60)
+                deathRawItems.AddRange(await ctx.TimeSeries.Where(a => a.IndicatorId == Consts.InfectionSerieId && a.Value != null && a.FromAge >= minAge)
                            .GroupBy(a => new { Date = a.StartDate, Code = a.GeoArea.Parent.CodeAlt })
                            .Select(a => new DayAreaItem<int>()
                            {
@@ -224,73 +391,67 @@ namespace GeoPlot.Web.Controllers
                                Value = (int)a.Sum(b => b.Value)
                            }).ToArrayAsync());
 
-                var groups = deathRawItems.GroupBy(a => a.Date.Year).ToDictionary(a => a.Key, a => a.GroupBy(b => b.AreaId).ToDictionary(b => b.Key));
-                var daysMap = result.Days.ToDictionary(a => a.Date);
 
-                foreach (var yearGroup in groups)
-                {
-                    foreach (var areaGroup in yearGroup.Value)
-                    {
-                        InfectionData prevAreaData = null;
-                        foreach (var entry in areaGroup.Value.OrderBy(a=> a.Date))
-                        {
-                            var curDay = new DateTime(2020, entry.Date.Month, entry.Date.Day);
-
-                            if (!daysMap.TryGetValue(curDay, out var dayData))
-                            {
-                                continue;
-                                dayData = new DayAreaGroupItem<InfectionData>() { 
-                                    Date = curDay,
-                                    Values = new Dictionary<string, InfectionData>()
-                                };
-                                daysMap[curDay] = dayData;
-                                result.Days.Add(dayData);
-                            }
-
-                            if (!dayData.Values.TryGetValue(areaGroup.Key, out var areaData))
-                            {
-                                areaData = new InfectionData();
-                                dayData.Values[areaGroup.Key] = areaData;
-                            }
-
-                            if (areaData.HistoricDeaths == null)
-                                areaData.HistoricDeaths = new Dictionary<int, int?>();
-
-                            areaData.HistoricDeaths[yearGroup.Key] = entry.Value;
-                            if (prevAreaData != null)
-                                areaData.HistoricDeaths[yearGroup.Key] += prevAreaData.HistoricDeaths[yearGroup.Key];
-
-                            prevAreaData = areaData;
-                        }
-                    }
-                }
-                ((List<DayAreaGroupItem<InfectionData>>)result.Days).Sort((a, b) => a.Date.CompareTo(b.Date));
+                FillDeathData(result, deathRawItems, onlyInRange);
             }
-
-            await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
-
-            return result;
         }
 
-        async Task<GeoAreaSet> LoadGeoAreas(bool includePoly = true)
+        static void FillDeathData(DayAreaDataSet<InfectionData> result, IList<DayAreaItem<int>> deathRawItems, bool onlyInRange)
         {
-            var cacheFile = _env.WebRootPath + "\\data\\italy_geo.json";
-            if (System.IO.File.Exists(cacheFile))
-                return JsonConvert.DeserializeObject<GeoAreaSet>(await System.IO.File.ReadAllTextAsync(cacheFile));
+            var groups = deathRawItems.GroupBy(a => a.Date.Year).ToDictionary(a => a.Key, a => a.GroupBy(b => b.AreaId).ToDictionary(b => b.Key));
+            var daysMap = result.Days.ToDictionary(a => a.Date);
 
-            var source = new ItalyGeoSource(_env.WebRootPath + "\\data\\province_demo.csv", _env.WebRootPath + "\\data\\province_superficie.csv");
-
-            var data = await source.LoadAsync();
-
-            var result = new GeoAreaSet
+            foreach (var yearGroup in groups)
             {
-                Areas = data.ToDictionary(a => a.Id, a => a),
-                ViewBox = source.ViewBox
-            };
+                foreach (var areaGroup in yearGroup.Value)
+                {
+                    InfectionData prevAreaData = null;
+                    var dateGroup = areaGroup.Value.ToDictionary(a => a.Date);
+                    var minDate = new DateTime(yearGroup.Key, 1, 1);
+                    var maxDate = new DateTime(yearGroup.Key, 4, 30);
+                    var curDate = minDate;
+                    while (curDate <= maxDate)
+                    {
+                        dateGroup.TryGetValue(curDate, out var entry);
 
-            await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
+                        var curDay = new DateTime(2020, curDate.Month, curDate.Day);
 
-            return result;
+                        if (!daysMap.TryGetValue(curDay, out var dayData))
+                        {
+                            if (onlyInRange)
+                                goto nextDay;
+
+                            dayData = new DayAreaGroupItem<InfectionData>()
+                            {
+                                Date = curDay,
+                                Values = new Dictionary<string, InfectionData>()
+                            };
+                            daysMap[curDay] = dayData;
+                            result.Days.Add(dayData);
+                        }
+
+                        if (!dayData.Values.TryGetValue(areaGroup.Key, out var areaData))
+                        {
+                            areaData = new InfectionData();
+                            dayData.Values[areaGroup.Key] = areaData;
+                        }
+
+                        if (areaData.HistoricDeaths == null)
+                            areaData.HistoricDeaths = new Dictionary<int, int?>();
+
+                        areaData.HistoricDeaths[yearGroup.Key] = entry != null ? entry.Value : 0;
+                        if (prevAreaData != null)
+                            areaData.HistoricDeaths[yearGroup.Key] += prevAreaData.HistoricDeaths[yearGroup.Key];
+
+                        prevAreaData = areaData;
+
+                        nextDay:
+
+                        curDate = curDate.AddDays(1);
+                    }
+                }
+            }
+                ((List<DayAreaGroupItem<InfectionData>>)result.Days).Sort((a, b) => a.Date.CompareTo(b.Date));
         }
 
         static async Task<DateTime> GetLastCommit()
@@ -312,12 +473,13 @@ namespace GeoPlot.Web.Controllers
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
             client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36");
-            //client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
             client.DefaultRequestHeaders.Add("Accept-Language", "en,it-IT;q=0.9,it;q=0.8,en-US;q=0.7");
             var json = await client.GetStringAsync(url);
             return JsonConvert.DeserializeObject<T>(json);
         }
 
 
+        #endregion
     }
 }
+

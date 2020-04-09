@@ -1,0 +1,93 @@
+﻿@using Geo.Data.Types
+
+@model ISvgMapViewModel
+@{
+    var typeOrder = new[] { GeoAreaType.Municipality , GeoAreaType.District, GeoAreaType.Region };
+}
+
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
+    <style type="text/css">
+        svg.map .environment > circle {
+            stroke: #000;
+            stroke-width: 500;
+            fill-opacity: 0.7;
+        }
+
+        svg.map .group .area {
+            fill: none;
+        }
+
+            svg.map .group .area.region {
+                stroke: #000;
+                stroke-width: 0.2%;
+            }
+
+            svg.map .group .area.district {
+                stroke: #999;
+                stroke-width: 0.05%;
+            }
+
+            svg.map .group .area.municipality {
+                stroke: #ccc;
+                stroke-width: 0.04%;
+            }
+
+        svg.map .group.active .area {
+            fill: white;
+        }
+
+            svg.map .group.active .area.region {
+                stroke-width: 0.15%;
+            }
+    </style>
+    <style type="text/css">
+        .good {
+            fill: #4caf50;
+            background-color: #4caf50;
+        }
+
+        .medium {
+            fill: #ffeb3b;
+            background-color: #ffeb3b;
+        }
+
+        .bad {
+            fill: #ff9800;
+            background-color: #ff9800;
+        }
+
+        .sever {
+            fill: #f44336;
+            background-color: #f44336;
+        }
+
+        .verysevere {
+            fill: #9c27b0;
+            background-color: #9c27b0;
+        }
+    </style>
+    @foreach (var areaType in typeOrder)
+    {
+        <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: WebApp.GeoPlot.ViewModes[viewMode()].areaType == @((int)areaType) }">
+            @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
+            {
+                <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">
+                    @foreach (var poly in area.Value.Geometry)
+                    {
+                        <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
+                    }
+                </g>
+                area.Value.Geometry = null;
+            }
+        </g>
+    }
+    @if (Model.Environment != null)
+    {
+        <g class="environment" data-bind="visible: isShowEnvData">
+            @foreach (var item in Model.Environment.Where(a => a.Value.ReportingYear == 2018).OrderBy(a => a.Value.Value))
+            {
+                <circle cx="@item.Position.X" cy="@item.Position.Y" r="15000" class="@item.Severity.ToString().ToLower()" data-value="@item.Value.Value" id="@item.Value.StationId"></circle>
+            }
+        </g>
+    }
+</svg>

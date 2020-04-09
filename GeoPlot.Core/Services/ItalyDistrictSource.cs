@@ -21,7 +21,7 @@ namespace GeoPlot.Core
         {
         }
 
-        protected override void ProcessFeature(IFeature feature, GeoArea geoArea)
+        protected override void ProcessFeature(IFeature feature, GeoAreaView geoArea)
         {
             geoArea.Type = GeoAreaType.District;
             geoArea.Id = "D" + feature.Attributes["prov_istat_code_num"].ToString();

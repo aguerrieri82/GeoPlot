@@ -1,4 +1,6 @@
 ﻿using GeoPlot.Entities;
+using NetTopologySuite.Geometries;
+using NetTopologySuite.Simplify;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,5 +28,66 @@ namespace GeoPlot.Core
             return result;
         }
 
+        public static IList<Poly2D> ProjectAndSimplify(Geometry geo, double tollerance = 0.01)
+        {
+            var result = new List<Poly2D>();
+            ProjectAndSimplify(geo, tollerance, result);
+            return result;
+        }
+
+
+        static void ProjectAndSimplify(Geometry geo, double tollerance, IList<Poly2D> result)
+        {
+            if (geo is Polygon geoPoly)
+            {
+                Geometry curGeo = geoPoly.ExteriorRing;
+                if (tollerance != 0)
+                {
+                    var simplifier = new VWSimplifier(curGeo);
+                    simplifier.DistanceTolerance = tollerance;
+                    curGeo = simplifier.GetResultGeometry();
+                }
+
+                if (curGeo.IsValid)
+                    result.Add(new Poly2D() { Points = curGeo.Coordinates.Select(a => Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
+            }
+            else if (geo is MultiPolygon multiPoly)
+            {
+                foreach (var innerPoly in multiPoly.Geometries)
+                    ProjectAndSimplify(innerPoly, tollerance, result);
+            }
+        }
+
+        public static Rect2D GetViewBox(IList<Poly2D> geometry)
+        {
+            var min = new Point2D()
+            {
+                X = double.PositiveInfinity,
+                Y = double.PositiveInfinity
+            };
+
+            var max = new Point2D()
+            {
+                X = double.NegativeInfinity,
+                Y = double.NegativeInfinity
+            };
+
+            foreach (var point in geometry.SelectMany(a=> a.Points))
+            {
+                min.X = Math.Min(min.X, point.X);
+                max.X = Math.Max(max.X, point.X);
+
+                min.Y = Math.Min(min.Y, point.Y);
+                max.Y = Math.Max(max.Y, point.Y);
+            }
+
+            return new Rect2D()
+            {
+                X = min.X,
+                Y = min.Y,
+                Width = (max.X - min.X),
+                Height = (max.Y - min.Y)
+            };
+        }
     }
 }

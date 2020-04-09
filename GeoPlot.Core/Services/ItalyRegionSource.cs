@@ -22,7 +22,7 @@ namespace GeoPlot.Core
         {
         }
 
-        protected override void ProcessFeature(IFeature feature, GeoArea geoArea)
+        protected override void ProcessFeature(IFeature feature, GeoAreaView geoArea)
         {
             geoArea.Type = GeoAreaType.Region;
             geoArea.Id = "R" + feature.Attributes["reg_istat_code_num"].ToString();

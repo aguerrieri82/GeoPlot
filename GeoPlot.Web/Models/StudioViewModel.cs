@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 
 namespace GeoPlot.Web.Models
 {
-    public class StudioViewModel
+    public class StudioViewModel : ISvgMapViewModel
     {
         public DayAreaDataSet<InfectionData> Data { get; set; }
 
-        public GeoAreaSet Geo { get; set; }
+        public GeoAreaViewSet Geo { get; set; }
+
+        IList<EnvironmentItemViewModel> ISvgMapViewModel.Environment => null;
     }
 }

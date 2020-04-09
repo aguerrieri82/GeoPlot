@@ -190,14 +190,25 @@ var WebApp;
         GeoPlot.DoubleFactorFunction = DoubleFactorFunction;
         class IndicatorCalculator {
             constructor(data, dataSet, geo) {
-                this._data = data;
-                this._dataSet = dataSet;
-                this._geo = geo;
+                this.data = data;
+                this.dataSet = dataSet;
+                this.geo = geo;
+            }
+            /****************************************/
+            getDataAtDay(number, curAreaId) {
+                if (number < 0)
+                    return undefined;
+                const day = this.data.days[number];
+                if (day) {
+                    const data = day.values[curAreaId];
+                    if (data)
+                        return data;
+                }
+                return this.dataSet.empty;
             }
             /****************************************/
             getFactorValue(options) {
                 const areaId = (typeof options.areaOrId == "string" ? options.areaOrId : options.areaOrId.id).toLowerCase();
-                const dataAtDay = (number, curAreaId) => number < 0 ? undefined : this._data.days[number].values[curAreaId];
                 let dayGroup;
                 if (!Array.isArray(options.dayNumberOrGroup))
                     dayGroup = [options.dayNumberOrGroup];
@@ -208,47 +219,46 @@ var WebApp;
                 let exMain = [];
                 let exDelta = [];
                 for (var dayNumber of dayGroup) {
-                    main.push(dataAtDay(dayNumber, areaId));
+                    main.push(this.getDataAtDay(dayNumber, areaId));
                     if (options.isDayDelta)
-                        delta.push(dataAtDay(dayNumber - 1, areaId));
+                        delta.push(this.getDataAtDay(dayNumber - 1, areaId));
                     if (options.execludedAreas) {
                         var curExMain = [];
                         var curExDelta = [];
                         for (var exAreaId of options.execludedAreas) {
-                            curExMain.push(dataAtDay(dayNumber, exAreaId.toLowerCase()));
+                            curExMain.push(this.getDataAtDay(dayNumber, exAreaId.toLowerCase()));
                             if (options.isDayDelta)
-                                curExDelta.push(dataAtDay(dayNumber - 1, exAreaId.toLowerCase()));
+                                curExDelta.push(this.getDataAtDay(dayNumber - 1, exAreaId.toLowerCase()));
                         }
                         exMain.push(curExMain);
                         exDelta.push(curExDelta);
                     }
                 }
-                const factor = WebApp.linq(this._dataSet.factors).first(a => a.id == options.factorId);
-                const indicator = WebApp.linq(this._dataSet.indicators).first(a => a.id == options.indicatorId);
-                return factor.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId], indicator.compute);
+                const factor = WebApp.linq(this.dataSet.factors).first(a => a.id == options.factorId);
+                const indicator = WebApp.linq(this.dataSet.indicators).first(a => a.id == options.indicatorId);
+                return factor.compute.value(main, delta, exMain, exDelta, this.geo.areas[areaId], indicator.compute);
             }
             /****************************************/
             getIndicatorValue(options) {
                 const areaId = (typeof options.areaOrId == "string" ? options.areaOrId : options.areaOrId.id).toLowerCase();
-                const indicator = WebApp.linq(this._dataSet.indicators).first(a => a.id == options.indicatorId);
-                const dataAtDay = (number, curAreaId) => number < 0 ? undefined : this._data.days[number].values[curAreaId];
-                let main = dataAtDay(options.dayNumber, areaId);
+                const indicator = WebApp.linq(this.dataSet.indicators).first(a => a.id == options.indicatorId);
+                let main = this.getDataAtDay(options.dayNumber, areaId);
                 let delta;
                 let exMain;
                 let exDelta;
                 if (options.isDayDelta)
-                    delta = dataAtDay(options.dayNumber - 1, areaId);
+                    delta = this.getDataAtDay(options.dayNumber - 1, areaId);
                 if (options.execludedAreas) {
                     exMain = [];
                     exDelta = [];
                     for (var exAreaId of options.execludedAreas) {
-                        exMain.push(dataAtDay(options.dayNumber, exAreaId.toLowerCase()));
+                        exMain.push(this.getDataAtDay(options.dayNumber, exAreaId.toLowerCase()));
                         if (options.isDayDelta)
-                            exDelta.push(dataAtDay(options.dayNumber - 1, exAreaId.toLowerCase()));
+                            exDelta.push(this.getDataAtDay(options.dayNumber - 1, exAreaId.toLowerCase()));
                     }
                     ;
                 }
-                return indicator.compute.value(main, delta, exMain, exDelta, this._geo.areas[areaId]);
+                return indicator.compute.value(main, delta, exMain, exDelta, this.geo.areas[areaId]);
             }
             /****************************************/
             getSerie(source) {
@@ -256,12 +266,12 @@ var WebApp;
                 if (source.groupSize > 1) {
                     let count = source.groupSize;
                     let group = [];
-                    for (let i = 0 + source.startDay; i < this._data.days.length; i++) {
+                    for (let i = 0 + source.startDay; i < this.data.days.length; i++) {
                         group.push(i);
                         count--;
                         if (count == 0) {
                             const item = {
-                                x: (source.xAxis == "date" ? new Date(this._data.days[i].date) : i),
+                                x: (source.xAxis == "date" ? new Date(this.data.days[i].date) : i),
                                 y: this.getFactorValue({
                                     dayNumberOrGroup: source.isDelta ? group : i,
                                     areaOrId: source.areaId,
@@ -278,9 +288,9 @@ var WebApp;
                     }
                 }
                 else {
-                    for (let i = 0 + source.startDay; i < this._data.days.length; i++) {
+                    for (let i = 0 + source.startDay; i < this.data.days.length; i++) {
                         const item = {
-                            x: source.xAxis == "date" ? new Date(this._data.days[i].date) : i,
+                            x: source.xAxis == "date" ? new Date(this.data.days[i].date) : i,
                             y: this.getFactorValue({
                                 dayNumberOrGroup: i,
                                 areaOrId: source.areaId,
@@ -2321,12 +2331,23 @@ var WebApp;
         /****************************************/
         GeoPlot.InfectionDataSet = {
             name: "COVID-19",
+            empty: {
+                currentPositive: undefined,
+                historicDeaths: { "2015": undefined, "2016": undefined, "2017": undefined, "2018": undefined, "2019": undefined, "2020": undefined },
+                toatlTests: undefined,
+                totalDeath: undefined,
+                totalHealed: undefined,
+                totalHospedalized: undefined,
+                totalPositive: undefined,
+                totalSevere: undefined,
+            },
             indicators: [
                 {
                     id: "totalPositive",
                     name: $string("$(total-positive)"),
                     colorLight: "#f44336",
                     colorDark: "#b71c1c",
+                    validFor: ["region", "country", "district"],
                     showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalPositive)
                 },
@@ -2423,7 +2444,7 @@ var WebApp;
                 {
                     id: "death2017",
                     name: $string("$(total-death) +60 (2017)"),
-                    validFor: ["region", "district"],
+                    validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
                     showInFavorites: true,
@@ -2432,7 +2453,7 @@ var WebApp;
                 {
                     id: "death2018",
                     name: $string("$(total-death) +60 (2018)"),
-                    validFor: ["region", "district"],
+                    validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
                     showInFavorites: true,
@@ -2441,7 +2462,7 @@ var WebApp;
                 {
                     id: "death2019",
                     name: $string("$(total-death) +60 (2019)"),
-                    validFor: ["region", "district"],
+                    validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
                     showInFavorites: true,
@@ -2450,7 +2471,7 @@ var WebApp;
                 {
                     id: "death2020",
                     name: $string("$(total-death) +60 (2020)*"),
-                    validFor: ["region", "district"],
+                    validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
                     showInFavorites: true,
@@ -2555,6 +2576,16 @@ var WebApp;
                 tab: "italyTab",
                 areaType: GeoPlot.GeoAreaType.Country,
                 validateId: (id) => id.toLowerCase() == 'it'
+            },
+            'details': {
+                label: {
+                    singular: $string("$(area-details)"),
+                    plural: $string("$(area-details)")
+                },
+                mapGroup: "group_municipality",
+                tab: "detailsTab",
+                areaType: GeoPlot.GeoAreaType.Municipality,
+                validateId: (id) => id[0].toLowerCase() == 'm'
             }
         };
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
@@ -3474,7 +3505,7 @@ var WebApp;
                         showAfter: 3,
                         showAction: () => {
                             this.viewMode("region");
-                            this.selectedArea = this._geo.areas["r10"];
+                            this.selectedArea = this._calculator.geo.areas["r10"];
                         }
                     },
                     indicatorSelected: {
@@ -3609,7 +3640,7 @@ var WebApp;
                         showAction: () => {
                             if (this.viewMode() != "country")
                                 this.viewMode("country");
-                            this._execludedArea.set("R8", this._geo.areas["r8"]);
+                            this._execludedArea.set("R8", this._calculator.geo.areas["r8"]);
                             this.updateIndicator();
                         }
                     }
@@ -3673,6 +3704,8 @@ var WebApp;
                 /****************************************/
                 this.dayNumber = ko.observable(0);
                 this.totalDays = ko.observable(0);
+                this.detailsLoading = new WebApp.Signal(true);
+                this.detailsArea = ko.observable();
                 this.currentData = ko.observable();
                 this.currentArea = ko.observable();
                 this.topAreas = ko.observable();
@@ -3691,23 +3724,24 @@ var WebApp;
                 this.isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
                 this.groupDays = [1, 2, 3, 4, 5, 6, 7];
                 this.factorDescription = ko.observable();
-                this._data = model.data;
-                this._geo = model.geo;
+                this._mainData = model.data;
+                this._mainGeo = model.geo;
                 this._debugMode = model.debugMode;
-                this._calculator = new GeoPlot.IndicatorCalculator(this._data, this._dataSet, this._geo);
-                this.totalDays(this._data.days.length - 1);
+                this._calculator = new GeoPlot.IndicatorCalculator(this._mainData, this._dataSet, this._mainGeo);
+                this.totalDays(this._calculator.data.days.length - 1);
                 this.dayNumber.subscribe(value => {
-                    if (value != this._data.days.length - 1)
+                    if (value != this._calculator.data.days.length - 1)
                         this.tipManager.markAction("dayChanged");
                     this.updateDayData();
-                    this._specialDates.current.date = new Date(this._data.days[value].date);
+                    this._specialDates.current.date = new Date(this._calculator.data.days[value].date);
                     this.updateChart();
                 });
                 this._mapSvg = document.getElementsByTagName("svg").item(0);
-                this._mapSvg.addEventListener("click", e => this.onMapClick(e));
+                this._mapSvg.addEventListener("click", e => this.onMapClick(e, false));
+                this._mapSvg.addEventListener("dblclick", e => this.onMapClick(e, true));
                 this.days = [];
-                for (var i = 0; i < this._data.days.length; i++)
-                    this.days.push({ number: i, value: new Date(this._data.days[i].date), text: WebApp.DateUtils.format(this._data.days[i].date, $string("$(date-format-short)")) });
+                for (var i = 0; i < this._calculator.data.days.length; i++)
+                    this.days.push({ number: i, value: new Date(this._calculator.data.days[i].date), text: WebApp.DateUtils.format(this._calculator.data.days[i].date, $string("$(date-format-short)")) });
                 const areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
                 areaTabs.options.onShow = (el) => {
                     this.setViewMode(el.dataset["viewMode"]);
@@ -3728,6 +3762,9 @@ var WebApp;
                 this.factors = ko.computed(() => WebApp.linq(this._dataSet.factors)
                     .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
                     .toArray());
+                this.detailsArea.subscribe(value => {
+                    this.updateDetailsArea();
+                });
                 this.selectedIndicator.subscribe(value => {
                     if (!value)
                         return;
@@ -3801,7 +3838,7 @@ var WebApp;
             }
             /****************************************/
             isDefaultState(state) {
-                return (!state.day || state.day == this._data.days.length - 1) &&
+                return (!state.day || state.day == this._calculator.data.days.length - 1) &&
                     (!state.view || state.view == "region") &&
                     !state.area &&
                     (!state.indicator || state.indicator == "totalPositive") &&
@@ -3835,18 +3872,18 @@ var WebApp;
                     this.autoMaxFactor(false);
                     this.maxFactor(state.maxFactor);
                 }
-                this.dayNumber(state.day != undefined ? state.day : this._data.days.length - 1);
+                this.dayNumber(state.day != undefined ? state.day : this._calculator.data.days.length - 1);
                 if (state.excludedArea) {
                     this._execludedArea.clear();
                     for (let areaId of state.excludedArea)
-                        this._execludedArea.set(areaId, this._geo.areas[areaId.toLowerCase()]);
+                        this._execludedArea.set(areaId, this._calculator.geo.areas[areaId.toLowerCase()]);
                 }
                 if (state.indicator)
                     this.selectedIndicator(WebApp.linq(this._dataSet.indicators).first(a => a.id == state.indicator));
                 if (state.factor)
                     this.selectedFactor(WebApp.linq(this._dataSet.factors).first(a => a.id == state.factor));
                 if (state.area)
-                    this.selectedArea = this._geo.areas[state.area.toLowerCase()];
+                    this.selectedArea = this._calculator.geo.areas[state.area.toLowerCase()];
             }
             /****************************************/
             saveStata() {
@@ -3856,7 +3893,7 @@ var WebApp;
                     factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
                     dayDelta: this.isDayDelta() ? true : undefined,
                     maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
-                    day: this.dayNumber() == this._data.days.length - 1 ? undefined : this.dayNumber(),
+                    day: this.dayNumber() == this._calculator.data.days.length - 1 ? undefined : this.dayNumber(),
                     area: this.selectedArea ? this.selectedArea.id : undefined,
                     groupSize: this.groupSize() == 1 ? undefined : this.groupSize(),
                     startDay: this.startDay() == 0 ? undefined : this.startDay(),
@@ -4013,7 +4050,7 @@ var WebApp;
             }
             /****************************************/
             play() {
-                if (this.dayNumber() == this._data.days.length - 1)
+                if (this.dayNumber() == this._calculator.data.days.length - 1)
                     this.dayNumber(0);
                 this.isPlaying(true);
                 this.nextFrame();
@@ -4023,12 +4060,28 @@ var WebApp;
                 this.isPlaying(false);
             }
             /****************************************/
-            setViewMode(mode) {
+            setViewMode(mode, fromModel = false) {
+                if (fromModel) {
+                    const areaTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+                    areaTabs.select(GeoPlot.ViewModes[mode].tab);
+                }
+                if (mode == "details") {
+                    if (this._detailsGeo && this._detailsData) {
+                        this._calculator.geo = this._detailsGeo;
+                        this._calculator.data = this._detailsData;
+                        this.totalDays(this._calculator.data.days.length - 1);
+                    }
+                }
+                else {
+                    this._calculator.geo = this._mainGeo;
+                    this._calculator.data = this._mainData;
+                }
+                this.totalDays(this._calculator.data.days.length - 1);
                 if (mode != "region")
                     this.tipManager.markAction("viewChanged", mode);
                 this.viewMode(mode);
                 const districtGroup = document.getElementById("group_district");
-                if (mode == "district")
+                if (mode == "district" || mode == "details")
                     districtGroup.style.removeProperty("display");
                 else
                     districtGroup.style.display = "none";
@@ -4039,7 +4092,7 @@ var WebApp;
                 this.updateMaxFactor();
                 this.updateDayData();
                 if (this.viewMode() == "country") {
-                    this.selectedArea = this._geo.areas["it"];
+                    this.selectedArea = this._calculator.geo.areas["it"];
                     this.tipManager.showTip("regionExcluded", { timeout: 5 });
                 }
                 else {
@@ -4109,32 +4162,38 @@ var WebApp;
                 }
             }
             /****************************************/
-            onMapClick(e) {
+            onMapClick(e, isDouble) {
                 const item = e.target;
                 const areaId = item.parentElement.id;
-                const area = this._geo.areas[areaId.toLowerCase()];
+                const area = this._calculator.geo.areas[areaId.toLowerCase()];
                 if (!area)
                     return;
-                if (this.viewMode() == "country") {
-                    if (this._execludedArea.has(areaId))
-                        this._execludedArea.delete(areaId);
-                    else {
-                        this._execludedArea.set(areaId, area);
-                        M.toast({ html: $string("$(msg-region-ex)").replace("[region]", area.name) });
+                if (!isDouble) {
+                    if (this.viewMode() == "country") {
+                        if (this._execludedArea.has(areaId))
+                            this._execludedArea.delete(areaId);
+                        else {
+                            this._execludedArea.set(areaId, area);
+                            M.toast({ html: $string("$(msg-region-ex)").replace("[region]", area.name) });
+                        }
+                        this.updateIndicator();
                     }
-                    this.updateIndicator();
+                    else {
+                        //if (item.parentElement.classList.contains(this.viewMode()))
+                        this.selectedArea = area;
+                    }
+                    this.tipManager.markAction("areaSelected", area.name);
                 }
                 else {
-                    if (item.parentElement.classList.contains(this.viewMode()))
-                        this.selectedArea = area;
+                    if (this.viewMode() == "region")
+                        this.detailsArea(area);
                 }
-                this.tipManager.markAction("areaSelected", area.name);
             }
             /****************************************/
             nextFrame() {
                 if (!this.isPlaying())
                     return;
-                if (this.dayNumber() >= this._data.days.length - 1)
+                if (this.dayNumber() >= this._calculator.data.days.length - 1)
                     this.pause();
                 else
                     this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
@@ -4231,13 +4290,13 @@ var WebApp;
                 let curView = GeoPlot.ViewModes[this.viewMode()];
                 let count = 0;
                 let list = [];
-                for (let i = 0; i < this._data.days.length; i++) {
-                    const day = this._data.days[i];
+                for (let i = 0; i < this._calculator.data.days.length; i++) {
+                    const day = this._calculator.data.days[i];
                     for (let areaId in day.values) {
                         if (!curView.validateId(areaId))
                             continue;
                         const factor = this.getFactorValue(i, areaId);
-                        if (factor > result && factor != Number.POSITIVE_INFINITY)
+                        if (!isNaN(factor) && factor > result && factor != Number.POSITIVE_INFINITY)
                             result = factor;
                         if (factor != 0)
                             list.push(factor);
@@ -4358,23 +4417,57 @@ var WebApp;
                     dayNumber = this.dayNumber();
                 const id = value.value.id.toLowerCase();
                 const area = value.value;
-                const day = this._data.days[dayNumber];
+                /*
                 if (!day || !day.values[id]) {
                     M.toast({
-                        html: $string("$msg-no-data)")
-                    });
+                        html: $string("$(msg-no-data)")});
                     return;
-                }
-                value.data(day.values[id]);
+                }*/
+                value.data(this._calculator.getDataAtDay(dayNumber, id));
                 value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
                 value.factor(WebApp.MathUtils.round(this.getFactorValue(dayNumber, area), 1));
-                value.reference(this.selectedFactor().reference(day.values[id], area));
+                value.reference(this.selectedFactor().reference(value.data(), area));
+            }
+            /****************************************/
+            updateDetailsArea() {
+                return __awaiter(this, void 0, void 0, function* () {
+                    const detailsEl = document.querySelector(".details-map");
+                    if (!this.detailsArea()) {
+                        this.setViewMode("region");
+                        detailsEl.innerHTML = "";
+                    }
+                    else {
+                        yield this.detailsLoading.waitFor();
+                        this.detailsLoading.reset();
+                        try {
+                            this.setViewMode("details", true);
+                            yield WebApp.PromiseUtils.delay(0);
+                            detailsEl.innerHTML = "<span class = 'loading'><i class ='material-icons'>loop</i></span>";
+                            document.getSelection().empty();
+                            var regionId = this.detailsArea().id.substr(1);
+                            if (regionId.length == 1)
+                                regionId = "0" + regionId;
+                            const mainData = JSON.parse(yield (yield fetch(WebApp.app.baseUrl + "RegionData/" + regionId)).text());
+                            const mapData = yield (yield fetch(WebApp.app.baseUrl + "RegionDataMap/" + regionId)).text();
+                            detailsEl.innerHTML = mapData;
+                            var svgMap = document.querySelector(".details-map svg");
+                            svgMap.addEventListener("click", e => this.onMapClick(e, false));
+                            svgMap.querySelector("#group_municipality").classList.add("active");
+                            this._detailsData = mainData.data;
+                            this._detailsGeo = mainData.geo;
+                            this.setViewMode("details", true);
+                        }
+                        finally {
+                            this.detailsLoading.set();
+                        }
+                    }
+                });
             }
             /****************************************/
             updateTopAreas() {
                 this._daysData = [];
-                for (let i = 0; i < this._data.days.length; i++) {
-                    const day = this._data.days[i];
+                for (let i = 0; i < this._calculator.data.days.length; i++) {
+                    const day = this._calculator.data.days[i];
                     const item = {};
                     const isInArea = GeoPlot.ViewModes[this.viewMode()].validateId;
                     item.topAreas = WebApp.linq(day.values).select(a => ({
@@ -4383,7 +4476,7 @@ var WebApp;
                     }))
                         .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
                         const area = new AreaViewModel();
-                        area.value = this._geo.areas[a.value.key.toLowerCase()];
+                        area.value = this._calculator.geo.areas[a.value.key.toLowerCase()];
                         area.select = () => this.selectedArea = area.value;
                         this.updateArea(area, i);
                         return area;
@@ -4394,7 +4487,11 @@ var WebApp;
             }
             /****************************************/
             updateDayData() {
-                const day = this._data.days[this.dayNumber()];
+                const day = this._calculator.data.days[this.dayNumber()];
+                if (!day) {
+                    console.warn("No day data: " + this.dayNumber());
+                    return;
+                }
                 this.currentData(WebApp.DateUtils.format(day.date, $string("$(date-format)")));
                 this.updateMap();
                 this.updateArea(this.currentArea());
@@ -4415,7 +4512,11 @@ var WebApp;
             }
             /****************************************/
             clearMap() {
-                const day = this._data.days[this.dayNumber()];
+                const day = this._calculator.data.days[this.dayNumber()];
+                if (!day && !day.values) {
+                    console.warn("No day data: " + this.dayNumber());
+                    return;
+                }
                 for (const key in day.values) {
                     const element = document.getElementById(key.toUpperCase());
                     if (element) {
@@ -4429,12 +4530,12 @@ var WebApp;
                 if (!this.selectedIndicator() || !this.selectedFactor())
                     return;
                 if (this.viewMode() != "country") {
-                    const day = this._data.days[this.dayNumber()];
+                    const day = this._calculator.data.days[this.dayNumber()];
                     const gradient = new WebApp.LinearGradient("#fff", this.selectedIndicator().colorDark);
                     for (const key in day.values) {
                         const element = document.getElementById(key.toUpperCase());
                         if (element) {
-                            const area = this._geo.areas[key];
+                            const area = this._calculator.geo.areas[key];
                             if (area.type != GeoPlot.ViewModes[this.viewMode()].areaType)
                                 continue;
                             let factor = this.getFactorValue(this.dayNumber(), area);
@@ -4457,8 +4558,8 @@ var WebApp;
                         }
                     }
                 }
-                else {
-                    WebApp.linq(document.querySelectorAll("g.region")).foreach((element) => {
+                else if (this.viewMode() != "details") {
+                    WebApp.linq(document.querySelectorAll(".main-map g.region")).foreach((element) => {
                         if (this._execludedArea.has(element.id))
                             element.style.fill = "#444";
                         else

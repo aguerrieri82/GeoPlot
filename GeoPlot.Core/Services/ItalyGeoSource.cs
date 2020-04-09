@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace GeoPlot.Core
 {
-    public class ItalyGeoSource : IDataSource<GeoArea>
+    public class ItalyGeoSource : IDataSource<GeoAreaView>
     {
         string _districtDemoSrc;
         string _districtSurfaceDemoSrc;
@@ -20,13 +20,13 @@ namespace GeoPlot.Core
         }
 
 
-        public async Task<IEnumerable<GeoArea>> LoadAsync()
+        public async Task<IEnumerable<GeoAreaView>> LoadAsync()
         {
             var district = (await new ItalyDistrictSource().LoadAsync()).ToArray();
             var districtDemo = (await new ItalyDistrictDemographySource(_districtDemoSrc).LoadAsync()).GroupBy(a=> a.DistrictId).ToDictionary(a=> a.Key, a=> a.ToArray());
             var districtSurface = (await new ItalyDistrictSurfaceSource(_districtSurfaceDemoSrc).LoadAsync()).ToDictionary(a => a.AreaId, a => a.Value);
 
-            var result = new List<GeoArea>();
+            var result = new List<GeoAreaView>();
             /*
             var municipality = (await new ItalyMunicipalitySource().LoadAsync()).ToArray();
 
@@ -57,7 +57,7 @@ namespace GeoPlot.Core
             }
 
             var regions = result.Where(a => a.ParentId == "IT");
-            result.Add(new GeoArea()
+            result.Add(new GeoAreaView()
             {
                 Id = "IT",
                 Name = "Italia",

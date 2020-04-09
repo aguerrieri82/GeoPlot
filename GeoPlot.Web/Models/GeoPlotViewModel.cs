@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 namespace GeoPlot.Web.Models
 {
 
-    public class GeoPlotViewModel
+    public class GeoPlotViewModel : ISvgMapViewModel
     {
-        public GeoAreaSet Geo { get; set; }
+        public GeoAreaViewSet Geo { get; set; }
 
         public DayAreaDataSet<InfectionData> Data { get; set; }
 

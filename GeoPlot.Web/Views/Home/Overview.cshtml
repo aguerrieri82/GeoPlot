@@ -3,7 +3,6 @@
 @{
     ViewData["Title"] = "Panoramica";
 
-    var typeOrder = new[] { GeoAreaType.District, GeoAreaType.Region };
 }
     <div class="container">
 
@@ -14,94 +13,23 @@
                         <li class="tab"><a href="#districtTab"><string transform="CapitalizeFirst">$(districts)</string></a></li>
                         <li class="tab"><a href="#regionTab"><string transform="CapitalizeFirst">$(regions)</string></a></li>
                         <li class="tab"><a href="#italyTab"><string transform="CapitalizeFirst">$(italy)</string></a></li>
+                        <li class="tab"><a href="#detailsTab" data-bind="text: detailsArea() ? detailsArea().name : $string('$(area-details)')"></a></li>
                     </ul>
                     <div class="card-content">
                         <div id="regionTab" data-view-mode="region"></div>
                         <div id="districtTab" data-view-mode="district"></div>
                         <div id="italyTab" data-view-mode="country"></div>
-                        <div class="center-align map-container">
+                        <div id="detailsTab" data-view-mode="details"></div>
+                        <div class="center-align map-container main-map" data-bind="visible: viewMode() != 'details'">
                             <div class="actions">
                                 <a href="#!" string-title="$(copy-map)" data-bind="click: copyMap"><i class="material-icons">image</i></a>
                             </div>
-                            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" class="map" preserveAspectRatio="xMidYMid meet" viewBox="@Model.Geo.ViewBox.X @Model.Geo.ViewBox.Y @Model.Geo.ViewBox.Width @Model.Geo.ViewBox.Height">
-                                <style type="text/css">
-                                    svg.map .environment > circle {
-                                        stroke: #000;
-                                        stroke-width: 500;
-                                        fill-opacity: 0.7;
-                                    }
-
-                                    svg.map .group .area {
-                                        fill: none;
-                                    }
-
-                                        svg.map .group .area.region {
-                                            stroke: #000;
-                                            stroke-width: 0.2%;
-                                        }
-
-                                        svg.map .group .area.district {
-                                            stroke: #999;
-                                            stroke-width: 0.05%;
-                                        }
-
-                                    svg.map .group.active .area {
-                                        fill: white;
-                                    }
-
-                                        svg.map .group.active .area.region {
-                                            stroke-width: 0.15%;
-                                        }
-                                </style>
-                                <style type="text/css">
-                                    .good {
-                                        fill: #4caf50;
-                                        background-color: #4caf50;
-                                    }
-
-                                    .medium {
-                                        fill: #ffeb3b;
-                                        background-color: #ffeb3b;
-                                    }
-
-                                    .bad {
-                                        fill: #ff9800;
-                                        background-color: #ff9800;
-                                    }
-
-                                    .sever {
-                                        fill: #f44336;
-                                        background-color: #f44336;
-                                    }
-
-                                    .verysevere {
-                                        fill: #9c27b0;
-                                        background-color: #9c27b0;
-                                    }
-                                </style>
-                                @foreach (var areaType in typeOrder)
-                                {
-                                    <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: viewMode() == '@(areaType.ToString().ToLower())'}">
-                                        @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
-                                        {
-                                            <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">
-                                                @foreach (var poly in area.Value.Geometry)
-                                                {
-                                                    <polygon points="@string.Join(' ', poly.Points.Select(a => string.Concat(a.X, " ", a.Y)))"></polygon>
-                                                }
-                                            </g>
-                                            area.Value.Geometry = null;
-                                        }
-                                    </g>
-                                }
-                                <g class="environment" data-bind="visible: isShowEnvData">
-                                    @foreach (var item in Model.Environment.Where(a => a.Value.ReportingYear == 2018).OrderBy(a => a.Value.Value))
-                                    {
-                                        <circle cx="@item.Position.X" cy="@item.Position.Y" r="15000" class="@item.Severity.ToString().ToLower()" data-value="@item.Value.Value" id="@item.Value.StationId"></circle>
-                                    }
-                                </g>
-                            </svg>
-
+                            <cache>
+                                <partial name="_SvgMap" />
+                            </cache>
+                        </div>
+                        <div class="center-align map-container details-map" data-bind="visible: viewMode() == 'details' ">
+                            <string>$(msg-select-region)</string>
                         </div>
                     </div>
                 </section>

@@ -19,12 +19,23 @@ namespace WebApp.GeoPlot {
     export var InfectionDataSet: IDataSet<IInfectionData> = {
 
         name: "COVID-19",
+        empty: {
+            currentPositive: undefined,
+            historicDeaths: { "2015": undefined, "2016": undefined, "2017": undefined, "2018": undefined, "2019": undefined, "2020": undefined },
+            toatlTests: undefined,
+            totalDeath: undefined,
+            totalHealed: undefined,
+            totalHospedalized: undefined,
+            totalPositive: undefined,
+            totalSevere: undefined,
+        },
         indicators: [
             {
                 id: "totalPositive",
                 name: $string("$(total-positive)"),
                 colorLight: "#f44336",
                 colorDark: "#b71c1c",
+                validFor: ["region", "country", "district"],
                 showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalPositive)
             },
@@ -121,7 +132,7 @@ namespace WebApp.GeoPlot {
             {
                 id: "death2017",
                 name: $string("$(total-death) +60 (2017)"),
-                validFor: ["region", "district"],
+                validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",      
                 showInFavorites: true,
@@ -131,7 +142,7 @@ namespace WebApp.GeoPlot {
             {
                 id: "death2018",
                 name: $string("$(total-death) +60 (2018)"),
-                validFor: ["region", "district"],
+                validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
                 showInFavorites: true,
@@ -141,7 +152,7 @@ namespace WebApp.GeoPlot {
             {
                 id: "death2019",
                 name: $string("$(total-death) +60 (2019)"),
-                validFor: ["region", "district"],
+                validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
                 showInFavorites: true,
@@ -151,7 +162,7 @@ namespace WebApp.GeoPlot {
             {
                 id: "death2020",
                 name: $string("$(total-death) +60 (2020)*"),
-                validFor: ["region", "district"],
+                validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
                 showInFavorites: true,

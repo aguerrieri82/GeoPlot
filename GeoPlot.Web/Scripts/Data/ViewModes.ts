@@ -1,11 +1,11 @@
 ﻿namespace WebApp.GeoPlot {
 
-    export type ViewMode = "district" | "region" | "country";
+    export type ViewMode = "district" | "region" | "country" |"details";
 
     interface IViewModeData {
-        label: { singular: string, plural: string },
-        mapGroup: string,
-        areaType: GeoAreaType
+        label: { singular: string, plural: string };
+        mapGroup: string;
+        areaType: GeoAreaType;
         validateId: (id: string) => boolean;
         tab: string;
     }
@@ -40,6 +40,16 @@
             tab: "italyTab",
             areaType: GeoAreaType.Country,
             validateId: (id: string) => id.toLowerCase() == 'it'
+        },
+        'details': {
+            label: {
+                singular: $string("$(area-details)"),
+                plural: $string("$(area-details)")
+            },
+            mapGroup: "group_municipality",
+            tab: "detailsTab",
+            areaType: GeoAreaType.Municipality,
+            validateId: (id: string) => id[0].toLowerCase() == 'm'
         }
     }
 }

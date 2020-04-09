@@ -1,6 +1,7 @@
 ﻿using GeoPlot.Entities;
 using NetTopologySuite.Features;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.GeometriesGraph.Index;
 using NetTopologySuite.IO;
 using NetTopologySuite.Simplify;
 using System;
@@ -10,7 +11,7 @@ using System.Text;
 
 namespace GeoPlot.Core
 {
-    public class BaseGeoJsonDataSource : BaseFileDataSource<GeoArea>
+    public class BaseGeoJsonDataSource : BaseFileDataSource<GeoAreaView>
     {
         public BaseGeoJsonDataSource(string src, double tollerance)
             : base(src)
@@ -18,11 +19,11 @@ namespace GeoPlot.Core
             SimplifyTollerance = tollerance;
         }
 
-        protected override IEnumerable<GeoArea> Load(string textData)
+        protected override IEnumerable<GeoAreaView> Load(string textData)
         {
             var reader = new GeoJsonReader();
             var features = reader.Read<FeatureCollection>(textData);
-            var result = new List<GeoArea>();
+            var result = new List<GeoAreaView>();
 
             ProcessFeatures(features, result);
 
@@ -43,7 +44,7 @@ namespace GeoPlot.Core
             return result;
         }
 
-        protected virtual void ProcessFeatures(FeatureCollection features, IList<GeoArea> result)
+        protected virtual void ProcessFeatures(FeatureCollection features, IList<GeoAreaView> result)
         {
             foreach (var feature in features)
             {
@@ -57,41 +58,19 @@ namespace GeoPlot.Core
             return true;
         }
 
-        protected virtual void ProcessFeature(IFeature feature, IList<GeoArea> result)
+        protected virtual void ProcessFeature(IFeature feature, IList<GeoAreaView> result)
         {
-            var geoArea = new GeoArea();
-            geoArea.Geometry = new List<Poly2D>();
-            CreatePoly(feature.Geometry, geoArea.Geometry);
+            var geoArea = new GeoAreaView();
+            geoArea.Geometry = GeoUtils.ProjectAndSimplify(feature.Geometry, SimplifyTollerance);
             ProcessFeature(feature, geoArea);
             result.Add(geoArea);
         }
 
-        protected virtual void ProcessFeature(IFeature feature, GeoArea geoArea)
+        protected virtual void ProcessFeature(IFeature feature, GeoAreaView geoArea)
         {
 
         }
 
-        protected virtual void CreatePoly(Geometry geo, IList<Poly2D> result)
-        {
-            if (geo is Polygon geoPoly)
-            {
-                Geometry curGeo = geoPoly.ExteriorRing;
-                if (SimplifyTollerance != 0)
-                {
-                    var simplifier = new VWSimplifier(curGeo);
-                    simplifier.DistanceTolerance = SimplifyTollerance;
-                    curGeo = simplifier.GetResultGeometry();
-                }
-         
-                if (curGeo.IsValid)
-                    result.Add(new Poly2D() { Points = curGeo.Coordinates.Select(a => GeoUtils.Project(new GeoPoint() { Lat = a.Y, Lng = a.X })).ToArray() });
-            }
-            else if (geo is MultiPolygon multiPoly)
-            {
-                foreach (var innerPoly in multiPoly.Geometries)
-                    CreatePoly(innerPoly, result);
-            }
-        }
 
         public Rect2D ViewBox { get; set; }
 

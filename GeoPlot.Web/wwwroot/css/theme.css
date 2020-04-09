@@ -186,6 +186,22 @@ ul.collapsible li.active .collapsible-header i {
 /****************************************/
 /* Components                           */
 /****************************************/
+@keyframes rotate {
+  from {
+    transform: rotate(0deg); }
+  to {
+    transform: rotate(180deg); } }
+
+.loading {
+  color: #1565c0; }
+  .loading i {
+    font-size: 32px;
+    animation-name: rotate;
+    animation-duration: 0.4s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite; }
+
+/****************************************/
 .flex-col-3 {
   display: flex;
   flex-direction: row;
