@@ -18,7 +18,7 @@ namespace GeoPlot.Core
         {
             return new GeoAreaItem<double>()
             {
-                AreaId = "D" + int.Parse(row[0]).ToString(),
+                AreaId = "D" + row[0].PadLeft(3, '0'),
                 Value = double.Parse(row[2], CultureInfo.InvariantCulture)
             };
         }

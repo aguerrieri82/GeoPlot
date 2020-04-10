@@ -116,7 +116,7 @@ namespace WebApp.GeoPlot {
             {
                 id: "death2020",
                 name: $string("$(total-death) +60 (2020)*"),
-                validFor: ["region", "district", "details"],
+                validFor: ["details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
                 showInFavorites: true,
@@ -139,7 +139,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",
-                showInFavorites: true,
+                showInFavorites: false,
                 compute: new SimpleIndicatorFunction(a =>
                     a.historicDeaths ? a.historicDeaths["2018"] : undefined)
             },
@@ -149,9 +149,22 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
                 colorDark: "#4a148c",      
-                showInFavorites: true,
+                showInFavorites: false,
                 compute: new SimpleIndicatorFunction(a =>
                     a.historicDeaths ? a.historicDeaths["2017"] : undefined)
+            },
+            {
+                id: "death-diff-2020-2019",
+                name: $string("DIff. decessi 2020-19"),
+                validFor: [ "details"],
+                colorLight: "#f44336",
+                colorDark: "#b71c1c",
+                gradient: new LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
+                canBeNegative: true,
+                compute: new CombineIndicatorFunction({
+                    death2019: new SimpleIndicatorFunction(a => a.historicDeaths[2019]),
+                    death2020: new SimpleIndicatorFunction(a => a.historicDeaths[2020]),
+                }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined : values.death2020 - values.death2019)
             },
             {
                 id: "population",
@@ -171,19 +184,7 @@ namespace WebApp.GeoPlot {
                 showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => a.demography.over65)
             },
-            {
-                id: "death-diff-2020-2019",
-                name: $string("DIff. decessi 2020-19"),
-                validFor: ["district", "details", "region"],
-                colorLight: "#f44336",
-                colorDark: "#b71c1c",
-                gradient: new LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
-                canBeNegative: true,
-                compute: new CombineIndicatorFunction({
-                    death2019: new SimpleIndicatorFunction(a => a.historicDeaths[2019]),
-                    death2020: new SimpleIndicatorFunction(a => a.historicDeaths[2020]),
-                }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined :  values.death2020 - values.death2019)
-            }
+    
             /*,
             {
                 id: "extimated-death",

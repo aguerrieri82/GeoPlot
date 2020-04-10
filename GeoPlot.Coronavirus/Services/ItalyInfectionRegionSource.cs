@@ -30,7 +30,7 @@ namespace GeoPlot.Coronavirus
             return new DayAreaItem<InfectionData>()
             {
                 Date = row.data.Value,
-                AreaId = "R" + row.codice_regione,
+                AreaId = "R" + row.codice_regione.ToString().PadLeft(2, '0'),
                 Value = new InfectionData()
                 {
                     TotalPositive = row.totale_casi,

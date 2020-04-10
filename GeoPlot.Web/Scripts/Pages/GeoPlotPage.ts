@@ -29,6 +29,7 @@
         logScale?: boolean;
         showEnvData?: boolean;
         excludedArea?: string[];
+        detailsArea?: string;
     }
 
     /****************************************/
@@ -103,9 +104,6 @@
         reference = ko.observable<any>();
         indicators = ko.observable<IndicatorViewModel[]>();
     }
-
-  
-
 
     /****************************************/
 
@@ -497,7 +495,8 @@
                 !state.showEnvData &&
                 (!state.groupSize || state.groupSize == 1) &&
                 (state.startDay == undefined || state.startDay == 0) &&
-                (!state.excludedArea);
+                (!state.excludedArea) &&
+                (!state.detailsArea);
         }
 
         /****************************************/
@@ -548,6 +547,9 @@
 
             if (state.area)
                 this.selectedArea = this._calculator.geo.areas[state.area.toLowerCase()];
+
+            if (state.detailsArea) 
+                this.detailsArea(this._calculator.geo.areas[state.detailsArea]);
         }
 
         /****************************************/
@@ -566,7 +568,8 @@
                 startDay: this.startDay() == 0 ? undefined : this.startDay(),
                 logScale: this.isLogScale() ? true : undefined,
                 excludedArea: this._execludedArea.size > 0 ? linq(this._execludedArea.keys()).toArray() : undefined,
-                showEnvData: this.isShowEnvData() ? true : undefined
+                showEnvData: this.isShowEnvData() ? true : undefined,
+                detailsArea: this.detailsArea() ? this.detailsArea().id : undefined,
             };
         }
 
@@ -925,7 +928,7 @@
                 this.tipManager.markAction("areaSelected", area.name);
             }
             else {
-                if (this.viewMode() == "region")
+                if (this.viewMode() == "region" || this.viewMode() == "district")
                     this.detailsArea(area);
             }
         }
@@ -1278,12 +1281,8 @@
 
                     document.getSelection().empty();
 
-                    var regionId = this.detailsArea().id.substr(1);
-                    if (regionId.length == 1)
-                        regionId = "0" + regionId;
-
-                    const mainData = <IGeoPlotViewModel>JSON.parse(await (await fetch(app.baseUrl + "RegionData/" + regionId)).text());
-                    const mapData = await (await fetch(app.baseUrl + "RegionDataMap/" + regionId)).text();
+                    const mainData = <IGeoPlotViewModel>JSON.parse(await (await fetch(app.baseUrl + "AreaData/" + this.detailsArea().id)).text());
+                    const mapData = await (await fetch(app.baseUrl + "AreaMap/" + this.detailsArea().id)).text();
 
                     detailsEl.innerHTML = mapData;
 

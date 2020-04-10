@@ -28,7 +28,7 @@ namespace GeoPlot.Core
         {
             return new DistrictDemoRawItem
             {
-                DistrictId = "D" + int.Parse(row[0]).ToString(),
+                DistrictId = "D" +  row[0].PadLeft(3, '0'),
                 Age = row[2] == "Totale" ? null : (int?)int.Parse(row[2]),
                 Female = int.Parse(row[18]),
                 Male = int.Parse(row[10])

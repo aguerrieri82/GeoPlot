@@ -24,9 +24,9 @@ namespace GeoPlot.Core
         protected override void ProcessFeature(IFeature feature, GeoAreaView geoArea)
         {
             geoArea.Type = GeoAreaType.District;
-            geoArea.Id = "D" + feature.Attributes["prov_istat_code_num"].ToString();
+            geoArea.Id = "D" + feature.Attributes["prov_istat_code"].ToString();
             geoArea.Name = (string)feature.Attributes["prov_name"];
-            geoArea.ParentId = "R" + feature.Attributes["reg_istat_code_num"].ToString();
+            geoArea.ParentId = "R" + feature.Attributes["reg_istat_code"].ToString();
         }
     }
 }

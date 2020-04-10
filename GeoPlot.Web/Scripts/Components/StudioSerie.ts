@@ -350,10 +350,40 @@
                 this.offsetX(state.offsetX);
 
             if (state.source)
-                this.source = state.source;
+                this.source = this.upgradeSource(state.source);
 
             if (state.values != undefined)
                 this.importValues(state.values);
+        }
+
+        /****************************************/
+
+        protected upgradeSource(source: SerieSource): SerieSource{
+
+            if (source.type == "geoplot") {
+                this.upgradeAreaId(source.areaId);
+                if (source.exeludedAreaIds)
+                    for (let i = 0; i < source.exeludedAreaIds.length; i++) 
+                        source.exeludedAreaIds[i] = this.upgradeAreaId(source.exeludedAreaIds[i]);
+                    
+            }
+            return source;
+        }
+
+        /****************************************/
+
+        protected upgradeAreaId(id: string): string {
+
+            if (id) {
+                if (id.startsWith("R") && id.length == 2)
+                    return "R0" + id.substring(1);
+                if (id.startsWith("D") && id.length == 2)
+                    return "D00" + id.substring(1);
+                if (id.startsWith("D") && id.length == 3)
+                    return "D0" + id.substring(1);
+            }
+
+            return id;
         }
 
         /****************************************/

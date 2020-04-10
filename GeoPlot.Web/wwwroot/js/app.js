@@ -108,6 +108,14 @@ var WebApp;
 (function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
+        function sumNull(curValue, newValue) {
+            if (isNaN(newValue))
+                return curValue;
+            if (isNaN(curValue))
+                return newValue;
+            return curValue + newValue;
+        }
+        /****************************************/
         class ConstIndicatorFunction {
             constructor(value) {
                 this._value = value;
@@ -117,7 +125,7 @@ var WebApp;
                 let result = this._value(main, area);
                 if (exMain) {
                     for (var i in exMain)
-                        result -= this.value(exMain[i], exDelta[i], null, null, area);
+                        result = sumNull(result, -this.value(exMain[i], exDelta[i], null, null, area));
                 }
                 return result;
             }
@@ -163,9 +171,9 @@ var WebApp;
             }
             /****************************************/
             value(main, delta, exMain, exDelta, area, indicator) {
-                let curValue = 0;
+                let curValue;
                 for (var i in main)
-                    curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
+                    curValue = sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
                 return this._value(curValue, main[0], area);
             }
         }
@@ -178,11 +186,11 @@ var WebApp;
             }
             /****************************************/
             value(main, delta, exMain, exDelta, area, indicator) {
-                let curValue = 0;
-                let curFactor = 0;
+                let curValue;
+                let curFactor;
                 for (var i in main) {
-                    curValue += indicator.value(main[i], delta[i], exMain[i], exDelta[i], area);
-                    curFactor += this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area);
+                    curValue = sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
+                    curFactor = sumNull(curFactor, this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area));
                 }
                 return this._value(curValue, curFactor);
             }
@@ -2262,9 +2270,31 @@ var WebApp;
                 if (state.offsetX != undefined)
                     this.offsetX(state.offsetX);
                 if (state.source)
-                    this.source = state.source;
+                    this.source = this.upgradeSource(state.source);
                 if (state.values != undefined)
                     this.importValues(state.values);
+            }
+            /****************************************/
+            upgradeSource(source) {
+                if (source.type == "geoplot") {
+                    this.upgradeAreaId(source.areaId);
+                    if (source.exeludedAreaIds)
+                        for (let i = 0; i < source.exeludedAreaIds.length; i++)
+                            source.exeludedAreaIds[i] = this.upgradeAreaId(source.exeludedAreaIds[i]);
+                }
+                return source;
+            }
+            /****************************************/
+            upgradeAreaId(id) {
+                if (id) {
+                    if (id.startsWith("R") && id.length == 2)
+                        return "R0" + id.substring(1);
+                    if (id.startsWith("D") && id.length == 2)
+                        return "D00" + id.substring(1);
+                    if (id.startsWith("D") && id.length == 3)
+                        return "D0" + id.substring(1);
+                }
+                return id;
             }
             /****************************************/
             getState() {
@@ -2526,7 +2556,7 @@ var WebApp;
                 {
                     id: "death2020",
                     name: $string("$(total-death) +60 (2020)*"),
-                    validFor: ["region", "district", "details"],
+                    validFor: ["details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
                     showInFavorites: true,
@@ -2547,7 +2577,7 @@ var WebApp;
                     validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
-                    showInFavorites: true,
+                    showInFavorites: false,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2018"] : undefined)
                 },
                 {
@@ -2556,8 +2586,21 @@ var WebApp;
                     validFor: ["region", "district", "details"],
                     colorLight: "#9c27b0",
                     colorDark: "#4a148c",
-                    showInFavorites: true,
+                    showInFavorites: false,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths ? a.historicDeaths["2017"] : undefined)
+                },
+                {
+                    id: "death-diff-2020-2019",
+                    name: $string("DIff. decessi 2020-19"),
+                    validFor: ["details"],
+                    colorLight: "#f44336",
+                    colorDark: "#b71c1c",
+                    gradient: new WebApp.LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
+                    canBeNegative: true,
+                    compute: new GeoPlot.CombineIndicatorFunction({
+                        death2019: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2019]),
+                        death2020: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2020]),
+                    }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined : values.death2020 - values.death2019)
                 },
                 {
                     id: "population",
@@ -2577,43 +2620,6 @@ var WebApp;
                     showInFavorites: false,
                     compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.over65)
                 },
-                {
-                    id: "death-diff-2020-2019",
-                    name: $string("DIff. decessi 2020-19"),
-                    validFor: ["district", "details", "region"],
-                    colorLight: "#f44336",
-                    colorDark: "#b71c1c",
-                    gradient: new WebApp.LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
-                    canBeNegative: true,
-                    compute: new GeoPlot.CombineIndicatorFunction({
-                        death2019: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2019]),
-                        death2020: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2020]),
-                    }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined : values.death2020 - values.death2019)
-                }
-                /*,
-                {
-                    id: "extimated-death",
-                    name: $string("Morti stimati"),
-                    validFor: ["country"],
-                    colorLight: "#f44336",
-                    colorDark: "#b71c1c",
-                    compute: new CombineIndicatorFunction({
-                        totalPositive: new SimpleIndicatorFunction(a => a.totalPositive),
-                        toatlTests: new SimpleIndicatorFunction(a => a.toatlTests),
-                        dailyDeath: new ConstIndicatorFunction((v, a) => 1450)
-                    }, values => Math.round((values.totalPositive / values.toatlTests) * values.dailyDeath))
-                },
-                {
-                    id: "healed-death",
-                    name: $string("$(death) + $(healed)"),
-                    validFor: ["country", "region"],
-                    colorLight: "#4caf50",
-                    colorDark: "#1b5e20",
-                    compute: new CombineIndicatorFunction({
-                        totalHealed: new SimpleIndicatorFunction(a => a.totalHealed),
-                        totalDeath: new SimpleIndicatorFunction(a => a.totalDeath)
-                    }, values => values.totalHealed + values.totalDeath)
-                }*/
             ],
             factors: [
                 {
@@ -3890,7 +3896,8 @@ var WebApp;
                     !state.showEnvData &&
                     (!state.groupSize || state.groupSize == 1) &&
                     (state.startDay == undefined || state.startDay == 0) &&
-                    (!state.excludedArea);
+                    (!state.excludedArea) &&
+                    (!state.detailsArea);
             }
             /****************************************/
             loadState(state) {
@@ -3925,6 +3932,8 @@ var WebApp;
                     this.selectedFactor(WebApp.linq(this._dataSet.factors).first(a => a.id == state.factor));
                 if (state.area)
                     this.selectedArea = this._calculator.geo.areas[state.area.toLowerCase()];
+                if (state.detailsArea)
+                    this.detailsArea(this._calculator.geo.areas[state.detailsArea]);
             }
             /****************************************/
             saveStata() {
@@ -3940,7 +3949,8 @@ var WebApp;
                     startDay: this.startDay() == 0 ? undefined : this.startDay(),
                     logScale: this.isLogScale() ? true : undefined,
                     excludedArea: this._execludedArea.size > 0 ? WebApp.linq(this._execludedArea.keys()).toArray() : undefined,
-                    showEnvData: this.isShowEnvData() ? true : undefined
+                    showEnvData: this.isShowEnvData() ? true : undefined,
+                    detailsArea: this.detailsArea() ? this.detailsArea().id : undefined,
                 };
             }
             /****************************************/
@@ -4226,7 +4236,7 @@ var WebApp;
                     this.tipManager.markAction("areaSelected", area.name);
                 }
                 else {
-                    if (this.viewMode() == "region")
+                    if (this.viewMode() == "region" || this.viewMode() == "district")
                         this.detailsArea(area);
                 }
             }
@@ -4485,11 +4495,8 @@ var WebApp;
                             yield WebApp.PromiseUtils.delay(0);
                             detailsEl.innerHTML = "<span class = 'loading'><i class ='material-icons'>loop</i></span>";
                             document.getSelection().empty();
-                            var regionId = this.detailsArea().id.substr(1);
-                            if (regionId.length == 1)
-                                regionId = "0" + regionId;
-                            const mainData = JSON.parse(yield (yield fetch(WebApp.app.baseUrl + "RegionData/" + regionId)).text());
-                            const mapData = yield (yield fetch(WebApp.app.baseUrl + "RegionDataMap/" + regionId)).text();
+                            const mainData = JSON.parse(yield (yield fetch(WebApp.app.baseUrl + "AreaData/" + this.detailsArea().id)).text());
+                            const mapData = yield (yield fetch(WebApp.app.baseUrl + "AreaMap/" + this.detailsArea().id)).text();
                             detailsEl.innerHTML = mapData;
                             var svgMap = document.querySelector(".details-map svg");
                             svgMap.addEventListener("click", e => this.onMapClick(e, false));

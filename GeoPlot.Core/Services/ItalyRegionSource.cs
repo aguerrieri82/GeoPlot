@@ -25,7 +25,7 @@ namespace GeoPlot.Core
         protected override void ProcessFeature(IFeature feature, GeoAreaView geoArea)
         {
             geoArea.Type = GeoAreaType.Region;
-            geoArea.Id = "R" + feature.Attributes["reg_istat_code_num"].ToString();
+            geoArea.Id = "R" + feature.Attributes["reg_istat_code"].ToString();
             geoArea.ParentId = "IT";
             geoArea.Name = (string)feature.Attributes["reg_name"];
         }
