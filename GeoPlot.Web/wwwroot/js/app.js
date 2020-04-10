@@ -4554,7 +4554,7 @@ var WebApp;
             /****************************************/
             clearMap() {
                 const day = this._calculator.data.days[this.dayNumber()];
-                if (!day && !day.values) {
+                if (!day || !day.values) {
                     console.warn("No day data: " + this.dayNumber());
                     return;
                 }
