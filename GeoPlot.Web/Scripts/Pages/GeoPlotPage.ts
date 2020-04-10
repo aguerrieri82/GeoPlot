@@ -1083,7 +1083,7 @@
                     if (!curView.validateId(areaId))
                         continue;
                     const factor = Math.abs(this.getFactorValue(i, areaId));
-                    if (!isNaN(factor) && factor > result && factor != Number.POSITIVE_INFINITY)
+                    if (!MathUtils.isNaNOrNull(factor) && factor != Number.POSITIVE_INFINITY && factor > result)
                         result = factor;
 
                     if (factor != 0)
@@ -1436,7 +1436,7 @@
 
                         factor = Math.min(1, Math.max(0, factor));
 
-                        if (isNaN(factor)) {
+                        if (MathUtils.isNaNOrNull(factor)) {
                             if (element.classList.contains("valid"))
                                 element.classList.remove("valid");
                             element.style.removeProperty("fill");

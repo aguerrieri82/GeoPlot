@@ -112,7 +112,7 @@ namespace WebApp.GeoPlot {
                 showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => MathUtils.round(a.demography.total / a.surface, 0))
             },
-    
+
             {
                 id: "death2020",
                 name: $string("$(total-death) +60 (2020)*"),
@@ -148,7 +148,7 @@ namespace WebApp.GeoPlot {
                 name: $string("$(total-death) +60 (2017)"),
                 validFor: ["region", "district", "details"],
                 colorLight: "#9c27b0",
-                colorDark: "#4a148c",      
+                colorDark: "#4a148c",
                 showInFavorites: false,
                 compute: new SimpleIndicatorFunction(a =>
                     a.historicDeaths ? a.historicDeaths["2017"] : undefined)
@@ -156,7 +156,7 @@ namespace WebApp.GeoPlot {
             {
                 id: "death-diff-2020-2019",
                 name: $string("DIff. decessi 2020-19"),
-                validFor: [ "details"],
+                validFor: ["details"],
                 colorLight: "#f44336",
                 colorDark: "#b71c1c",
                 gradient: new LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
@@ -164,7 +164,7 @@ namespace WebApp.GeoPlot {
                 compute: new CombineIndicatorFunction({
                     death2019: new SimpleIndicatorFunction(a => a.historicDeaths[2019]),
                     death2020: new SimpleIndicatorFunction(a => a.historicDeaths[2020]),
-                }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined : values.death2020 - values.death2019)
+                }, values => MathUtils.isNaNOrNull(values.death2020) || MathUtils.isNaNOrNull(values.death2019) ? undefined : (values.death2020 - values.death2019))
             },
             {
                 id: "population",
@@ -184,7 +184,7 @@ namespace WebApp.GeoPlot {
                 showInFavorites: false,
                 compute: new ConstIndicatorFunction((v, a) => a.demography.over65)
             },
-    
+
             /*,
             {
                 id: "extimated-death",
@@ -223,7 +223,7 @@ namespace WebApp.GeoPlot {
                 id: "population",
                 validFor: ["region", "country", "details", "district"],
                 name: $string("$(population)"),
-                compute: new SimpleFactorFunction((i, v, a) => (i / a.demography.total) * 100000),
+                compute: new SimpleFactorFunction((i, v, a) => MathUtils.divideNull(i, a.demography.total) * 100000),
                 format: a => formatNumber(a),
                 reference: (v, a) => formatNumber(a.demography.total),
                 description: $string("[indicator] $(every-100k)")
@@ -232,7 +232,7 @@ namespace WebApp.GeoPlot {
                 id: "populationOld",
                 validFor: ["region", "country", "district"],
                 name: $string("$(population) +65"),
-                compute: new SimpleFactorFunction((i, v, a) => (i / a.demography.over65) * 100000),
+                compute: new SimpleFactorFunction((i, v, a) => MathUtils.divideNull(i, a.demography.over65) * 100000),
                 format: a => formatNumber(MathUtils.round(a, 1)),
                 reference: (v, a) => formatNumber(a.demography.over65),
                 description: $string("[indicator] $(every-100k) +65")
@@ -241,7 +241,7 @@ namespace WebApp.GeoPlot {
                 id: "density",
                 name: $string("$(density)"),
                 validFor: ["region", "country", "district"],
-                compute: new SimpleFactorFunction((i, v, a) => (i / (a.demography.total / a.surface)) * 100000),
+                compute: new SimpleFactorFunction((i, v, a) => MathUtils.divideNull(i, MathUtils.divideNull(a.demography.total, a.surface)) * 100000),
                 format: a => formatNumber(MathUtils.round(a, 1)),
                 reference: (v, a) => formatNumber(MathUtils.round(a.demography.total / a.surface, 1)),
                 description: $string("[indicator] $(over-density)")
@@ -250,7 +250,7 @@ namespace WebApp.GeoPlot {
                 id: "totalPositive",
                 name: $string("$(total-positive)"),
                 validFor: ["region", "country"],
-                compute: new DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalPositive)),
+                compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalPositive)),
                 format: a => MathUtils.round(a, 1) + "%",
                 reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive),
                 description: $string("% [indicator] $(over-total-positive)")
@@ -259,7 +259,7 @@ namespace WebApp.GeoPlot {
                 id: "severe",
                 name: $string("$(severe)"),
                 validFor: ["region", "country"],
-                compute: new DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalSevere)),
+                compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalSevere)),
                 format: a => MathUtils.round(a, 1) + "%",
                 reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere),
                 description: $string("% [indicator] $(over-severe)")
@@ -268,7 +268,7 @@ namespace WebApp.GeoPlot {
                 id: "test",
                 name: $string("$(tested)"),
                 validFor: ["region", "country"],
-                compute: new DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new SimpleIndicatorFunction(v => v.toatlTests)),
+                compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.toatlTests)),
                 format: a => MathUtils.round(a, 1) + "%",
                 reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
                 description: $string("% [indicator] $(over-tested)")

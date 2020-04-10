@@ -61,6 +61,6 @@ if (window["Chart"]) {
 
 declare const $language: string;
 
-declare function formatNumber(value: number): string;
+declare function formatNumber(value: number, emptyValue?: string): string;
 
 declare function $string(format: string): string;

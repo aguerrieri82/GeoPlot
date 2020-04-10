@@ -300,22 +300,25 @@ namespace GeoPlot.Web.Controllers
             {
                 var items = new List<GeoArea>();
                 GeoArea mainItem = null;
+                double tollerance = 0;
                 if (areaCode.StartsWith("R"))
                 {
+                    tollerance = 0.01;
                     mainItem = await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.Region && a.Code == areaCode.Substring(1)).AsNoTracking().SingleAsync();
                     items.AddRange(await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.District && a.ParentId == mainItem.Id).AsNoTracking().ToArrayAsync());
                     items.AddRange(await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.Municipality && a.Parent.ParentId == mainItem.Id).AsNoTracking().ToArrayAsync());
                 }
                 else if (areaCode.StartsWith("D"))
                 {
-                    mainItem = await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.District && a.Code == areaCode.Substring(1)).AsNoTracking().SingleAsync();
+                    tollerance = 0;
+                    mainItem = await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.District && a.CodeAlt == areaCode.Substring(1)).AsNoTracking().SingleAsync();
                     items.AddRange(await ctx.GeoAreas.Include(a => a.Parent).Where(a => a.Type == GeoAreaType.Municipality && a.ParentId == mainItem.Id).AsNoTracking().ToArrayAsync());
                 }
                 
-                var mainView = CreateGeoArea(mainItem, includePoly, result);
+                var mainView = CreateGeoArea(mainItem, includePoly, result, 0);
 
                 foreach (var item in items)
-                    CreateGeoArea(item, includePoly, result);
+                    CreateGeoArea(item, includePoly, result, tollerance);
 
                 if (includePoly)
                     result.ViewBox = GeoUtils.GetViewBox(mainView.Geometry);
@@ -323,7 +326,7 @@ namespace GeoPlot.Web.Controllers
             return result;
         }
 
-        static GeoAreaView CreateGeoArea(GeoArea geoArea, bool includePoly, GeoAreaViewSet result)
+        static GeoAreaView CreateGeoArea(GeoArea geoArea, bool includePoly, GeoAreaViewSet result, double tollerance)
         {
             var view = new GeoAreaView
             {
@@ -335,7 +338,7 @@ namespace GeoPlot.Web.Controllers
                 {
                     Total = geoArea.Population
                 },
-                Geometry = includePoly ? GeoUtils.ProjectAndSimplify(geoArea.Geometry, 0) : null
+                Geometry = includePoly ? GeoUtils.ProjectAndSimplify(geoArea.Geometry, tollerance) : null
             };
             result.Areas[view.Id] = view;
             return view;
@@ -369,7 +372,7 @@ namespace GeoPlot.Web.Controllers
                 var deathRawItems = await ctx.TimeSeries.Where(a => 
                                 a.IndicatorId == Consts.InfectionSerieId && 
                                 a.GeoArea.Type == GeoAreaType.Municipality && 
-                                (regionCode != null && a.GeoArea.Parent.Parent.Code == regionCode || districtCode != null && a.GeoArea.Parent.Code == districtCode) &&
+                                (regionCode != null && a.GeoArea.Parent.Parent.Code == regionCode || districtCode != null && a.GeoArea.Parent.CodeAlt == districtCode) &&
                                 a.Value != null && 
                                 a.FromAge >= minAge)
                             .GroupBy(a => new 

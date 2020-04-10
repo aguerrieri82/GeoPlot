@@ -108,13 +108,6 @@ var WebApp;
 (function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
-        function sumNull(curValue, newValue) {
-            if (isNaN(newValue))
-                return curValue;
-            if (isNaN(curValue))
-                return newValue;
-            return curValue + newValue;
-        }
         /****************************************/
         class ConstIndicatorFunction {
             constructor(value) {
@@ -125,7 +118,7 @@ var WebApp;
                 let result = this._value(main, area);
                 if (exMain) {
                     for (var i in exMain)
-                        result = sumNull(result, -this.value(exMain[i], exDelta[i], null, null, area));
+                        result = WebApp.MathUtils.sumNull(result, -this.value(exMain[i], exDelta[i], null, null, area));
                 }
                 return result;
             }
@@ -173,7 +166,7 @@ var WebApp;
             value(main, delta, exMain, exDelta, area, indicator) {
                 let curValue;
                 for (var i in main)
-                    curValue = sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
+                    curValue = WebApp.MathUtils.sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
                 return this._value(curValue, main[0], area);
             }
         }
@@ -189,8 +182,8 @@ var WebApp;
                 let curValue;
                 let curFactor;
                 for (var i in main) {
-                    curValue = sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
-                    curFactor = sumNull(curFactor, this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area));
+                    curValue = WebApp.MathUtils.sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
+                    curFactor = WebApp.MathUtils.sumNull(curFactor, this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area));
                 }
                 return this._value(curValue, curFactor);
             }
@@ -2600,7 +2593,7 @@ var WebApp;
                     compute: new GeoPlot.CombineIndicatorFunction({
                         death2019: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2019]),
                         death2020: new GeoPlot.SimpleIndicatorFunction(a => a.historicDeaths[2020]),
-                    }, values => values.death2020 === undefined || values.death2019 === undefined ? undefined : values.death2020 - values.death2019)
+                    }, values => WebApp.MathUtils.isNaNOrNull(values.death2020) || WebApp.MathUtils.isNaNOrNull(values.death2019) ? undefined : (values.death2020 - values.death2019))
                 },
                 {
                     id: "population",
@@ -2634,7 +2627,7 @@ var WebApp;
                     id: "population",
                     validFor: ["region", "country", "details", "district"],
                     name: $string("$(population)"),
-                    compute: new GeoPlot.SimpleFactorFunction((i, v, a) => (i / a.demography.total) * 100000),
+                    compute: new GeoPlot.SimpleFactorFunction((i, v, a) => WebApp.MathUtils.divideNull(i, a.demography.total) * 100000),
                     format: a => formatNumber(a),
                     reference: (v, a) => formatNumber(a.demography.total),
                     description: $string("[indicator] $(every-100k)")
@@ -2643,7 +2636,7 @@ var WebApp;
                     id: "populationOld",
                     validFor: ["region", "country", "district"],
                     name: $string("$(population) +65"),
-                    compute: new GeoPlot.SimpleFactorFunction((i, v, a) => (i / a.demography.over65) * 100000),
+                    compute: new GeoPlot.SimpleFactorFunction((i, v, a) => WebApp.MathUtils.divideNull(i, a.demography.over65) * 100000),
                     format: a => formatNumber(WebApp.MathUtils.round(a, 1)),
                     reference: (v, a) => formatNumber(a.demography.over65),
                     description: $string("[indicator] $(every-100k) +65")
@@ -2652,7 +2645,7 @@ var WebApp;
                     id: "density",
                     name: $string("$(density)"),
                     validFor: ["region", "country", "district"],
-                    compute: new GeoPlot.SimpleFactorFunction((i, v, a) => (i / (a.demography.total / a.surface)) * 100000),
+                    compute: new GeoPlot.SimpleFactorFunction((i, v, a) => WebApp.MathUtils.divideNull(i, WebApp.MathUtils.divideNull(a.demography.total, a.surface)) * 100000),
                     format: a => formatNumber(WebApp.MathUtils.round(a, 1)),
                     reference: (v, a) => formatNumber(WebApp.MathUtils.round(a.demography.total / a.surface, 1)),
                     description: $string("[indicator] $(over-density)")
@@ -2661,7 +2654,7 @@ var WebApp;
                     id: "totalPositive",
                     name: $string("$(total-positive)"),
                     validFor: ["region", "country"],
-                    compute: new GeoPlot.DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new GeoPlot.SimpleIndicatorFunction(v => v.totalPositive)),
+                    compute: new GeoPlot.DoubleFactorFunction((i, f) => WebApp.MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new GeoPlot.SimpleIndicatorFunction(v => v.totalPositive)),
                     format: a => WebApp.MathUtils.round(a, 1) + "%",
                     reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive),
                     description: $string("% [indicator] $(over-total-positive)")
@@ -2670,7 +2663,7 @@ var WebApp;
                     id: "severe",
                     name: $string("$(severe)"),
                     validFor: ["region", "country"],
-                    compute: new GeoPlot.DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new GeoPlot.SimpleIndicatorFunction(v => v.totalSevere)),
+                    compute: new GeoPlot.DoubleFactorFunction((i, f) => WebApp.MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new GeoPlot.SimpleIndicatorFunction(v => v.totalSevere)),
                     format: a => WebApp.MathUtils.round(a, 1) + "%",
                     reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere),
                     description: $string("% [indicator] $(over-severe)")
@@ -2679,7 +2672,7 @@ var WebApp;
                     id: "test",
                     name: $string("$(tested)"),
                     validFor: ["region", "country"],
-                    compute: new GeoPlot.DoubleFactorFunction((i, f) => !i ? 0 : (i / f) * 100, new GeoPlot.SimpleIndicatorFunction(v => v.toatlTests)),
+                    compute: new GeoPlot.DoubleFactorFunction((i, f) => WebApp.MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new GeoPlot.SimpleIndicatorFunction(v => v.toatlTests)),
                     format: a => WebApp.MathUtils.round(a, 1) + "%",
                     reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
                     description: $string("% [indicator] $(over-tested)")
@@ -4347,7 +4340,7 @@ var WebApp;
                         if (!curView.validateId(areaId))
                             continue;
                         const factor = Math.abs(this.getFactorValue(i, areaId));
-                        if (!isNaN(factor) && factor > result && factor != Number.POSITIVE_INFINITY)
+                        if (!WebApp.MathUtils.isNaNOrNull(factor) && factor != Number.POSITIVE_INFINITY && factor > result)
                             result = factor;
                         if (factor != 0)
                             list.push(factor);
@@ -4595,7 +4588,7 @@ var WebApp;
                             else
                                 factor = factor / this.maxFactor();
                             factor = Math.min(1, Math.max(0, factor));
-                            if (isNaN(factor)) {
+                            if (WebApp.MathUtils.isNaNOrNull(factor)) {
                                 if (element.classList.contains("valid"))
                                     element.classList.remove("valid");
                                 element.style.removeProperty("fill");

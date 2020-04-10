@@ -1,12 +1,6 @@
 ﻿namespace WebApp.GeoPlot {
 
-    function sumNull(curValue: number, newValue: number): number {
-        if (isNaN(newValue))
-            return curValue;
-        if (isNaN(curValue))
-            return newValue;
-        return curValue + newValue;
-    }
+
 
     /****************************************/
 
@@ -23,7 +17,7 @@
             let result = this._value(main, area);
             if (exMain) {
                 for (var i in exMain)
-                    result = sumNull(result, -this.value(exMain[i], exDelta[i], null, null, area));
+                    result = MathUtils.sumNull(result, -this.value(exMain[i], exDelta[i], null, null, area));
             }
             return result;
         }
@@ -91,7 +85,7 @@
         value(main: TData[], delta: TData[], exMain: TData[][], exDelta: TData[][], area: IGeoArea, indicator: IIndicatorFunction<TData>): number {
             let curValue: number;
             for (var i in main) 
-                curValue = sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
+                curValue = MathUtils.sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
             return this._value(curValue, main[0], area);
         }
     }
@@ -113,8 +107,8 @@
             let curValue: number;
             let curFactor: number;
             for (var i in main) {
-                curValue = sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
-                curFactor = sumNull(curFactor, this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area));
+                curValue = MathUtils.sumNull(curValue, indicator.value(main[i], delta[i], exMain[i], exDelta[i], area));
+                curFactor = MathUtils.sumNull(curFactor, this._factor.value(main[i], delta[i], exMain[i], exDelta[i], area));
             }
             return this._value(curValue, curFactor);
         }
