@@ -11,7 +11,10 @@
   },
   "compileOnSave": true,
   "references": [
-    { "path": "../Eusoft/WebApp/src/Eusoft.WebApp/Scripts/core" }
+    {
+      "path": "../Eusoft/WebApp/src/Eusoft.WebApp/",
+      "prepend": true
+    }
   ],
   
   "include": [

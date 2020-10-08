@@ -34,5 +34,7 @@ namespace GeoPlot.Coronavirus.Entities
         public int? totale_casi;
 
         public int? tamponi;
+
+        public int? casi_testati;
     }
 }

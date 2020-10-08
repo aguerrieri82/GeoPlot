@@ -360,8 +360,12 @@
 
         protected upgradeSource(source: SerieSource): SerieSource{
 
+            if (!source.type)
+                source.type = "geoplot";
+
             if (source.type == "geoplot") {
-                this.upgradeAreaId(source.areaId);
+                
+                source.areaId = this.upgradeAreaId(source.areaId);
                 if (source.exeludedAreaIds)
                     for (let i = 0; i < source.exeludedAreaIds.length; i++) 
                         source.exeludedAreaIds[i] = this.upgradeAreaId(source.exeludedAreaIds[i]);

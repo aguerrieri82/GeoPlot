@@ -66,7 +66,7 @@
                                 </div>
                                 <div class="summary-field">
                                     <label data-bind="attr: {title: factorDescription}" string="$(factor)"></label>
-                                    <div data-bind="text: currentArea().factor"></div>
+                                    <div data-bind="text: selectedFactor().format(currentArea().factor())"></div>
                                 </div>
                             </div>
                             <div class="chart" data-bind="css: {zoom: isZoomChart(), 'z-depth-3': isZoomChart()}">
@@ -211,7 +211,7 @@
                                         <td data-bind="text: formatNumber(indicator())"></td>
                                         <!--ko if: $parent.selectedFactor().id != 'none'-->
                                         <td><span data-bind="text: reference"></span></td>
-                                        <td><span data-bind="text: factor"></span></td>
+                                        <td><span data-bind="text: $parent.selectedFactor().format(factor())"></span></td>
                                         <!--/ko-->
                                     </tr>
                                 </tbody>

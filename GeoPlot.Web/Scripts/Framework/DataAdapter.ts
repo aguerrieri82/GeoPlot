@@ -229,6 +229,9 @@
 
             for (let row of rows) {
 
+                if (row.trim().length == 0)
+                    continue;
+
                 for (let item of items) {
 
                     if (stats[item] === false)

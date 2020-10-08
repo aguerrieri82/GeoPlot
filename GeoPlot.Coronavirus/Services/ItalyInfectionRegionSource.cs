@@ -39,7 +39,8 @@ namespace GeoPlot.Coronavirus
                     TotalHealed = row.dimessi_guariti,
                     TotalHospedalized = row.ricoverati_con_sintomi,
                     TotalSevere = row.terapia_intensiva,
-                    ToatlTests = row.tamponi
+                    ToatlTests = row.tamponi,
+                    TotalCaseTested = row.casi_testati
                 }
             };
         }

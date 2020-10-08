@@ -11,6 +11,7 @@ namespace WebApp.GeoPlot {
         totalHospedalized: number;
         totalHealed: number;
         toatlTests: number;
+        totalCaseTested: number;
         historicDeaths: Dictionary<number>;
     }
 
@@ -29,6 +30,7 @@ namespace WebApp.GeoPlot {
             totalHospedalized: undefined,
             totalPositive: undefined,
             totalSevere: undefined,
+            totalCaseTested: undefined,
         },
         indicators: [
             {
@@ -93,6 +95,15 @@ namespace WebApp.GeoPlot {
                 colorDark: "#01579b",
                 showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.toatlTests)
+            },
+            {
+                id: "totalCaseTested",
+                name: $string("$(caseTested)"),
+                validFor: ["region", "country"],
+                colorLight: "#03a9f4",
+                colorDark: "#01579b",
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a => a.totalCaseTested)
             },
             {
                 id: "surface",
@@ -252,7 +263,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalPositive)),
                 format: a => MathUtils.round(a, 1) + "%",
-                reference: (v, a) => !v.totalPositive ? "N/A" : formatNumber(v.totalPositive),
+                reference: (v, a) => formatNumber(v.totalPositive),
                 description: $string("% [indicator] $(over-total-positive)")
             },
             {
@@ -261,7 +272,7 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalSevere)),
                 format: a => MathUtils.round(a, 1) + "%",
-                reference: (v, a) => !v.totalSevere ? "N/A" : formatNumber(v.totalSevere),
+                reference: (v, a) => formatNumber(v.totalSevere),
                 description: $string("% [indicator] $(over-severe)")
             },
             {
@@ -270,7 +281,25 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country"],
                 compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.toatlTests)),
                 format: a => MathUtils.round(a, 1) + "%",
-                reference: (v, a) => !v.toatlTests ? "N/A" : formatNumber(v.toatlTests),
+                reference: (v, a) => formatNumber(v.toatlTests),
+                description: $string("% [indicator] $(over-tested)")
+            },
+            {
+                id: "caseTested",
+                name: $string("$(caseTested)"),
+                validFor: ["region", "country"],
+                compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.totalCaseTested)),
+                format: a => MathUtils.round(a, 1) + "%",
+                reference: (v, a) => formatNumber(v.totalCaseTested),
+                description: $string("% [indicator] $(over-case-tested)")
+            },
+            {
+                id: "death2019Perc",
+                name: $string("$(total-death) +60 (2019)"),
+                validFor: ["details"],
+                compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.historicDeaths[2019])),
+                format: a => MathUtils.isNaNOrNull(a) ? "N/A" : (a > 0 ? "+" : "") + MathUtils.round(a, 1) + "%",
+                reference: (v, a) => formatNumber(v.historicDeaths[2019]),
                 description: $string("% [indicator] $(over-tested)")
             },
         ]

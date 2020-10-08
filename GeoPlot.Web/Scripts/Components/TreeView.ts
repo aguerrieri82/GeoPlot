@@ -319,7 +319,8 @@
 
         select(expand = false) {
             this.isSelected(true);
-            this._element.focus();
+            if (this._element)
+                this._element.focus();
             if (expand) {
                 let curNode: TreeNode<ITreeItem> = this;
                 while (curNode) {

@@ -97,7 +97,7 @@
 
         progress(progress: IOperationProgress | string) {
 
-            if (ObjectUtils.isString(progress))
+            if (TypeCheck.isString(progress))
                 progress = <IOperationProgress>{ message: progress };
 
             if (this.current)
@@ -108,7 +108,7 @@
 
         begin(configOrMessge: IOperationConfig | string): IOperation {
 
-            if (ObjectUtils.isString(configOrMessge))
+            if (TypeCheck.isString(configOrMessge))
                 configOrMessge = <IOperationProgress>{ message: configOrMessge };
 
             let operation = new BaseOperation(configOrMessge);

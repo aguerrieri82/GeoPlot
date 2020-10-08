@@ -706,8 +706,11 @@
 
             const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
             let text = "";
-            for (let i = 0; i < data.length; i++)
-                text += DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + MathUtils.round(data[i].y, 1) + "\n";
+            for (let i = 0; i < data.length; i++) {
+                if (i > 0)
+                    text += "\n";
+                text += DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + MathUtils.round(data[i].y, 1);
+            }
 
             DomUtils.copyText(text);
 
@@ -934,7 +937,7 @@
         }
 
 
-        /****************************************/
+        /****************************************/top
 
         protected nextFrame() {
 
@@ -946,7 +949,7 @@
             else
                 this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
 
-            setTimeout(() => this.nextFrame(), 1000);
+            setTimeout(() => this.nextFrame(), 200);
         }
 
         /****************************************/
@@ -1249,7 +1252,7 @@
 
             value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
 
-            value.factor(MathUtils.round(this.getFactorValue(dayNumber, area), 1));
+            value.factor(this.getFactorValue(dayNumber, area));
 
             value.reference(this.selectedFactor().reference(value.data(), area));
 
@@ -1320,7 +1323,7 @@
                 item.topAreas = linq(day.values).select(a => ({
                     factor: this.getFactorValue(i, a.key),
                     value: a
-                }))
+                })).where(a=> !MathUtils.isNaNOrNull(a.factor))
                     .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
 
                         const area = new AreaViewModel();
