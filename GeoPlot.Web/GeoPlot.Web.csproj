@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp5.0</TargetFramework>
+    <TypeScriptToolsVersion>Latest</TypeScriptToolsVersion>
+    <TypeScriptBuildMode>False</TypeScriptBuildMode>
     <SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</SourceRevisionId>
     <UserSecretsId>d7fa46ba-1f45-4fbc-b376-bca9f7b05777</UserSecretsId>
   </PropertyGroup>
@@ -12,24 +14,6 @@
   </ItemGroup>
 
 
-  <ItemGroup>
-    <Content Remove="wwwroot\states\**" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <None Remove="Scripts\Components\BaseStudioItem.ts" />
-    <None Remove="Scripts\Components\ColorPicker.ts" />
-    <None Remove="Scripts\Components\GraphContext.ts" />
-    <None Remove="Scripts\Components\SplitEnumerator.ts" />
-    <None Remove="Scripts\Components\StudioProject.ts" />
-    <None Remove="Scripts\Components\StudioRegression.ts" />
-    <None Remove="Scripts\Components\StudioSerie.ts" />
-    <None Remove="Scripts\Components\TreeView.ts" />
-    <None Remove="Scripts\Framework\DataAdapter.ts" />
-    <None Remove="Scripts\Framework\Operation.ts" />
-  </ItemGroup>
-
 
   <ItemGroup>
     <_ContentIncludedByDefault Remove="wwwroot\css\theme.min.css" />
@@ -38,7 +22,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.0-rc.1.20451.17" />
-    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.0.3">
+    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.1.0-beta">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
