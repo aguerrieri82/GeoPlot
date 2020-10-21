@@ -40,7 +40,7 @@ namespace GeoPlot.Coronavirus
                     TotalHospedalized = row.ricoverati_con_sintomi,
                     TotalSevere = row.terapia_intensiva,
                     ToatlTests = row.tamponi,
-                    TotalCaseTested = row.casi_testati
+                    TotalCaseTested = (int?)row.casi_testati
                 }
             };
         }

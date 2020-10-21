@@ -286,12 +286,15 @@ namespace WebApp.GeoPlot {
 
         }
 
+        get mainExpression(): string {
+            return undefined;
+        }
+
         /****************************************/
 
         folderId: string;
         time = ko.observable(0);
         optionsTemplateName: string;
         parameters = ko.observableArray<ParameterViewModel>();
-        readonly mainExpression: string;
     }
 }

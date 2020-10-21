@@ -959,7 +959,7 @@ var WebApp;
                 const request = this.openRead().get(key);
                 request.onerror = ev => rej();
                 request.onsuccess = ev => {
-                    res(JSON.parse(request.result));
+                    res(!request.result ? null : JSON.parse(request.result));
                 };
             });
         }
@@ -3793,7 +3793,12 @@ var WebApp;
             return this._startupArgs;
         }
         get isSelfHosted() {
-            return window.parent != window && window.parent["WebApp"] && window.parent["WebApp"]["app"];
+            try {
+                return window.parent != window && window.parent["WebApp"] && window.parent["WebApp"]["app"];
+            }
+            catch (e) {
+                return false;
+            }
         }
         get hasMain() {
             return false;
@@ -8675,7 +8680,9 @@ var WebApp;
                                 content: this.createItemView(item),
                                 removeAsync: () => __awaiter(this, void 0, void 0, function* () {
                                     this.items.remove(itemView);
-                                    this.editValue.splice(this.editValue.indexOf(this.itemsSource.getItemValue(itemView.item)), 1);
+                                    let value = this.itemsSource.getItemValue(itemView.item);
+                                    let index = WebApp.linq(this.editValue).indexOf(a => this.itemsSource.equals(a, value));
+                                    this.editValue.splice(index, 1);
                                     yield this.notifyEditValueChangedAsync();
                                 })
                             });
@@ -11929,6 +11936,9 @@ var WebApp;
             }
             /****************************************/
             updateColor() {
+            }
+            get mainExpression() {
+                return undefined;
             }
         }
         GeoPlot.BaseStudioItem = BaseStudioItem;
