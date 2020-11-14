@@ -274,7 +274,7 @@ namespace GeoPlot.Web.Controllers
             if (System.IO.File.Exists(cacheFile))
                 return JsonConvert.DeserializeObject<GeoAreaViewSet>(await System.IO.File.ReadAllTextAsync(cacheFile));
 
-            var source = new ItalyGeoSource(_env.WebRootPath + "\\data\\province_demo.csv", _env.WebRootPath + "\\data\\province_superficie.csv");
+            var source = new ItalyGeoSource(_env.WebRootPath + "\\data\\province_demo.csv", _env.WebRootPath + "\\data\\province_superficie.csv", _env.WebRootPath + "\\data\\region-demo.csv");
 
             var data = await source.LoadAsync();
 

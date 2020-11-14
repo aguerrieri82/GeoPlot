@@ -7644,6 +7644,10 @@ var WebApp;
             this.prop("displayValue");
             this.prop("value").subscribe((value, old) => this.onValueChanged(value, old));
             this.prop("name").subscribe(() => this.updateUid());
+            if (config.converter) {
+                this.editToValue = config.converter.convertFrom;
+                this.valueToEdit = config.converter.convertTo;
+            }
             this.updateUid();
         }
         updateUid() {
@@ -8221,7 +8225,7 @@ var WebApp;
     WebApp.ItemsEditorItemView = ItemsEditorItemView;
     class ItemsEditor extends WebApp.BaseEditor {
         constructor(config) {
-            var _a;
+            var _a, _b, _c;
             super(Object.assign({ template: "ItemsEditor" }, config));
             this._changesCount = 0;
             this._isUpdating = 0;
@@ -8251,9 +8255,9 @@ var WebApp;
             this.bindConfig("editActionLabel", config);
             if (config) {
                 if (!config.editActionLabel)
-                    this.editActionLabel = WebApp.Format.action("edit-item", this.itemsSource.displayName);
+                    this.editActionLabel = WebApp.Format.action("edit-item", (_a = this.itemsSource) === null || _a === void 0 ? void 0 : _a.displayName);
                 if (!config.removeActionLabel)
-                    this.removeActionLabel = WebApp.Format.action("remove-item", this.itemsSource.displayName);
+                    this.removeActionLabel = WebApp.Format.action("remove-item", (_b = this.itemsSource) === null || _b === void 0 ? void 0 : _b.displayName);
                 if (config.createItemAddEditor)
                     this.createItemAddEditor = config.createItemAddEditor;
                 if (config.createItemUpdateEditor)
@@ -8276,7 +8280,7 @@ var WebApp;
                 name: "add-item",
                 icon: "fas fa-plus",
                 operation: WebApp.OperationType.Local,
-                displayName: (_a = config === null || config === void 0 ? void 0 : config.addActionLabel) !== null && _a !== void 0 ? _a : WebApp.Format.action("add-item", this.itemsSource.displayName),
+                displayName: (_c = config === null || config === void 0 ? void 0 : config.addActionLabel) !== null && _c !== void 0 ? _c : WebApp.Format.action("add-item", this.itemsSource.displayName),
                 executeAsync: () => __awaiter(this, void 0, void 0, function* () { return yield this.addAsync(); })
             });
             if (this.value)
@@ -13829,6 +13833,15 @@ var WebApp;
                     description: $string("% [indicator] $(over-total-positive)")
                 },
                 {
+                    id: "currentPositive",
+                    name: $string("$(current-positive)"),
+                    validFor: ["region", "country"],
+                    compute: new GeoPlot.DoubleFactorFunction((i, f) => WebApp.MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new GeoPlot.SimpleIndicatorFunction(v => v.currentPositive)),
+                    format: a => WebApp.MathUtils.round(a, 1) + "%",
+                    reference: (v, a) => formatNumber(v.totalPositive),
+                    description: $string("% [indicator] $(over-current-positive)")
+                },
+                {
                     id: "severe",
                     name: $string("$(severe)"),
                     validFor: ["region", "country"],
@@ -15529,6 +15542,8 @@ var WebApp;
                     const day = this._calculator.data.days[i];
                     for (let areaId in day.values) {
                         if (!curView.validateId(areaId))
+                            continue;
+                        if (!this._calculator.geo.areas[areaId])
                             continue;
                         const factor = Math.abs(this.getFactorValue(i, areaId));
                         if (!WebApp.MathUtils.isNaNOrNull(factor) && factor != Number.POSITIVE_INFINITY && factor > result)

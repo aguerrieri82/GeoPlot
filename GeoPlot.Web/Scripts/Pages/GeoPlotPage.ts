@@ -1085,6 +1085,9 @@
                 for (let areaId in day.values) {
                     if (!curView.validateId(areaId))
                         continue;
+                    if (!this._calculator.geo.areas[areaId])
+                        continue;
+
                     const factor = Math.abs(this.getFactorValue(i, areaId));
                     if (!MathUtils.isNaNOrNull(factor) && factor != Number.POSITIVE_INFINITY && factor > result)
                         result = factor;

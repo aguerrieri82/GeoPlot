@@ -12,11 +12,13 @@ namespace GeoPlot.Core
     {
         string _districtDemoSrc;
         string _districtSurfaceDemoSrc;
+        string _regionDemoSrc;
 
-        public ItalyGeoSource(string districtDemoSrc, string districtSurfaceDemoSrc)
+        public ItalyGeoSource(string districtDemoSrc, string districtSurfaceDemoSrc, string regionDemoSrc)
         {
             _districtDemoSrc = districtDemoSrc;
             _districtSurfaceDemoSrc = districtSurfaceDemoSrc;
+            _regionDemoSrc = regionDemoSrc;
         }
 
 
@@ -25,6 +27,7 @@ namespace GeoPlot.Core
             var district = (await new ItalyDistrictSource().LoadAsync()).ToArray();
             var districtDemo = (await new ItalyDistrictDemographySource(_districtDemoSrc).LoadAsync()).GroupBy(a=> a.DistrictId).ToDictionary(a=> a.Key, a=> a.ToArray());
             var districtSurface = (await new ItalyDistrictSurfaceSource(_districtSurfaceDemoSrc).LoadAsync()).ToDictionary(a => a.AreaId, a => a.Value);
+            var regionDemo = (await new ItalyRegionDemographySource(_regionDemoSrc).LoadAsync()).ToDictionary(a => a.Region, a => a.Population);
 
             var result = new List<GeoAreaView>();
             /*

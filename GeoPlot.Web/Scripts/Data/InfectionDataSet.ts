@@ -267,6 +267,15 @@ namespace WebApp.GeoPlot {
                 description: $string("% [indicator] $(over-total-positive)")
             },
             {
+                id: "currentPositive",
+                name: $string("$(current-positive)"),
+                validFor: ["region", "country"],
+                compute: new DoubleFactorFunction((i, f) => MathUtils.isNaNOrNull(i) ? undefined : (i / f) * 100, new SimpleIndicatorFunction(v => v.currentPositive)),
+                format: a => MathUtils.round(a, 1) + "%",
+                reference: (v, a) => formatNumber(v.totalPositive),
+                description: $string("% [indicator] $(over-current-positive)")
+            },
+            {
                 id: "severe",
                 name: $string("$(severe)"),
                 validFor: ["region", "country"],
