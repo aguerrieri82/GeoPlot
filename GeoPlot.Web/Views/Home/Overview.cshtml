@@ -86,6 +86,14 @@
                                     <canvas id="areaGraph">
                                     </canvas>
                                 </div>
+                                <div>
+                                    <!--ko foreach: dataRanges-->
+                                    <label class="option-button">
+                                        <input name="data-range" type="radio" data-bind="checked: $parent.dataRange, checkedValue: $data" />
+                                        <span data-bind="text: $string(name)"></span>
+                                    </label>
+                                    <!--/ko-->
+                                </div>
                             </div>
                         </div>
                         <div class="card-section expandable indicators">

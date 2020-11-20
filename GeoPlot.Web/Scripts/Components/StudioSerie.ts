@@ -425,7 +425,7 @@
                 if (!this._graphCtx.serieCalculator) {
                     M.toast({ html: $string("$(msg-downloading-data)") })
                     const model = await Api.loadStudioData();
-                    this._graphCtx.serieCalculator = new IndicatorCalculator(model.data, InfectionDataSet, model.geo);
+                    this._graphCtx.serieCalculator = new IndicatorCalculator(new RangeDayAreaDataSet( model.data), InfectionDataSet, model.geo);
                 }
 
                 this.importValues(this._graphCtx.serieCalculator.getSerie(<IDayAreaSerieSource>this.source));

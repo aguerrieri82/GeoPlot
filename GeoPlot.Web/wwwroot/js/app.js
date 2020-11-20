@@ -11356,7 +11356,7 @@ var WebApp;
             getDataAtDay(number, curAreaId) {
                 if (number < 0)
                     return undefined;
-                const day = this.data.days[number];
+                const day = this.data.get(number);
                 if (day) {
                     const data = day.values[curAreaId];
                     if (data)
@@ -11424,12 +11424,12 @@ var WebApp;
                 if (source.groupSize > 1) {
                     let count = source.groupSize;
                     let group = [];
-                    for (let i = 0 + source.startDay; i < this.data.days.length; i++) {
+                    this.data.days.skip(source.startDay).foreach((day, i) => {
                         group.push(i);
                         count--;
                         if (count == 0) {
                             const item = {
-                                x: (source.xAxis == "date" ? new Date(this.data.days[i].date) : i),
+                                x: (source.xAxis == "date" ? new Date(day.date) : i),
                                 y: this.getFactorValue({
                                     dayNumberOrGroup: source.isDelta ? group : i,
                                     areaOrId: source.areaId,
@@ -11443,12 +11443,12 @@ var WebApp;
                             count = source.groupSize;
                             group = [];
                         }
-                    }
+                    });
                 }
                 else {
-                    for (let i = 0 + source.startDay; i < this.data.days.length; i++) {
+                    this.data.days.skip(source.startDay).foreach((day, i) => {
                         const item = {
-                            x: source.xAxis == "date" ? new Date(this.data.days[i].date) : i,
+                            x: source.xAxis == "date" ? new Date(day.date) : i,
                             y: this.getFactorValue({
                                 dayNumberOrGroup: i,
                                 areaOrId: source.areaId,
@@ -11459,7 +11459,7 @@ var WebApp;
                             })
                         };
                         result.push(item);
-                    }
+                    });
                 }
                 return result;
             }
@@ -13480,7 +13480,7 @@ var WebApp;
                         if (!this._graphCtx.serieCalculator) {
                             M.toast({ html: $string("$(msg-downloading-data)") });
                             const model = yield GeoPlot.Api.loadStudioData();
-                            this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(model.data, GeoPlot.InfectionDataSet, model.geo);
+                            this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(new GeoPlot.RangeDayAreaDataSet(model.data), GeoPlot.InfectionDataSet, model.geo);
                         }
                         this.importValues(this._graphCtx.serieCalculator.getSerie(this.source));
                         this._graphCtx.updateTable(this.getGraphId("table"), this.values);
@@ -14710,6 +14710,36 @@ var WebApp;
 (function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
+        class RangeDayAreaDataSet {
+            constructor(data) {
+                this._days = data.days;
+            }
+            get days() {
+                var _a, _b;
+                const startIndex = (_a = this.startDay) !== null && _a !== void 0 ? _a : 0;
+                const endIndex = (_b = this.endDay) !== null && _b !== void 0 ? _b : this._days.length - 1;
+                return WebApp.linq(this._days).skip(startIndex).take(endIndex - startIndex + 1);
+            }
+            get(index) {
+                var _a;
+                index = typeof index == "string" ? parseInt(index) : index;
+                return this._days[((_a = this.startDay) !== null && _a !== void 0 ? _a : 0) + index];
+            }
+            get count() {
+                var _a, _b;
+                const startIndex = (_a = this.startDay) !== null && _a !== void 0 ? _a : 0;
+                const endIndex = (_b = this.endDay) !== null && _b !== void 0 ? _b : this._days.length - 1;
+                return endIndex - startIndex + 1;
+            }
+        }
+        GeoPlot.RangeDayAreaDataSet = RangeDayAreaDataSet;
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+/// <reference path="../data/rangedayareadataset.ts" />
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
         /****************************************/
         class IndicatorViewModel {
             constructor() {
@@ -14943,6 +14973,22 @@ var WebApp;
                         label: "DPCM 25 Marzo (maggiori sanzioni)"
                     }
                 };
+                this._dataRanges = [
+                    {
+                        id: 0,
+                        name: "$(all)",
+                    },
+                    {
+                        id: 0,
+                        name: "1° $(wave)",
+                        endDay: new Date(2020, 7, 31)
+                    },
+                    {
+                        id: 0,
+                        name: "2° $(wave)",
+                        startDay: new Date(2020, 8, 1)
+                    },
+                ];
                 /****************************************/
                 this.dayNumber = ko.observable(0);
                 this.totalDays = ko.observable(0);
@@ -14963,27 +15009,37 @@ var WebApp;
                 this.isShowEnvData = ko.observable(false);
                 this.groupSize = ko.observable(1);
                 this.startDay = ko.observable(0);
+                this.dataRange = ko.observable();
+                this.days = ko.observable();
                 this.isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
                 this.groupDays = [1, 2, 3, 4, 5, 6, 7];
                 this.factorDescription = ko.observable();
-                this._mainData = model.data;
+                this._mainData = new GeoPlot.RangeDayAreaDataSet(model.data);
                 this._mainGeo = model.geo;
                 this._debugMode = model.debugMode;
                 this._calculator = new GeoPlot.IndicatorCalculator(this._mainData, this._dataSet, this._mainGeo);
-                this.totalDays(this._calculator.data.days.length - 1);
+                this.dataRange.subscribe(value => {
+                    const findDayIndex = (date) => {
+                        return this._mainData.days.indexOf(a => WebApp.DateUtils.parse(a.date).getTime() >= date.getTime());
+                    };
+                    this._mainData.startDay = undefined;
+                    this._mainData.endDay = undefined;
+                    this._mainData.startDay = value.startDay ? findDayIndex(value.startDay) : undefined;
+                    this._mainData.endDay = value.endDay ? findDayIndex(value.endDay) : undefined;
+                    this.updateDays();
+                    this.dayNumber(this._mainData.count - 1);
+                });
                 this.dayNumber.subscribe(value => {
-                    if (value != this._calculator.data.days.length - 1)
+                    if (value != this._calculator.data.count - 1)
                         this.tipManager.markAction("dayChanged");
                     this.updateDayData();
-                    this._specialDates.current.date = new Date(this._calculator.data.days[value].date);
+                    this._specialDates.current.date = new Date(this._calculator.data.get(value).date);
                     this.updateChart();
                 });
                 this._mapSvg = document.getElementsByTagName("svg").item(0);
                 this._mapSvg.addEventListener("click", e => this.onMapClick(e, false));
                 this._mapSvg.addEventListener("dblclick", e => this.onMapClick(e, true));
-                this.days = [];
-                for (var i = 0; i < this._calculator.data.days.length; i++)
-                    this.days.push({ number: i, value: new Date(this._calculator.data.days[i].date), text: WebApp.DateUtils.format(this._calculator.data.days[i].date, $string("$(date-format-short)")) });
+                this.updateDays();
                 const areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
                 areaTabs.options.onShow = (el) => {
                     this.setViewMode(el.dataset["viewMode"]);
@@ -15080,7 +15136,7 @@ var WebApp;
             }
             /****************************************/
             isDefaultState(state) {
-                return (!state.day || state.day == this._calculator.data.days.length - 1) &&
+                return (!state.day || state.day == this._calculator.data.count - 1) &&
                     (!state.view || state.view == "region") &&
                     !state.area &&
                     (!state.indicator || state.indicator == "totalPositive") &&
@@ -15089,10 +15145,11 @@ var WebApp;
                     !state.dayDelta &&
                     !state.logScale &&
                     !state.showEnvData &&
+                    state.dateRangeId == 0,
                     (!state.groupSize || state.groupSize == 1) &&
-                    (state.startDay == undefined || state.startDay == 0) &&
-                    (!state.excludedArea) &&
-                    (!state.detailsArea);
+                        (state.startDay == undefined || state.startDay == 0) &&
+                        (!state.excludedArea) &&
+                        (!state.detailsArea);
             }
             /****************************************/
             loadState(state) {
@@ -15101,6 +15158,10 @@ var WebApp;
                 const viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
                 viewTabs.select(GeoPlot.ViewModes[state.view].tab);
                 document.body.scrollTop = 0;
+                if (!state.dateRangeId)
+                    this.dataRange(this.dataRanges[0]);
+                else
+                    this.dataRange(WebApp.linq(this.dataRanges).first(a => a.id == state.dateRangeId));
                 if (state.logScale != undefined)
                     this.isLogScale(state.logScale);
                 if (state.groupSize)
@@ -15115,7 +15176,7 @@ var WebApp;
                     this.autoMaxFactor(false);
                     this.maxFactor(state.maxFactor);
                 }
-                this.dayNumber(state.day != undefined ? state.day : this._calculator.data.days.length - 1);
+                this.dayNumber(state.day != undefined ? state.day : this._calculator.data.count - 1);
                 if (state.excludedArea) {
                     this._execludedArea.clear();
                     for (let areaId of state.excludedArea)
@@ -15138,7 +15199,7 @@ var WebApp;
                     factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
                     dayDelta: this.isDayDelta() ? true : undefined,
                     maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
-                    day: this.dayNumber() == this._calculator.data.days.length - 1 ? undefined : this.dayNumber(),
+                    day: this.dayNumber() == this._calculator.data.count - 1 ? undefined : this.dayNumber(),
                     area: this.selectedArea ? this.selectedArea.id : undefined,
                     groupSize: this.groupSize() == 1 ? undefined : this.groupSize(),
                     startDay: this.startDay() == 0 ? undefined : this.startDay(),
@@ -15146,6 +15207,7 @@ var WebApp;
                     excludedArea: this._execludedArea.size > 0 ? WebApp.linq(this._execludedArea.keys()).toArray() : undefined,
                     showEnvData: this.isShowEnvData() ? true : undefined,
                     detailsArea: this.detailsArea() ? this.detailsArea().id : undefined,
+                    dateRangeId: this.dataRange().id
                 };
             }
             /****************************************/
@@ -15283,7 +15345,6 @@ var WebApp;
                             areaId: this.selectedArea.id,
                             indicatorId: this.selectedIndicator().id,
                             xAxis: "dayNumber",
-                            startDay: this.startDay(),
                             exeludedAreaIds: WebApp.linq(this._execludedArea.keys()).toArray(),
                             factorId: this.selectedFactor().id,
                             groupSize: this.groupSize(),
@@ -15299,7 +15360,7 @@ var WebApp;
             }
             /****************************************/
             play() {
-                if (this.dayNumber() == this._calculator.data.days.length - 1)
+                if (this.dayNumber() == this._calculator.data.count - 1)
                     this.dayNumber(0);
                 this.isPlaying(true);
                 this.nextFrame();
@@ -15318,14 +15379,13 @@ var WebApp;
                     if (this._detailsGeo && this._detailsData) {
                         this._calculator.geo = this._detailsGeo;
                         this._calculator.data = this._detailsData;
-                        this.totalDays(this._calculator.data.days.length - 1);
                     }
                 }
                 else {
                     this._calculator.geo = this._mainGeo;
                     this._calculator.data = this._mainData;
                 }
-                this.totalDays(this._calculator.data.days.length - 1);
+                this.totalDays(this._calculator.data.count - 1);
                 if (mode != "region")
                     this.tipManager.markAction("viewChanged", mode);
                 this.viewMode(mode);
@@ -15399,13 +15459,13 @@ var WebApp;
             }
             /****************************************/
             computeStartDayForGroup() {
-                let totDays = this.days.length - this.startDay();
+                let totDays = this._calculator.data.count - this.startDay();
                 const module = (totDays % this.groupSize());
                 if (module != 0) {
                     const invModule = this.groupSize() - module;
                     if (this.startDay() - invModule >= 0)
                         this.startDay(this.startDay() - invModule);
-                    else if (this.startDay() + module < this.days.length - 1)
+                    else if (this.startDay() + module < this._calculator.data.count - 1)
                         this.startDay(this.startDay() + module);
                     M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
                 }
@@ -15441,7 +15501,7 @@ var WebApp;
             nextFrame() {
                 if (!this.isPlaying())
                     return;
-                if (this.dayNumber() >= this._calculator.data.days.length - 1)
+                if (this.dayNumber() >= this._calculator.data.count - 1)
                     this.pause();
                 else
                     this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
@@ -15538,8 +15598,7 @@ var WebApp;
                 let curView = GeoPlot.ViewModes[this.viewMode()];
                 let count = 0;
                 let list = [];
-                for (let i = 0; i < this._calculator.data.days.length; i++) {
-                    const day = this._calculator.data.days[i];
+                this._calculator.data.days.foreach((day, i) => {
                     for (let areaId in day.values) {
                         if (!curView.validateId(areaId))
                             continue;
@@ -15551,7 +15610,7 @@ var WebApp;
                         if (factor != 0)
                             list.push(factor);
                     }
-                }
+                });
                 /*
                 list = linq(list).orderBy(a => a).toArray();
                 var index = Math.floor(list.length / 2);
@@ -15630,6 +15689,13 @@ var WebApp;
                 });
             }
             /****************************************/
+            updateDays() {
+                const days = [];
+                this._calculator.data.days.foreach((day, i) => days.push({ number: i, value: new Date(day.date), text: WebApp.DateUtils.format(day.date, $string("$(date-format-short)")) }));
+                this.days(days);
+                this.totalDays(this._calculator.data.count - 1);
+            }
+            /****************************************/
             updateChart() {
                 if (!this.selectedIndicator() || !this.currentArea() || !this.selectedFactor())
                     return;
@@ -15700,7 +15766,7 @@ var WebApp;
                             var svgMap = document.querySelector(".details-map svg");
                             svgMap.addEventListener("click", e => this.onMapClick(e, false));
                             svgMap.querySelector("#group_municipality").classList.add("active");
-                            this._detailsData = mainData.data;
+                            this._detailsData = new GeoPlot.RangeDayAreaDataSet(mainData.data);
                             this._detailsGeo = mainData.geo;
                             this.setViewMode("details", true);
                         }
@@ -15713,8 +15779,7 @@ var WebApp;
             /****************************************/
             updateTopAreas() {
                 this._daysData = [];
-                for (let i = 0; i < this._calculator.data.days.length; i++) {
-                    const day = this._calculator.data.days[i];
+                this._calculator.data.days.foreach((day, i) => {
                     const item = {};
                     const isInArea = GeoPlot.ViewModes[this.viewMode()].validateId;
                     item.topAreas = WebApp.linq(day.values).select(a => ({
@@ -15729,12 +15794,12 @@ var WebApp;
                         return area;
                     }).take(25).toArray();
                     this._daysData.push(item);
-                }
+                });
                 this.topAreas(this._daysData[this.dayNumber()].topAreas);
             }
             /****************************************/
             updateDayData() {
-                const day = this._calculator.data.days[this.dayNumber()];
+                const day = this._calculator.data.get(this.dayNumber());
                 if (!day) {
                     console.warn("No day data: " + this.dayNumber());
                     return;
@@ -15759,7 +15824,7 @@ var WebApp;
             }
             /****************************************/
             clearMap() {
-                const day = this._calculator.data.days[this.dayNumber()];
+                const day = this._calculator.data.get(this.dayNumber());
                 if (!day || !day.values) {
                     console.warn("No day data: " + this.dayNumber());
                     return;
@@ -15777,7 +15842,7 @@ var WebApp;
                 if (!this.selectedIndicator() || !this.selectedFactor())
                     return;
                 if (this.viewMode() != "country") {
-                    const day = this._calculator.data.days[this.dayNumber()];
+                    const day = this._calculator.data.get(this.dayNumber());
                     var indicator = this.selectedIndicator();
                     const gradient = indicator.gradient ? indicator.gradient : new WebApp.LinearGradient("#fff", indicator.colorDark);
                     for (const key in day.values) {
@@ -15820,6 +15885,9 @@ var WebApp;
                             element.style.fill = "#FFF";
                     });
                 }
+            }
+            get dataRanges() {
+                return this._dataRanges;
             }
         }
         GeoPlot.GeoPlotPage = GeoPlotPage;
