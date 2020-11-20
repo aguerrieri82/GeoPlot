@@ -11421,17 +11421,18 @@ var WebApp;
             /****************************************/
             getSerie(source) {
                 const result = [];
+                let index = source.startDay + (source.isDelta ? 1 : 0);
                 if (source.groupSize > 1) {
                     let count = source.groupSize;
                     let group = [];
-                    this.data.days.skip(source.startDay).foreach((day, i) => {
-                        group.push(i);
+                    this.data.days.skip(index).foreach((day) => {
+                        group.push(index);
                         count--;
                         if (count == 0) {
                             const item = {
-                                x: (source.xAxis == "date" ? new Date(day.date) : i),
+                                x: (source.xAxis == "date" ? new Date(day.date) : index),
                                 y: this.getFactorValue({
-                                    dayNumberOrGroup: source.isDelta ? group : i,
+                                    dayNumberOrGroup: source.isDelta ? group : index,
                                     areaOrId: source.areaId,
                                     factorId: source.factorId,
                                     indicatorId: source.indicatorId,
@@ -11443,14 +11444,15 @@ var WebApp;
                             count = source.groupSize;
                             group = [];
                         }
+                        index++;
                     });
                 }
                 else {
-                    this.data.days.skip(source.startDay).foreach((day, i) => {
+                    this.data.days.skip(index).foreach((day) => {
                         const item = {
-                            x: source.xAxis == "date" ? new Date(day.date) : i,
+                            x: source.xAxis == "date" ? new Date(day.date) : index,
                             y: this.getFactorValue({
-                                dayNumberOrGroup: i,
+                                dayNumberOrGroup: index,
                                 areaOrId: source.areaId,
                                 factorId: source.factorId,
                                 indicatorId: source.indicatorId,
@@ -11459,6 +11461,7 @@ var WebApp;
                             })
                         };
                         result.push(item);
+                        index++;
                     });
                 }
                 return result;

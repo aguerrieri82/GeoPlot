@@ -21,6 +21,7 @@
 
 
   <ItemGroup>
+    <PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.0-rc.1.20451.17" />
     <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.1.0-beta">
       <PrivateAssets>all</PrivateAssets>
@@ -36,10 +37,5 @@
     <ProjectReference Include="..\GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <TypeScriptCompile Update="Scripts\Components\TreeView.ts">
-      <SubType>Code</SubType>
-    </TypeScriptCompile>
-  </ItemGroup>
 
 </Project>
