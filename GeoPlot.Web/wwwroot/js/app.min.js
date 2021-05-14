@@ -13630,6 +13630,11 @@ var WebApp;
                 totalPositive: undefined,
                 totalSevere: undefined,
                 totalCaseTested: undefined,
+                newICU: undefined,
+                totalAntigenicPositive: undefined,
+                totalAntigenicTests: undefined,
+                totalMolecularPositive: undefined,
+                totalMolecularTests: undefined,
             },
             indicators: [
                 {
@@ -13640,6 +13645,24 @@ var WebApp;
                     validFor: ["region", "country", "district"],
                     showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalPositive)
+                },
+                {
+                    id: "totalAntigenicPositive",
+                    name: $string("$(antigenic-positive)"),
+                    colorLight: "#f44336",
+                    colorDark: "#b71c1c",
+                    validFor: ["region", "country"],
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalAntigenicPositive)
+                },
+                {
+                    id: "totalMolecularPositive",
+                    name: $string("$(molecular-positive)"),
+                    colorLight: "#f44336",
+                    colorDark: "#b71c1c",
+                    validFor: ["region", "country"],
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalMolecularPositive)
                 },
                 {
                     id: "currentPositive",
@@ -13667,6 +13690,15 @@ var WebApp;
                     colorDark: "#e65100",
                     showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalSevere)
+                },
+                {
+                    id: "newICU",
+                    name: $string("$(newICU)"),
+                    validFor: ["region", "country"],
+                    colorLight: "#ff9800",
+                    colorDark: "#e65100",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.newICU)
                 },
                 {
                     id: "totalHospedalized",
@@ -13703,6 +13735,24 @@ var WebApp;
                     colorDark: "#01579b",
                     showInFavorites: true,
                     compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalCaseTested)
+                },
+                {
+                    id: "totalMolecularTests",
+                    name: $string("$(molecularTests)"),
+                    validFor: ["region", "country"],
+                    colorLight: "#03a9f4",
+                    colorDark: "#01579b",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalMolecularTests)
+                },
+                {
+                    id: "totalAntigenicTests",
+                    name: $string("$(antigenicTests)"),
+                    validFor: ["region", "country"],
+                    colorLight: "#03a9f4",
+                    colorDark: "#01579b",
+                    showInFavorites: true,
+                    compute: new GeoPlot.SimpleIndicatorFunction(a => a.totalAntigenicTests)
                 },
                 {
                     id: "surface",
@@ -13882,6 +13932,35 @@ var WebApp;
                 },
             ]
         };
+    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
+})(WebApp || (WebApp = {}));
+var WebApp;
+(function (WebApp) {
+    var GeoPlot;
+    (function (GeoPlot) {
+        class RangeDayAreaDataSet {
+            constructor(data) {
+                this._days = data.days;
+            }
+            get days() {
+                var _a, _b;
+                const startIndex = (_a = this.startDay) !== null && _a !== void 0 ? _a : 0;
+                const endIndex = (_b = this.endDay) !== null && _b !== void 0 ? _b : this._days.length - 1;
+                return WebApp.linq(this._days).skip(startIndex).take(endIndex - startIndex + 1);
+            }
+            get(index) {
+                var _a;
+                index = typeof index == "string" ? parseInt(index) : index;
+                return this._days[((_a = this.startDay) !== null && _a !== void 0 ? _a : 0) + index];
+            }
+            get count() {
+                var _a, _b;
+                const startIndex = (_a = this.startDay) !== null && _a !== void 0 ? _a : 0;
+                const endIndex = (_b = this.endDay) !== null && _b !== void 0 ? _b : this._days.length - 1;
+                return endIndex - startIndex + 1;
+            }
+        }
+        GeoPlot.RangeDayAreaDataSet = RangeDayAreaDataSet;
     })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
 var WebApp;
@@ -14708,35 +14787,6 @@ var WebApp;
         }
     }
     WebApp.TipManager = TipManager;
-})(WebApp || (WebApp = {}));
-var WebApp;
-(function (WebApp) {
-    var GeoPlot;
-    (function (GeoPlot) {
-        class RangeDayAreaDataSet {
-            constructor(data) {
-                this._days = data.days;
-            }
-            get days() {
-                var _a, _b;
-                const startIndex = (_a = this.startDay) !== null && _a !== void 0 ? _a : 0;
-                const endIndex = (_b = this.endDay) !== null && _b !== void 0 ? _b : this._days.length - 1;
-                return WebApp.linq(this._days).skip(startIndex).take(endIndex - startIndex + 1);
-            }
-            get(index) {
-                var _a;
-                index = typeof index == "string" ? parseInt(index) : index;
-                return this._days[((_a = this.startDay) !== null && _a !== void 0 ? _a : 0) + index];
-            }
-            get count() {
-                var _a, _b;
-                const startIndex = (_a = this.startDay) !== null && _a !== void 0 ? _a : 0;
-                const endIndex = (_b = this.endDay) !== null && _b !== void 0 ? _b : this._days.length - 1;
-                return endIndex - startIndex + 1;
-            }
-        }
-        GeoPlot.RangeDayAreaDataSet = RangeDayAreaDataSet;
-    })(GeoPlot = WebApp.GeoPlot || (WebApp.GeoPlot = {}));
 })(WebApp || (WebApp = {}));
 /// <reference path="../data/rangedayareadataset.ts" />
 var WebApp;

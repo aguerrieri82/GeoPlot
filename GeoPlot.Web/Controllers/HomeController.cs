@@ -261,7 +261,7 @@ namespace GeoPlot.Web.Controllers
                 result.Days.Add(item);
             };
 
-            await FillDeathDataNational(result, 60, true);
+            //await FillDeathDataNational(result, 60, true);
 
             await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
 

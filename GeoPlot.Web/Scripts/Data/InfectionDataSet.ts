@@ -13,6 +13,12 @@ namespace WebApp.GeoPlot {
         toatlTests: number;
         totalCaseTested: number;
         historicDeaths: Dictionary<number>;
+        newICU: number;
+        totalAntigenicPositive: number;
+        totalAntigenicTests: number;
+        totalMolecularPositive: number;
+        totalMolecularTests: number;
+
     }
 
     /****************************************/
@@ -31,6 +37,11 @@ namespace WebApp.GeoPlot {
             totalPositive: undefined,
             totalSevere: undefined,
             totalCaseTested: undefined,
+            newICU: undefined,
+            totalAntigenicPositive: undefined,
+            totalAntigenicTests: undefined,
+            totalMolecularPositive: undefined,
+            totalMolecularTests: undefined,
         },
         indicators: [
             {
@@ -41,6 +52,24 @@ namespace WebApp.GeoPlot {
                 validFor: ["region", "country", "district"],
                 showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalPositive)
+            },
+            {
+                id: "totalAntigenicPositive",
+                name: $string("$(antigenic-positive)"),
+                colorLight: "#f44336",
+                colorDark: "#b71c1c",
+                validFor: ["region", "country"],
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a => a.totalAntigenicPositive)
+            },
+            {
+                id: "totalMolecularPositive",
+                name: $string("$(molecular-positive)"),
+                colorLight: "#f44336",
+                colorDark: "#b71c1c",
+                validFor: ["region", "country"],
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a => a.totalMolecularPositive)
             },
             {
                 id: "currentPositive",
@@ -68,6 +97,15 @@ namespace WebApp.GeoPlot {
                 colorDark: "#e65100",
                 showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalSevere)
+            },
+            {
+                id: "newICU",
+                name: $string("$(newICU)"),
+                validFor: ["region", "country"],
+                colorLight: "#ff9800",
+                colorDark: "#e65100",
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a => a.newICU)
             },
             {
                 id: "totalHospedalized",
@@ -104,6 +142,24 @@ namespace WebApp.GeoPlot {
                 colorDark: "#01579b",
                 showInFavorites: true,
                 compute: new SimpleIndicatorFunction(a => a.totalCaseTested)
+            },
+            {
+                id: "totalMolecularTests",
+                name: $string("$(molecularTests)"),
+                validFor: ["region", "country"],
+                colorLight: "#03a9f4",
+                colorDark: "#01579b",
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a => a.totalMolecularTests)
+            },
+            {
+                id: "totalAntigenicTests",
+                name: $string("$(antigenicTests)"),
+                validFor: ["region", "country"],
+                colorLight: "#03a9f4",
+                colorDark: "#01579b",
+                showInFavorites: true,
+                compute: new SimpleIndicatorFunction(a => a.totalAntigenicTests)
             },
             {
                 id: "surface",

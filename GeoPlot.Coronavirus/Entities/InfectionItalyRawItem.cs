@@ -32,5 +32,15 @@ namespace GeoPlot.Coronavirus.Entities
         public int? tamponi;
 
         public double? casi_testati;
+
+        public double? ingressi_terapia_intensiva;
+
+        public double? tamponi_test_molecolare;
+
+        public double? tamponi_test_antigenico_rapido;
+
+        public double? totale_positivi_test_molecolare;
+
+        public double? totale_positivi_test_antigenico_rapido;
     }
 }

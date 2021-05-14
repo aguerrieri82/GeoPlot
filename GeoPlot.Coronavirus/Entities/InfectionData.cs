@@ -44,6 +44,16 @@ namespace GeoPlot.Coronavirus
 
         public int? TotalCaseTested { get; set; }
 
+        public int? NewICU { get; set; }
+
+        public int? TotalMolecularTests { get; set; }
+
+        public int? TotalAntigenicTests { get; set; }
+
+        public int? TotalMolecularPositive { get; set; }
+
+        public int? TotalAntigenicPositive { get; set; }
+
         public Dictionary<int, int?> HistoricDeaths { get; set; }
     }
 }
