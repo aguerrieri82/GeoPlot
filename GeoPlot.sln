@@ -29,6 +29,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.ServiceModel", "Euso
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.ServiceModel.Abstraction", "Eusoft\ServiceModel\src\Eusoft.ServiceModel.Abstraction\Eusoft.ServiceModel.Abstraction.csproj", "{6B774D3A-6723-434A-8522-6157E0E26CE4}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Framework", "Framework", "{47647A75-2FDD-4846-9E62-2B205EB74FCA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -306,6 +308,13 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D} = {47647A75-2FDD-4846-9E62-2B205EB74FCA}
+		{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642} = {47647A75-2FDD-4846-9E62-2B205EB74FCA}
+		{199E1B67-0B45-4B1C-9ED5-6E1CE03C7660} = {47647A75-2FDD-4846-9E62-2B205EB74FCA}
+		{12483BA7-1DF9-4353-98E2-094B7798C5F6} = {47647A75-2FDD-4846-9E62-2B205EB74FCA}
+		{6B774D3A-6723-434A-8522-6157E0E26CE4} = {47647A75-2FDD-4846-9E62-2B205EB74FCA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9C093B3B-48E5-422F-9BFD-C14CAD9037A3}

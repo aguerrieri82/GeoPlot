@@ -37,5 +37,9 @@
     <ProjectReference Include="..\GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\data\" />
+  </ItemGroup>
+
 
 </Project>

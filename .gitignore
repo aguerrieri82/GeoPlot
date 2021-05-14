@@ -340,3 +340,4 @@ ASALocalRun/
 healthchecksdb
 
 **/wwwroot/data
+appsettings*.json
