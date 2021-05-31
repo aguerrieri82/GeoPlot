@@ -18,7 +18,7 @@
     "GeoPlot.Web": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "Overview",
+      "launchUrl": "Studio",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

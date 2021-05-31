@@ -119,6 +119,10 @@
         endDay?: number;
         isDelta?: boolean;
         xAxis: "dayNumber" | "date";
+        range?: {
+            start: number,
+            end: number
+        };
 
     }
 

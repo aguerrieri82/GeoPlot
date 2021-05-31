@@ -428,7 +428,18 @@
                     this._graphCtx.serieCalculator = new IndicatorCalculator(new RangeDayAreaDataSet( model.data), InfectionDataSet, model.geo);
                 }
 
-                this.importValues(this._graphCtx.serieCalculator.getSerie(<IDayAreaSerieSource>this.source));
+                const daySource = this.source as IDayAreaSerieSource;
+
+                if (daySource.range) {
+                    this._graphCtx.serieCalculator.data.startDay = daySource.range.start;
+                    this._graphCtx.serieCalculator.data.endDay = daySource.range.end;
+                }
+                else {
+                    this._graphCtx.serieCalculator.data.startDay = undefined;
+                    this._graphCtx.serieCalculator.data.endDay = undefined;
+                }
+
+                this.importValues(this._graphCtx.serieCalculator.getSerie(daySource));
 
                 this._graphCtx.updateTable(this.getGraphId("table"), this.values);
                 this.children.foreach(a => a.onParentChanged());

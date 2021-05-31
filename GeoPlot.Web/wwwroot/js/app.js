@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var WebApp;
 (function (WebApp) {
     function isAndroidApp() {
@@ -445,16 +436,14 @@ var WebApp;
             }
             return this;
         }
-        foreachAsync(action, chunkSize = 1) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._enumerator.reset();
-                let index = 0;
-                while (this._enumerator.moveNext()) {
-                    yield action(this._enumerator.current, index);
-                    index++;
-                }
-                return this;
-            });
+        async foreachAsync(action, chunkSize = 1) {
+            this._enumerator.reset();
+            let index = 0;
+            while (this._enumerator.moveNext()) {
+                await action(this._enumerator.current, index);
+                index++;
+            }
+            return this;
         }
         any(condition) {
             if (!condition)
@@ -496,20 +485,18 @@ var WebApp;
             }
             return generator(this);
         }
-        toArrayAsync(chunkSize = 1) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._enumerator.toArray)
-                    return this._enumerator.toArray();
-                let array = [];
-                let index = 0;
-                for (let item of this.toGenerator()) {
-                    array.push(item);
-                    if (index % chunkSize == 0)
-                        yield WebApp.PromiseUtils.delay(0);
-                    index++;
-                }
-                return array;
-            });
+        async toArrayAsync(chunkSize = 1) {
+            if (this._enumerator.toArray)
+                return this._enumerator.toArray();
+            let array = [];
+            let index = 0;
+            for (let item of this.toGenerator()) {
+                array.push(item);
+                if (index % chunkSize == 0)
+                    await WebApp.PromiseUtils.delay(0);
+                index++;
+            }
+            return array;
         }
         toArray() {
             if (this._enumerator.toArray)
@@ -772,16 +759,14 @@ var WebApp;
         }
     }
     WebApp.safeCall = safeCall;
-    function safeCallAsync(block, errorHandler) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                return yield block();
-            }
-            catch (e) {
-                if (errorHandler)
-                    return Promise.resolve(errorHandler(e));
-            }
-        });
+    async function safeCallAsync(block, errorHandler) {
+        try {
+            return await block();
+        }
+        catch (e) {
+            if (errorHandler)
+                return Promise.resolve(errorHandler(e));
+        }
     }
     WebApp.safeCallAsync = safeCallAsync;
 })(WebApp || (WebApp = {}));
@@ -924,21 +909,19 @@ var WebApp;
     class DbStorage {
         constructor() {
         }
-        openAsync(name) {
-            return __awaiter(this, void 0, void 0, function* () {
-                return new Promise((res, rej) => {
-                    const request = indexedDB.open(name, 2);
-                    request.onerror = ev => rej();
-                    request.onsuccess = ev => {
-                        this._database = request.result;
-                        res(true);
-                    };
-                    request.onupgradeneeded = ev => {
-                        if (!request.result.objectStoreNames.contains("object"))
-                            request.result.createObjectStore("object");
-                        res(true);
-                    };
-                });
+        async openAsync(name) {
+            return new Promise((res, rej) => {
+                const request = indexedDB.open(name, 2);
+                request.onerror = ev => rej();
+                request.onsuccess = ev => {
+                    this._database = request.result;
+                    res(true);
+                };
+                request.onupgradeneeded = ev => {
+                    if (!request.result.objectStoreNames.contains("object"))
+                        request.result.createObjectStore("object");
+                    res(true);
+                };
             });
         }
         openReadWrite() {
@@ -1522,16 +1505,14 @@ var WebApp;
             return true;
         }
         ArrayUtils.equals = equals;
-        function forEachAsync(items, chunkSize, action) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let index = 0;
-                for (let item of items) {
-                    action(item, index);
-                    if (index % chunkSize == 0)
-                        yield WebApp.PromiseUtils.delay(0);
-                    index++;
-                }
-            });
+        async function forEachAsync(items, chunkSize, action) {
+            let index = 0;
+            for (let item of items) {
+                action(item, index);
+                if (index % chunkSize == 0)
+                    await WebApp.PromiseUtils.delay(0);
+                index++;
+            }
         }
         ArrayUtils.forEachAsync = forEachAsync;
     })(ArrayUtils = WebApp.ArrayUtils || (WebApp.ArrayUtils = {}));
@@ -1722,19 +1703,17 @@ var WebApp;
             return window.innerWidth < 610;
         }
         DomUtils.isSmallDevice = isSmallDevice;
-        function copyText(value) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (navigator["clipboard"])
-                    yield navigator.clipboard.writeText(value);
-                else {
-                    const input = document.createElement("textarea");
-                    document.body.appendChild(input);
-                    input.value = value;
-                    input.select();
-                    document.execCommand("copy");
-                    document.body.removeChild(input);
-                }
-            });
+        async function copyText(value) {
+            if (navigator["clipboard"])
+                await navigator.clipboard.writeText(value);
+            else {
+                const input = document.createElement("textarea");
+                document.body.appendChild(input);
+                input.value = value;
+                input.select();
+                document.execCommand("copy");
+                document.body.removeChild(input);
+            }
         }
         DomUtils.copyText = copyText;
         function centerElement(element, always = true) {
@@ -2177,45 +2156,39 @@ var WebApp;
                 center: new Microsoft.Maps.Location(location.latitude, location.longitude)
             });
         }
-        getSearchManagerAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (!this._searchManager) {
-                    yield this.loadModuleAsync("Microsoft.Maps.Search");
-                    this._searchManager = new Microsoft.Maps.Search.SearchManager(this._map);
-                }
-                return this._searchManager;
-            });
+        async getSearchManagerAsync() {
+            if (!this._searchManager) {
+                await this.loadModuleAsync("Microsoft.Maps.Search");
+                this._searchManager = new Microsoft.Maps.Search.SearchManager(this._map);
+            }
+            return this._searchManager;
         }
-        getAddressAsync(location) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let sm = yield this.getSearchManagerAsync();
-                return new Promise((res, rej) => {
-                    sm.reverseGeocode({
-                        location: new Microsoft.Maps.Location(location.latitude, location.longitude),
-                        callback: r => {
-                            if (r && r.address)
-                                res(r.address.formattedAddress);
-                            else
-                                res(undefined);
-                        }
-                    });
+        async getAddressAsync(location) {
+            let sm = await this.getSearchManagerAsync();
+            return new Promise((res, rej) => {
+                sm.reverseGeocode({
+                    location: new Microsoft.Maps.Location(location.latitude, location.longitude),
+                    callback: r => {
+                        if (r && r.address)
+                            res(r.address.formattedAddress);
+                        else
+                            res(undefined);
+                    }
                 });
             });
         }
-        getLocationAsync(address) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let sm = yield this.getSearchManagerAsync();
-                return new Promise((res, rej) => {
-                    sm.geocode({
-                        where: address,
-                        bounds: this._map.getBounds(),
-                        callback: r => {
-                            if (r && r.results && r.results.length > 0)
-                                res({ latitude: r.results[0].location.latitude, longitude: r.results[0].location.longitude });
-                            else
-                                res(undefined);
-                        }
-                    });
+        async getLocationAsync(address) {
+            let sm = await this.getSearchManagerAsync();
+            return new Promise((res, rej) => {
+                sm.geocode({
+                    where: address,
+                    bounds: this._map.getBounds(),
+                    callback: r => {
+                        if (r && r.results && r.results.length > 0)
+                            res({ latitude: r.results[0].location.latitude, longitude: r.results[0].location.longitude });
+                        else
+                            res(undefined);
+                    }
                 });
             });
         }
@@ -3380,16 +3353,14 @@ var WebApp;
             this._sessionId = new Date().getTime().toString();
             window.addEventListener("popstate", ev => this.onPopState(ev.state));
         }
-        onPopState(state) {
-            return __awaiter(this, void 0, void 0, function* () {
-                console.debug("begin popState: ", state, " isSyncing: ", this._isSyncing);
-                if (this._isSyncing)
-                    return;
-                if (state)
-                    yield this.goToAsync(state.index);
-                this._backSignal.set();
-                console.debug("end popState: ", state);
-            });
+        async onPopState(state) {
+            console.debug("begin popState: ", state, " isSyncing: ", this._isSyncing);
+            if (this._isSyncing)
+                return;
+            if (state)
+                await this.goToAsync(state.index);
+            this._backSignal.set();
+            console.debug("end popState: ", state);
         }
         onStateChanged(page) {
             if (this._isSyncing)
@@ -3411,104 +3382,92 @@ var WebApp;
                 window.history.replaceState(window.history.state, title, url);
             document.title = title;
         }
-        clearAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.innerHost.clearAsync();
-                yield this.syncHistoryAsync();
-                this._isSyncing = true;
-                window.history.pushState(null, null, null);
-                window.history.go(-1);
-                this._isSyncing = false;
-            });
+        async clearAsync() {
+            await this.innerHost.clearAsync();
+            await this.syncHistoryAsync();
+            this._isSyncing = true;
+            window.history.pushState(null, null, null);
+            window.history.go(-1);
+            this._isSyncing = false;
         }
         get(index) {
             return this.innerHost.get(index);
         }
-        goBackAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.pageCount > 1) {
-                    console.debug("begin goBack");
-                    this._backSignal.reset();
-                    window.history.back();
-                    const waitRes = yield this._backSignal.waitFor(WebApp.TimeSpan.fromMilliseconds(500));
-                    console.debug("end goBack: ", waitRes);
-                }
-                else {
-                    yield this.clearAsync();
-                    yield WebApp.app.mainAsync();
-                }
-            });
+        async goBackAsync() {
+            if (this.pageCount > 1) {
+                console.debug("begin goBack");
+                this._backSignal.reset();
+                window.history.back();
+                const waitRes = await this._backSignal.waitFor(WebApp.TimeSpan.fromMilliseconds(500));
+                console.debug("end goBack: ", waitRes);
+            }
+            else {
+                await this.clearAsync();
+                await WebApp.app.mainAsync();
+            }
         }
         goForwardAsync() {
             window.history.forward();
             return Promise.resolve();
         }
-        goToAsync(index) {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.innerHost.goToAsync(index);
-                this.updateState();
-            });
+        async goToAsync(index) {
+            await this.innerHost.goToAsync(index);
+            this.updateState();
         }
-        syncHistoryAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._isSyncing)
-                    return;
-                this._isSyncing = true;
-                try {
-                    let curState = window.history.state;
-                    while (curState && curState.sessionId == this._sessionId && curState.index > 0) {
-                        yield this.goBackAsync();
-                        curState = window.history.state;
-                    }
-                    let curIndex = 0;
-                    while (curIndex < this.pageCount) {
-                        const curPage = this.get(curIndex);
-                        const title = WebApp.app.formatTitle(curPage.title);
-                        const url = curPage.url ? WebApp.Uri.absolute(WebApp.Format.replaceArgs(curPage.url, WebApp.app.startupArgs)) : null;
-                        curState = {
-                            sessionId: this._sessionId,
-                            index: curIndex
-                        };
-                        if (curIndex == 0)
-                            window.history.replaceState(curState, title, url);
-                        else
-                            window.history.pushState(curState, title, url);
-                        if (curIndex == this.currentIndex)
-                            document.title = title;
-                        curIndex++;
-                    }
-                    const delta = this.currentIndex - (this.pageCount - 1);
-                    if (delta < 0)
-                        window.history.go(delta);
+        async syncHistoryAsync() {
+            if (this._isSyncing)
+                return;
+            this._isSyncing = true;
+            try {
+                let curState = window.history.state;
+                while (curState && curState.sessionId == this._sessionId && curState.index > 0) {
+                    await this.goBackAsync();
+                    curState = window.history.state;
                 }
-                finally {
-                    this._isSyncing = false;
+                let curIndex = 0;
+                while (curIndex < this.pageCount) {
+                    const curPage = this.get(curIndex);
+                    const title = WebApp.app.formatTitle(curPage.title);
+                    const url = curPage.url ? WebApp.Uri.absolute(WebApp.Format.replaceArgs(curPage.url, WebApp.app.startupArgs)) : null;
+                    curState = {
+                        sessionId: this._sessionId,
+                        index: curIndex
+                    };
+                    if (curIndex == 0)
+                        window.history.replaceState(curState, title, url);
+                    else
+                        window.history.pushState(curState, title, url);
+                    if (curIndex == this.currentIndex)
+                        document.title = title;
+                    curIndex++;
                 }
-            });
+                const delta = this.currentIndex - (this.pageCount - 1);
+                if (delta < 0)
+                    window.history.go(delta);
+            }
+            finally {
+                this._isSyncing = false;
+            }
         }
-        loadAsync(page, options) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const curState = window.history.state;
-                const inSync = curState && curState.sessionId == this._sessionId && curState.index == this.currentIndex;
-                yield this.innerHost.loadAsync(page, options);
-                page.prop("title").subscribe(a => this.onStateChanged(page));
-                page.prop("url").subscribe(a => this.onStateChanged(page));
-                page.host = this;
-                if (inSync)
-                    this.updateState(true);
-                else
-                    yield this.syncHistoryAsync();
-                return page;
-            });
+        async loadAsync(page, options) {
+            const curState = window.history.state;
+            const inSync = curState && curState.sessionId == this._sessionId && curState.index == this.currentIndex;
+            await this.innerHost.loadAsync(page, options);
+            page.prop("title").subscribe(a => this.onStateChanged(page));
+            page.prop("url").subscribe(a => this.onStateChanged(page));
+            page.host = this;
+            if (inSync)
+                this.updateState(true);
+            else
+                await this.syncHistoryAsync();
+            return page;
         }
         find(nameOrType) {
             return this.innerHost.find(nameOrType);
         }
-        bringFrontAsync(page) {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.innerHost.bringFrontAsync(page);
-                yield this.syncHistoryAsync();
-            });
+        async bringFrontAsync(page) {
+            await this.innerHost.bringFrontAsync(page);
+            await this.syncHistoryAsync();
         }
         get currentIndex() {
             return this.innerHost.currentIndex;
@@ -3695,28 +3654,26 @@ var WebApp;
             this.language = null;
             this.prop("language").subscribe(() => this.updateLanguage());
         }
-        runAsync(baseUrl, args) {
-            return __awaiter(this, void 0, void 0, function* () {
-                window.addEventListener("error", ev => this.handleError(ev.srcElement, ev.error, ev.message));
-                this._startupArgs = args;
-                this._baseUrl = baseUrl;
-                if (this._baseUrl.length == 0 || this._baseUrl[this._baseUrl.length - 1] != "/")
-                    this._baseUrl += "/";
-                this.initServices();
-                yield this.configureServicesAsync();
-                if (this.isSelfHosted) {
-                    this.pageHost = new WebApp.SelfHostedPageHost();
-                    this.view = this.pageHost;
-                }
-                else {
-                    this.pageHost = new WebApp.HistoryPageHost(this.createPageHost());
-                    this.view = this.pageHost.innerHost;
-                }
-                WebApp.Services.pageHost = this.pageHost;
-                document.title = this.appName;
-                WebApp.template(document.body, this.view.template, this.view);
-                this.onStarted();
-            });
+        async runAsync(baseUrl, args) {
+            window.addEventListener("error", ev => this.handleError(ev.srcElement, ev.error, ev.message));
+            this._startupArgs = args;
+            this._baseUrl = baseUrl;
+            if (this._baseUrl.length == 0 || this._baseUrl[this._baseUrl.length - 1] != "/")
+                this._baseUrl += "/";
+            this.initServices();
+            await this.configureServicesAsync();
+            if (this.isSelfHosted) {
+                this.pageHost = new WebApp.SelfHostedPageHost();
+                this.view = this.pageHost;
+            }
+            else {
+                this.pageHost = new WebApp.HistoryPageHost(this.createPageHost());
+                this.view = this.pageHost.innerHost;
+            }
+            WebApp.Services.pageHost = this.pageHost;
+            document.title = this.appName;
+            WebApp.template(document.body, this.view.template, this.view);
+            this.onStarted();
         }
         updateLanguage() {
             document.documentElement.lang = this.language;
@@ -3861,24 +3818,22 @@ var WebApp;
         handleError(source, error) {
             WebApp.app.handleError(source, error);
         }
-        loadAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.status == "notloaded" || this.status == "error") {
-                    let op = WebApp.Operation.begin({ message: "Loading page: " + (this.title ? this.title : (this.url ? this.url : WebApp.ObjectUtils.getTypeName(this))) });
-                    this.status = "loading";
-                    try {
-                        yield this.loadWorkAsync();
-                    }
-                    catch (e) {
-                        this.status = "error";
-                        WebApp.app.handleError(this, e);
-                    }
-                    finally {
-                        op.end();
-                        this.status = "loaded";
-                    }
+        async loadAsync() {
+            if (this.status == "notloaded" || this.status == "error") {
+                let op = WebApp.Operation.begin({ message: "Loading page: " + (this.title ? this.title : (this.url ? this.url : WebApp.ObjectUtils.getTypeName(this))) });
+                this.status = "loading";
+                try {
+                    await this.loadWorkAsync();
                 }
-            });
+                catch (e) {
+                    this.status = "error";
+                    WebApp.app.handleError(this, e);
+                }
+                finally {
+                    op.end();
+                    this.status = "loaded";
+                }
+            }
         }
         loadWorkAsync() {
             return Promise.resolve();
@@ -3886,13 +3841,11 @@ var WebApp;
         refreshAsync() {
             return Promise.resolve();
         }
-        closeAsync(result) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if ("goBackAsync" in this.host)
-                    yield this.host.goBackAsync();
-                this.status = "closed";
-                return true;
-            });
+        async closeAsync(result) {
+            if ("goBackAsync" in this.host)
+                await this.host.goBackAsync();
+            this.status = "closed";
+            return true;
         }
     }
     WebApp.Page = Page;
@@ -3916,13 +3869,11 @@ var WebApp;
         deactivateAsync() {
             return Promise.resolve();
         }
-        closeAsync(result) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const closeResult = yield WebApp.Page.prototype.closeAsync.call(this, result);
-                if (this._resultResolve)
-                    this._resultResolve(result);
-                return closeResult;
-            });
+        async closeAsync(result) {
+            const closeResult = await WebApp.Page.prototype.closeAsync.call(this, result);
+            if (this._resultResolve)
+                this._resultResolve(result);
+            return closeResult;
         }
         loadWorkAsync() {
             return this.createAsync();
@@ -3973,13 +3924,11 @@ var WebApp;
                     this._actionBar.mainAction = "back";
             });
         }
-        closeAsync(result) {
+        async closeAsync(result) {
             var _a;
-            return __awaiter(this, void 0, void 0, function* () {
-                if ((_a = this.activeContentProvider) === null || _a === void 0 ? void 0 : _a.deactivateAsync)
-                    yield this.activeContentProvider.deactivateAsync();
-                return yield WebApp.Activity.prototype.closeAsync.call(this, result);
-            });
+            if ((_a = this.activeContentProvider) === null || _a === void 0 ? void 0 : _a.deactivateAsync)
+                await this.activeContentProvider.deactivateAsync();
+            return await WebApp.Activity.prototype.closeAsync.call(this, result);
         }
         activateAsync() {
             var _a, _b;
@@ -4010,67 +3959,63 @@ var WebApp;
             this.activeContentProvider = WebApp.linq(this.providers).first(a => a.info.name == this.activeContent);
             return this.loadContentAsync(this.activeContentProvider, force);
         }
-        loadWorkAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.createAsync();
-                if (this.activeContentProvider)
-                    this.activeContent = this.activeContentProvider.info.name;
-            });
+        async loadWorkAsync() {
+            await this.createAsync();
+            if (this.activeContentProvider)
+                this.activeContent = this.activeContentProvider.info.name;
         }
-        loadContentAsync(provider, force) {
+        async loadContentAsync(provider, force) {
             var _a, _b;
-            return __awaiter(this, void 0, void 0, function* () {
-                const isContentChanged = this.activeContentProvider != provider;
-                if (!isContentChanged && !force)
-                    return;
-                if (isContentChanged && ((_a = this.activeContentProvider) === null || _a === void 0 ? void 0 : _a.deactivateAsync))
-                    (_b = this.activeContentProvider) === null || _b === void 0 ? void 0 : _b.deactivateAsync();
-                this.activeContentProvider = provider;
-                if (!force && (this.status == "notloaded" || this.status == "loading" || this.status == "closed")) {
-                    console.debug("Skip loading content: " + provider.info.name);
-                    return;
+            const isContentChanged = this.activeContentProvider != provider;
+            if (!isContentChanged && !force)
+                return;
+            if (isContentChanged && ((_a = this.activeContentProvider) === null || _a === void 0 ? void 0 : _a.deactivateAsync))
+                (_b = this.activeContentProvider) === null || _b === void 0 ? void 0 : _b.deactivateAsync();
+            this.activeContentProvider = provider;
+            if (!force && (this.status == "notloaded" || this.status == "loading" || this.status == "closed")) {
+                console.debug("Skip loading content: " + provider.info.name);
+                return;
+            }
+            const op = WebApp.Operation.begin({ message: "Loading content: " + provider.info.name });
+            try {
+                const content = await provider.getContentAsync(this);
+                this.title = this.formatTitle(WebApp.DynamicString.getValue(content.title, WebApp.StringUsage.Title));
+                this._contentView.clear();
+                if (content.styles)
+                    this._contentView.styles = content.styles;
+                else
+                    this._contentView.styles = this.contentStyle;
+                if (content.views)
+                    content.views.forEach(a => this._contentView.addView(a));
+                this._contentView.name = provider.info.name;
+                this._contentView.buildStyles();
+                this._actionBar.actions.clear();
+                if (this._floatingView)
+                    this._floatingView.clear();
+                if (content.actions) {
+                    content.actions.forEach(action => {
+                        if (action.priority == null || action.priority == WebApp.ActionPriority.Secondary)
+                            this._actionBar.actions.add(this.createActionView(action));
+                        else if (action.priority == WebApp.ActionPriority.Primary) {
+                            this._floatingView.visible = true;
+                            this._floatingView.addView(this.createActionView(action, { styles: WebApp.ArrayUtils.merge(["floating"], action.styles) }));
+                        }
+                    });
                 }
-                const op = WebApp.Operation.begin({ message: "Loading content: " + provider.info.name });
-                try {
-                    const content = yield provider.getContentAsync(this);
-                    this.title = this.formatTitle(WebApp.DynamicString.getValue(content.title, WebApp.StringUsage.Title));
-                    this._contentView.clear();
-                    if (content.styles)
-                        this._contentView.styles = content.styles;
-                    else
-                        this._contentView.styles = this.contentStyle;
-                    if (content.views)
-                        content.views.forEach(a => this._contentView.addView(a));
-                    this._contentView.name = provider.info.name;
-                    this._contentView.buildStyles();
-                    this._actionBar.actions.clear();
-                    if (this._floatingView)
-                        this._floatingView.clear();
-                    if (content.actions) {
-                        content.actions.forEach(action => {
-                            if (action.priority == null || action.priority == WebApp.ActionPriority.Secondary)
-                                this._actionBar.actions.add(this.createActionView(action));
-                            else if (action.priority == WebApp.ActionPriority.Primary) {
-                                this._floatingView.visible = true;
-                                this._floatingView.addView(this.createActionView(action, { styles: WebApp.ArrayUtils.merge(["floating"], action.styles) }));
-                            }
-                        });
-                    }
-                    this._floatingView.visible = this._floatingView.content.count > 0;
-                    this.actions.forEach(a => this._actionBar.actions.add(a));
-                    yield this._contentView.loadAsync();
-                    if (provider === null || provider === void 0 ? void 0 : provider.activateAsync)
-                        yield provider.activateAsync("loading");
-                    this.onContentChanged(provider);
-                    this._isContentLoaded = true;
-                }
-                catch (e) {
-                    this.handleError(this, e);
-                }
-                finally {
-                    op.end();
-                }
-            });
+                this._floatingView.visible = this._floatingView.content.count > 0;
+                this.actions.forEach(a => this._actionBar.actions.add(a));
+                await this._contentView.loadAsync();
+                if (provider === null || provider === void 0 ? void 0 : provider.activateAsync)
+                    await provider.activateAsync("loading");
+                this.onContentChanged(provider);
+                this._isContentLoaded = true;
+            }
+            catch (e) {
+                this.handleError(this, e);
+            }
+            finally {
+                op.end();
+            }
         }
         formatTitle(value) {
             return value;
@@ -4172,39 +4117,37 @@ var WebApp;
         refreshAsync() {
             return this._listView.refreshAsync();
         }
-        createAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._actionBar = this.view.addView(new WebApp.ActionBar({
-                    onBack: () => this.closeAsync(),
-                    title: this.prop("title"),
-                    mainAction: "back"
-                }));
-                this._searchView = new WebApp.SearchView({
-                    name: "search-expanded",
-                    tooltip: this.prop("tooltip"),
-                    isExpanded: true,
-                    searchText: this.prop("searchText"),
-                    searchAsync: text => this._listView.refreshAsync()
-                });
-                this._actionBar.actions.add(this._searchView);
-                this._emptyView = new WebApp.IconTextView({
-                    styles: ["empty-view"],
-                    visible: false
-                });
-                this._listView = this.view.addView(new WebApp.ListView(Object.assign({ name: "content", styles: this.listStyles, template: "ListViewInline", header: [this._emptyView], itemsSource: new WebApp.ItemsSource({
-                        getItemsAsync: () => __awaiter(this, void 0, void 0, function* () {
-                            const searchText = this.searchText;
-                            const items = yield this.searchWorkAsync(searchText);
-                            this.updateView((items === null || items === void 0 ? void 0 : items.length) > 0, searchText);
-                            return items;
-                        })
-                    }), itemsLoader: this.pageSize ? new WebApp.PagedItemsLoader({
-                        getFilter: (offset, pageSize) => this.getFilter(this.searchText, offset, pageSize),
-                        pageSize: this.pageSize
-                    }) : undefined, createItemView: item => this.createItemView(item) }, this.configureListView())));
-                setTimeout(() => this._searchView.hasFocus = true, 500);
-                yield this.refreshAsync();
+        async createAsync() {
+            this._actionBar = this.view.addView(new WebApp.ActionBar({
+                onBack: () => this.closeAsync(),
+                title: this.prop("title"),
+                mainAction: "back"
+            }));
+            this._searchView = new WebApp.SearchView({
+                name: "search-expanded",
+                tooltip: this.prop("tooltip"),
+                isExpanded: true,
+                searchText: this.prop("searchText"),
+                searchAsync: text => this._listView.refreshAsync()
             });
+            this._actionBar.actions.add(this._searchView);
+            this._emptyView = new WebApp.IconTextView({
+                styles: ["empty-view"],
+                visible: false
+            });
+            this._listView = this.view.addView(new WebApp.ListView(Object.assign({ name: "content", styles: this.listStyles, template: "ListViewInline", header: [this._emptyView], itemsSource: new WebApp.ItemsSource({
+                    getItemsAsync: async () => {
+                        const searchText = this.searchText;
+                        const items = await this.searchWorkAsync(searchText);
+                        this.updateView((items === null || items === void 0 ? void 0 : items.length) > 0, searchText);
+                        return items;
+                    }
+                }), itemsLoader: this.pageSize ? new WebApp.PagedItemsLoader({
+                    getFilter: (offset, pageSize) => this.getFilter(this.searchText, offset, pageSize),
+                    pageSize: this.pageSize
+                }) : undefined, createItemView: item => this.createItemView(item) }, this.configureListView())));
+            setTimeout(() => this._searchView.hasFocus = true, 500);
+            await this.refreshAsync();
         }
         updateView(hasItems, searchText) {
             if (!hasItems) {
@@ -4277,31 +4220,27 @@ var WebApp;
                 items.forEach(a => this.addSelection(a));
             }
         }
-        createAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield WebApp.SearchActivity.prototype["createAsync"].call(this);
-                this._actionBar.addAction({
-                    name: "confirm",
-                    icon: "fas fa-check",
-                    displayName: "confirm",
-                    executeAsync: () => this.confirmAsync(),
-                    priority: WebApp.ActionPriority.Primary
-                });
-                this._bottomSheet = new WebApp.BottomSheet({
-                    headHeight: 50,
-                    content: new WebApp.ItemsView({
-                        styles: ["padding", "horizontal-wrap"],
-                        content: this.selectedItems
-                    })
-                });
-                this.view.addView(this._bottomSheet);
-                this.updateView();
+        async createAsync() {
+            await WebApp.SearchActivity.prototype["createAsync"].call(this);
+            this._actionBar.addAction({
+                name: "confirm",
+                icon: "fas fa-check",
+                displayName: "confirm",
+                executeAsync: () => this.confirmAsync(),
+                priority: WebApp.ActionPriority.Primary
             });
+            this._bottomSheet = new WebApp.BottomSheet({
+                headHeight: 50,
+                content: new WebApp.ItemsView({
+                    styles: ["padding", "horizontal-wrap"],
+                    content: this.selectedItems
+                })
+            });
+            this.view.addView(this._bottomSheet);
+            this.updateView();
         }
-        confirmAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.closeAsync(WebApp.linq(this.selectedItems).select(a => a.item).toArray());
-            });
+        async confirmAsync() {
+            await this.closeAsync(WebApp.linq(this.selectedItems).select(a => a.item).toArray());
         }
         configureListView() {
             const header = [];
@@ -4402,28 +4341,26 @@ var WebApp;
         findSelectable(item) {
             return WebApp.linq(this._listView.content).first(a => this.itemsSource.itemComparer(a.item, item));
         }
-        addItemAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                const editor = this.createItemEditor();
-                let editValue;
-                if (WebApp.TypeCheck.isAsyncEditor(editor))
-                    editValue = yield editor.editAsync(this.itemsSource.newItem());
-                else {
-                    const activity = new WebApp.ActivityEditor({
-                        editor: editor,
-                        title: this.addLabel
-                    });
-                    editValue = yield activity.editAsync(this.itemsSource.newItem());
-                }
-                if (!editValue)
-                    return;
-                const newItem = yield this.itemsSource.addItemAsync(editValue);
-                if (!newItem)
-                    return;
-                const itemView = this.createItemView(newItem);
-                itemView.isSelected = true;
-                this._listView.content.insert(0, itemView);
-            });
+        async addItemAsync() {
+            const editor = this.createItemEditor();
+            let editValue;
+            if (WebApp.TypeCheck.isAsyncEditor(editor))
+                editValue = await editor.editAsync(this.itemsSource.newItem());
+            else {
+                const activity = new WebApp.ActivityEditor({
+                    editor: editor,
+                    title: this.addLabel
+                });
+                editValue = await activity.editAsync(this.itemsSource.newItem());
+            }
+            if (!editValue)
+                return;
+            const newItem = await this.itemsSource.addItemAsync(editValue);
+            if (!newItem)
+                return;
+            const itemView = this.createItemView(newItem);
+            itemView.isSelected = true;
+            this._listView.content.insert(0, itemView);
         }
     }
     WebApp.SelectMultipleItemsActivity = SelectMultipleItemsActivity;
@@ -4455,22 +4392,18 @@ var WebApp;
             if (!(config === null || config === void 0 ? void 0 : config.addLabel))
                 this.addLabel = WebApp.Strings["new-item"]({ params: [this.itemsSource.displayName], usage: WebApp.StringUsage.Action });
         }
-        createAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield WebApp.SearchActivity.prototype["createAsync"].call(this);
-                this._actionBar.addAction({
-                    name: "confirm",
-                    icon: "fas fa-check",
-                    displayName: "confirm",
-                    executeAsync: () => this.confirmAsync(),
-                    priority: WebApp.ActionPriority.Primary
-                });
+        async createAsync() {
+            await WebApp.SearchActivity.prototype["createAsync"].call(this);
+            this._actionBar.addAction({
+                name: "confirm",
+                icon: "fas fa-check",
+                displayName: "confirm",
+                executeAsync: () => this.confirmAsync(),
+                priority: WebApp.ActionPriority.Primary
             });
         }
-        confirmAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.closeAsync();
-            });
+        async confirmAsync() {
+            await this.closeAsync();
         }
         configureListView() {
             const header = [];
@@ -4521,25 +4454,23 @@ var WebApp;
         setSelectionAsync(item) {
             return this.closeAsync(item);
         }
-        addItemAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                const editor = this.createItemEditor();
-                let editValue;
-                if (WebApp.TypeCheck.isAsyncEditor(editor))
-                    editValue = yield editor.editAsync(this.itemsSource.newItem());
-                else {
-                    const activity = new WebApp.ActivityEditor({
-                        editor: editor,
-                        title: this.addLabel
-                    });
-                    editValue = yield activity.editAsync(this.itemsSource.newItem());
-                }
-                if (!editValue)
-                    return;
-                const newItem = yield this.itemsSource.addItemAsync(editValue);
-                if (newItem)
-                    yield this.setSelectionAsync(newItem);
-            });
+        async addItemAsync() {
+            const editor = this.createItemEditor();
+            let editValue;
+            if (WebApp.TypeCheck.isAsyncEditor(editor))
+                editValue = await editor.editAsync(this.itemsSource.newItem());
+            else {
+                const activity = new WebApp.ActivityEditor({
+                    editor: editor,
+                    title: this.addLabel
+                });
+                editValue = await activity.editAsync(this.itemsSource.newItem());
+            }
+            if (!editValue)
+                return;
+            const newItem = await this.itemsSource.addItemAsync(editValue);
+            if (newItem)
+                await this.setSelectionAsync(newItem);
         }
     }
     WebApp.SelectSingleItemActivity = SelectSingleItemActivity;
@@ -4757,11 +4688,9 @@ var WebApp;
             if (action)
                 action.parentView = this;
         }
-        showNavigationMenu() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.navigationMenu)
-                    yield this.navigationMenu.showAsync();
-            });
+        async showNavigationMenu() {
+            if (this.navigationMenu)
+                await this.navigationMenu.showAsync();
         }
         addAction(action) {
             this.actions.add(WebApp.ActionView.fromActionIcon(action));
@@ -4819,29 +4748,27 @@ var WebApp;
                     config.subActions.forEach(sub => this.subActions.add(new ActionView(sub)));
             }
         }
-        executeAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (window.event)
-                    window.event.stopPropagation();
-                var op = WebApp.Operation.begin({ message: "Executing " + this.name, type: this.operation });
-                this.status = "executing";
-                try {
-                    yield this.executeWorkAsync();
-                    if (this.subActions.count > 0) {
-                        let menu = new WebApp.ContextMenu();
-                        this.subActions.forEach(a => menu.actions.add(a));
-                        menu.showAsync(window.event.srcElement);
-                    }
+        async executeAsync() {
+            if (window.event)
+                window.event.stopPropagation();
+            var op = WebApp.Operation.begin({ message: "Executing " + this.name, type: this.operation });
+            this.status = "executing";
+            try {
+                await this.executeWorkAsync();
+                if (this.subActions.count > 0) {
+                    let menu = new WebApp.ContextMenu();
+                    this.subActions.forEach(a => menu.actions.add(a));
+                    menu.showAsync(window.event.srcElement);
                 }
-                catch (ex) {
-                    WebApp.app.handleError(this, ex);
-                    throw ex;
-                }
-                finally {
-                    this.status = "";
-                    op.end();
-                }
-            });
+            }
+            catch (ex) {
+                WebApp.app.handleError(this, ex);
+                throw ex;
+            }
+            finally {
+                this.status = "";
+                op.end();
+            }
         }
         executeWorkAsync() {
             return Promise.resolve();
@@ -4889,19 +4816,17 @@ var WebApp;
             this._container = document.createElement("DIV");
             this._container.className = this.className + "-container";
         }
-        showAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._isVisible)
-                    return;
-                this._isVisible = true;
-                WebApp.app.unblock(true);
-                const builder = new WebApp.TemplateBuilder(this, this._container);
-                builder.template(this.template, a => a);
-                document.body.appendChild(this._container);
-                yield WebApp.PromiseUtils.delay(0);
-                this._container.classList.add("visible");
-                return new Promise(res => this._showResolve = res);
-            });
+        async showAsync() {
+            if (this._isVisible)
+                return;
+            this._isVisible = true;
+            WebApp.app.unblock(true);
+            const builder = new WebApp.TemplateBuilder(this, this._container);
+            builder.template(this.template, a => a);
+            document.body.appendChild(this._container);
+            await WebApp.PromiseUtils.delay(0);
+            this._container.classList.add("visible");
+            return new Promise(res => this._showResolve = res);
         }
         hide(actionName) {
             if (!this._isVisible)
@@ -4937,26 +4862,22 @@ var WebApp;
             if (this.status == "hide")
                 this._element.style.display = "none";
         }
-        showAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._element)
-                    this._element.style.removeProperty("display");
-                this.status = "showing";
-                yield WebApp.PromiseUtils.delay(0);
-                if (this.status == "showing")
-                    this.status = "show";
-            });
+        async showAsync() {
+            if (this._element)
+                this._element.style.removeProperty("display");
+            this.status = "showing";
+            await WebApp.PromiseUtils.delay(0);
+            if (this.status == "showing")
+                this.status = "show";
         }
-        hideAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.status = "hiding";
-                yield WebApp.PromiseUtils.delay(500);
-                if (this.status == "hiding") {
-                    this.status = "hide";
-                    if (this._element)
-                        this._element.style.display = "none";
-                }
-            });
+        async hideAsync() {
+            this.status = "hiding";
+            await WebApp.PromiseUtils.delay(500);
+            if (this.status == "hiding") {
+                this.status = "hide";
+                if (this._element)
+                    this._element.style.display = "none";
+            }
         }
     }
     WebApp.Blocker = Blocker;
@@ -5056,18 +4977,16 @@ var WebApp;
                     break;
             }
         }
-        setHeightAsync(value) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._isAnimating++;
-                if (this._isAnimating == 1)
-                    this._element.classList.add("animate");
-                yield WebApp.PromiseUtils.delay(0);
-                this._element.style.height = value.toString() + "px";
-                yield WebApp.PromiseUtils.delay(500);
-                this._isAnimating--;
-                if (this._isAnimating == 0)
-                    this._element.classList.remove("animate");
-            });
+        async setHeightAsync(value) {
+            this._isAnimating++;
+            if (this._isAnimating == 1)
+                this._element.classList.add("animate");
+            await WebApp.PromiseUtils.delay(0);
+            this._element.style.height = value.toString() + "px";
+            await WebApp.PromiseUtils.delay(500);
+            this._isAnimating--;
+            if (this._isAnimating == 0)
+                this._element.classList.remove("animate");
         }
         toggle() {
             if (this.status == "open" || this.status == "close")
@@ -5331,24 +5250,22 @@ var WebApp;
             this._body.emptyView = this.emptyView;
             this.emptyView = null;
         }
-        loadAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.contentProvider) {
-                    yield this.closeAsync();
-                    const content = yield this.contentProvider.getContentAsync(this);
-                    if (content.styles)
-                        this._body.styles = content.styles;
-                    this.name = this.contentProvider.info.name;
-                    this.title = WebApp.Format.title(content.title);
-                    content.views.forEach(a => this._body.addView(a));
-                    if (content.actions)
-                        content.actions.forEach(a => this.addAction(a));
-                    yield WebApp.Panel.prototype.loadAsync.call(this);
-                    if (this.contentProvider.activateAsync)
-                        yield this.contentProvider.activateAsync();
-                }
-                this._actions.visible = this._actions.content.count > 0;
-            });
+        async loadAsync() {
+            if (this.contentProvider) {
+                await this.closeAsync();
+                const content = await this.contentProvider.getContentAsync(this);
+                if (content.styles)
+                    this._body.styles = content.styles;
+                this.name = this.contentProvider.info.name;
+                this.title = WebApp.Format.title(content.title);
+                content.views.forEach(a => this._body.addView(a));
+                if (content.actions)
+                    content.actions.forEach(a => this.addAction(a));
+                await WebApp.Panel.prototype.loadAsync.call(this);
+                if (this.contentProvider.activateAsync)
+                    await this.contentProvider.activateAsync();
+            }
+            this._actions.visible = this._actions.content.count > 0;
         }
         addAction(action) {
             this._actions.addView(WebApp.ActionView.fromAction(action, { template: this.actionTemplate }));
@@ -5356,16 +5273,14 @@ var WebApp;
         notifyContentChanged(provider) {
             this.loadAsync();
         }
-        closeAsync(result) {
+        async closeAsync(result) {
             var _a;
-            return __awaiter(this, void 0, void 0, function* () {
-                if ((_a = this.contentProvider) === null || _a === void 0 ? void 0 : _a.deactivateAsync)
-                    yield this.contentProvider.deactivateAsync();
-                this._body.clear();
-                this._actions.clear();
-                this.title = null;
-                return true;
-            });
+            if ((_a = this.contentProvider) === null || _a === void 0 ? void 0 : _a.deactivateAsync)
+                await this.contentProvider.deactivateAsync();
+            this._body.clear();
+            this._actions.clear();
+            this.title = null;
+            return true;
         }
     }
     WebApp.ContentHostView = ContentHostView;
@@ -5388,51 +5303,49 @@ var WebApp;
         addAction(action) {
             this.actions.add(WebApp.ActionView.fromAction(action));
         }
-        showAsync(element, event) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let curOfs = { x: 0, y: 0 };
-                if (!element && event) {
-                    element = event.srcElement;
-                    curOfs.x = event.offsetX;
-                    curOfs.y = event.offsetY;
+        async showAsync(element, event) {
+            let curOfs = { x: 0, y: 0 };
+            if (!element && event) {
+                element = event.srcElement;
+                curOfs.x = event.offsetX;
+                curOfs.y = event.offsetY;
+            }
+            const builder = new WebApp.TemplateBuilder(this, this._menuContainer);
+            builder.template("ContextMenu", a => a);
+            document.body.appendChild(this._menuContainer);
+            await WebApp.PromiseUtils.delay(0);
+            window.addEventListener("mouseup", this._clickHandler);
+            let curEl = element;
+            let offsetEl = element;
+            while (curEl) {
+                if (curEl == offsetEl) {
+                    curOfs.y += curEl.offsetTop;
+                    curOfs.x += curEl.offsetLeft;
+                    offsetEl = curEl.offsetParent;
                 }
-                const builder = new WebApp.TemplateBuilder(this, this._menuContainer);
-                builder.template("ContextMenu", a => a);
-                document.body.appendChild(this._menuContainer);
-                yield WebApp.PromiseUtils.delay(0);
-                window.addEventListener("mouseup", this._clickHandler);
-                let curEl = element;
-                let offsetEl = element;
-                while (curEl) {
-                    if (curEl == offsetEl) {
-                        curOfs.y += curEl.offsetTop;
-                        curOfs.x += curEl.offsetLeft;
-                        offsetEl = curEl.offsetParent;
-                    }
-                    curOfs.y -= curEl.scrollTop;
-                    curOfs.x -= curEl.scrollLeft;
-                    curEl = curEl.parentElement;
-                }
-                let xTrans = "";
-                let yTrans = "";
-                if (curOfs.x + this._menuContainer.clientWidth > document.body.clientWidth) {
-                    curOfs.x -= this._menuContainer.clientWidth;
-                    xTrans = "right";
-                }
-                else
-                    xTrans = "left";
-                if (curOfs.y + this._menuContainer.clientHeight > document.body.clientHeight) {
-                    curOfs.y -= this._menuContainer.clientHeight;
-                    yTrans = "bottom";
-                }
-                else
-                    yTrans = "top";
-                this._menuContainer.style.top = curOfs.y + "px";
-                this._menuContainer.style.left = curOfs.x + "px";
-                this._menuContainer.style.transformOrigin = xTrans + " " + yTrans;
-                yield WebApp.PromiseUtils.delay(0);
-                this._menuContainer.classList.add("visible");
-            });
+                curOfs.y -= curEl.scrollTop;
+                curOfs.x -= curEl.scrollLeft;
+                curEl = curEl.parentElement;
+            }
+            let xTrans = "";
+            let yTrans = "";
+            if (curOfs.x + this._menuContainer.clientWidth > document.body.clientWidth) {
+                curOfs.x -= this._menuContainer.clientWidth;
+                xTrans = "right";
+            }
+            else
+                xTrans = "left";
+            if (curOfs.y + this._menuContainer.clientHeight > document.body.clientHeight) {
+                curOfs.y -= this._menuContainer.clientHeight;
+                yTrans = "bottom";
+            }
+            else
+                yTrans = "top";
+            this._menuContainer.style.top = curOfs.y + "px";
+            this._menuContainer.style.left = curOfs.x + "px";
+            this._menuContainer.style.transformOrigin = xTrans + " " + yTrans;
+            await WebApp.PromiseUtils.delay(0);
+            this._menuContainer.classList.add("visible");
         }
         hide() {
             this._menuContainer.classList.remove("visible");
@@ -5485,10 +5398,10 @@ var WebApp;
         }
         addAction(action) {
             const actionView = WebApp.ActionView.fromAction(action, {
-                executeAsync: () => __awaiter(this, void 0, void 0, function* () {
+                executeAsync: async () => {
                     this._host.hideAsync();
-                    yield action.executeAsync();
-                })
+                    await action.executeAsync();
+                }
             });
             this.actions.add(actionView);
             return actionView;
@@ -5524,20 +5437,16 @@ var WebApp;
                     this.hideAsync();
             });
         }
-        showAsync(ctx) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.status = "showing";
-                yield WebApp.PromiseUtils.delay(0);
-                this.status = "visible";
-            });
+        async showAsync(ctx) {
+            this.status = "showing";
+            await WebApp.PromiseUtils.delay(0);
+            this.status = "visible";
         }
-        hideAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.status = "hiding";
-                yield WebApp.PromiseUtils.delay(500);
-                if (this.status == "hiding")
-                    this.status = "hidden";
-            });
+        async hideAsync() {
+            this.status = "hiding";
+            await WebApp.PromiseUtils.delay(500);
+            if (this.status == "hiding")
+                this.status = "hidden";
         }
     }
     WebApp.Drawer = Drawer;
@@ -5579,15 +5488,13 @@ var WebApp;
         }
         remove() {
         }
-        uploadAsync(url) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.status = "uploading";
-                let result = yield WebApp.Http.postBinaryAsync(url, this._input.files[0], ev => {
-                    this.progress = ev.loaded / ev.total;
-                });
-                this.status = "uploaded";
-                return result;
+        async uploadAsync(url) {
+            this.status = "uploading";
+            let result = await WebApp.Http.postBinaryAsync(url, this._input.files[0], ev => {
+                this.progress = ev.loaded / ev.total;
             });
+            this.status = "uploaded";
+            return result;
         }
         get file() {
             if (!this._input.files || this._input.files.length == 0)
@@ -5688,14 +5595,14 @@ var WebApp;
                         if (args.value)
                             this.items.removeWhen(a => this.itemsSource.equals(this.itemsSource.getItemValue(a), args.value));
                     },
-                    onItemChanged: (args) => __awaiter(this, void 0, void 0, function* () {
+                    onItemChanged: async (args) => {
                         let index = WebApp.linq(this.items).indexOf(a => this.itemsSource.equals(this.itemsSource.getItemValue(a), args.value));
                         if (index != -1) {
-                            const newItem = yield this.itemsSource.getItemByValueAsync(args.value);
+                            const newItem = await this.itemsSource.getItemByValueAsync(args.value);
                             if (newItem)
                                 this.items.set(index, newItem);
                         }
-                    })
+                    }
                 };
             WebApp.Services.itemsObserver.register(this.itemsSource.typeName, this._listener);
         }
@@ -5719,27 +5626,23 @@ var WebApp;
         clear() {
             this.items.clear();
         }
-        loadAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._isLoaded)
-                    return;
-                this.refreshAsync();
-            });
+        async loadAsync() {
+            if (this._isLoaded)
+                return;
+            this.refreshAsync();
         }
-        refreshAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                let oldSelection = this.selectedItem;
-                if (this.itemsLoader) {
-                    this.beginUpdate();
-                    yield this.itemsLoader.loadItemsAsync(this, 25);
-                    this.endUpdate();
-                }
-                this._isLoaded = true;
-                if (oldSelection && this.itemsSource)
-                    this.selectedItem = WebApp.linq(this.items).first(a => this.itemsSource.itemComparer(a, oldSelection));
-                else
-                    this.selectedItem = null;
-            });
+        async refreshAsync() {
+            let oldSelection = this.selectedItem;
+            if (this.itemsLoader) {
+                this.beginUpdate();
+                await this.itemsLoader.loadItemsAsync(this, 25);
+                this.endUpdate();
+            }
+            this._isLoaded = true;
+            if (oldSelection && this.itemsSource)
+                this.selectedItem = WebApp.linq(this.items).first(a => this.itemsSource.itemComparer(a, oldSelection));
+            else
+                this.selectedItem = null;
         }
         onItemRemoved(itemView) {
             if (itemView) {
@@ -5925,22 +5828,20 @@ var WebApp;
         showMap() {
             WebApp.Actions.maps(this.content);
         }
-        updateAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                let manager = WebApp.Services.mapManager();
-                let pos = this.content.position;
-                if (!pos)
-                    pos = yield manager.getLocationAsync(this.content.address);
-                this.map = manager.staticMap({
-                    center: pos,
-                    size: this.mapSize,
-                    zoomLevel: this.zoomLevel,
-                    pins: [{
-                            center: pos,
-                            icon: 113,
-                            name: this.content.name
-                        }]
-                });
+        async updateAsync() {
+            let manager = WebApp.Services.mapManager();
+            let pos = this.content.position;
+            if (!pos)
+                pos = await manager.getLocationAsync(this.content.address);
+            this.map = manager.staticMap({
+                center: pos,
+                size: this.mapSize,
+                zoomLevel: this.zoomLevel,
+                pins: [{
+                        center: pos,
+                        icon: 113,
+                        name: this.content.name
+                    }]
             });
         }
     }
@@ -5979,27 +5880,25 @@ var WebApp;
                     this.selectedItem = null;
             };
         }
-        loadItemsAsync(filter) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (!this.itemsSource)
-                    return;
-                this.beginUpdate();
-                this.content.clear();
-                this.status = "loading";
-                let operation = WebApp.Operation.begin({ message: "Loading items", type: WebApp.OperationType.Local });
-                try {
-                    let items = yield this.itemsSource.getItemsAsync(filter);
-                    if (items)
-                        items.forEach(a => this.content.add(a));
-                    if (this.mapReady.isSet)
-                        this.initItems();
-                }
-                finally {
-                    operation.end();
-                    this.status = "";
-                    this.endUpdate();
-                }
-            });
+        async loadItemsAsync(filter) {
+            if (!this.itemsSource)
+                return;
+            this.beginUpdate();
+            this.content.clear();
+            this.status = "loading";
+            let operation = WebApp.Operation.begin({ message: "Loading items", type: WebApp.OperationType.Local });
+            try {
+                let items = await this.itemsSource.getItemsAsync(filter);
+                if (items)
+                    items.forEach(a => this.content.add(a));
+                if (this.mapReady.isSet)
+                    this.initItems();
+            }
+            finally {
+                operation.end();
+                this.status = "";
+                this.endUpdate();
+            }
         }
         attach(element) {
             WebApp.Operation.progress("Map attacched");
@@ -6126,10 +6025,10 @@ var WebApp;
             this.actions.add(WebApp.ActionView.fromAction(action, {
                 template: "ActionButton",
                 styles: styles,
-                executeAsync: () => __awaiter(this, void 0, void 0, function* () {
-                    yield action.executeAsync();
+                executeAsync: async () => {
+                    await action.executeAsync();
                     this.hide(action.name);
-                })
+                }
             }));
         }
     }
@@ -6222,38 +6121,34 @@ var WebApp;
             this.bindConfigString("title", config);
             this.bindConfigString("closeLabel", config);
         }
-        createAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                const viewContent = yield this.contentProvider.getContentAsync(this);
-                if (viewContent.actions) {
-                    this.addAction({
-                        name: "close",
-                        icon: "fas fa-close",
-                        displayName: this.closeLabel,
-                        executeAsync: () => this.closeAsync()
-                    });
-                    viewContent.actions.forEach(a => this.addAction(a));
-                }
-                if (viewContent.title)
-                    this.title = WebApp.DynamicString.getValue(viewContent.title);
-                this.contentView.content.clear();
-                if (viewContent.views)
-                    viewContent.views.forEach(a => this.contentView.addView(a));
-                if (viewContent.styles && viewContent.styles.length > 0)
-                    this.contentView.styles = viewContent.styles;
-                else
-                    this.contentView.styles = this.contentStyle;
-            });
+        async createAsync() {
+            const viewContent = await this.contentProvider.getContentAsync(this);
+            if (viewContent.actions) {
+                this.addAction({
+                    name: "close",
+                    icon: "fas fa-close",
+                    displayName: this.closeLabel,
+                    executeAsync: () => this.closeAsync()
+                });
+                viewContent.actions.forEach(a => this.addAction(a));
+            }
+            if (viewContent.title)
+                this.title = WebApp.DynamicString.getValue(viewContent.title);
+            this.contentView.content.clear();
+            if (viewContent.views)
+                viewContent.views.forEach(a => this.contentView.addView(a));
+            if (viewContent.styles && viewContent.styles.length > 0)
+                this.contentView.styles = viewContent.styles;
+            else
+                this.contentView.styles = this.contentStyle;
         }
         get result() {
             return new Promise(res => this._resultResolve = res);
         }
-        openAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.createAsync();
-                this.showAsync();
-                return this;
-            });
+        async openAsync() {
+            await this.createAsync();
+            this.showAsync();
+            return this;
         }
         notifyContentChanged(provider) {
             this.createAsync();
@@ -6336,40 +6231,38 @@ var WebApp;
             this.editor.error = null;
             this.error = null;
         }
-        validateAsync(target, force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                console.group("begin validation: " + this.label, " - needValidation: ", this.isDirty);
-                try {
-                    const curValue = this.editor instanceof WebApp.NumberEditor ? this.editor.value : this.editor.editValue;
-                    if (!force && this._lastValidationValue !== undefined && WebApp.ObjectUtils.equals(this._lastValidationValue, curValue))
-                        return this.isValid;
-                    this.clearError();
-                    this._lastValidationValue = curValue;
-                    if (!(yield this.editor.validateAsync(force))) {
+        async validateAsync(target, force) {
+            console.group("begin validation: " + this.label, " - needValidation: ", this.isDirty);
+            try {
+                const curValue = this.editor instanceof WebApp.NumberEditor ? this.editor.value : this.editor.editValue;
+                if (!force && this._lastValidationValue !== undefined && WebApp.ObjectUtils.equals(this._lastValidationValue, curValue))
+                    return this.isValid;
+                this.clearError();
+                this._lastValidationValue = curValue;
+                if (!await this.editor.validateAsync(force)) {
+                    this.isValid = false;
+                    this.error = this.editor.error;
+                    return false;
+                }
+                const ctx = {
+                    value: curValue,
+                    fieldName: this.label,
+                    target: target
+                };
+                for (let validator of this.validators) {
+                    const result = await validator.validateAsync(ctx);
+                    if (!result.isValid) {
+                        this.error = WebApp.DynamicString.getValue(result.error, WebApp.StringUsage.Message);
                         this.isValid = false;
-                        this.error = this.editor.error;
                         return false;
                     }
-                    const ctx = {
-                        value: curValue,
-                        fieldName: this.label,
-                        target: target
-                    };
-                    for (let validator of this.validators) {
-                        const result = yield validator.validateAsync(ctx);
-                        if (!result.isValid) {
-                            this.error = WebApp.DynamicString.getValue(result.error, WebApp.StringUsage.Message);
-                            this.isValid = false;
-                            return false;
-                        }
-                    }
-                    this.isValid = true;
-                    return true;
                 }
-                finally {
-                    console.groupEnd();
-                }
-            });
+                this.isValid = true;
+                return true;
+            }
+            finally {
+                console.groupEnd();
+            }
         }
         loadAsync() {
             return this.editor.loadAsync();
@@ -6393,12 +6286,10 @@ var WebApp;
                     this.removeWorkAsync = config.removeAsync;
             }
         }
-        removeAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.status = "removed";
-                yield WebApp.PromiseUtils.delay(150);
-                yield this.removeWorkAsync();
-            });
+        async removeAsync() {
+            this.status = "removed";
+            await WebApp.PromiseUtils.delay(150);
+            await this.removeWorkAsync();
         }
         removeWorkAsync() {
             throw "Not supported";
@@ -6432,16 +6323,14 @@ var WebApp;
                 this.poolSearchTextAsync();
             }
         }
-        poolSearchTextAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                while (this.hasFocus) {
-                    if (this.searchText != this._lastSearchText) {
-                        this._lastSearchText = this.searchText;
-                        yield this.searchAsync(this._lastSearchText);
-                    }
-                    yield WebApp.PromiseUtils.delay(this.poolInterval);
+        async poolSearchTextAsync() {
+            while (this.hasFocus) {
+                if (this.searchText != this._lastSearchText) {
+                    this._lastSearchText = this.searchText;
+                    await this.searchAsync(this._lastSearchText);
                 }
-            });
+                await WebApp.PromiseUtils.delay(this.poolInterval);
+            }
         }
         executeWorkAsync() {
             if (!this.isExpanded) {
@@ -6450,17 +6339,15 @@ var WebApp;
             }
             return Promise.resolve();
         }
-        searchAsync(text) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.status = "searching";
-                yield WebApp.PromiseUtils.delay(0);
-                try {
-                    yield this.doSearchAsync(text);
-                }
-                finally {
-                    this.status = "loaded";
-                }
-            });
+        async searchAsync(text) {
+            this.status = "searching";
+            await WebApp.PromiseUtils.delay(0);
+            try {
+                await this.doSearchAsync(text);
+            }
+            finally {
+                this.status = "loaded";
+            }
         }
         doSearchAsync(text) {
             return Promise.resolve();
@@ -6560,11 +6447,9 @@ var WebApp;
             }
             return this._parentHost.find(nameOrType);
         }
-        goToAsync(index) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._parentHost.currentIndex = index;
-                return Promise.resolve();
-            });
+        async goToAsync(index) {
+            this._parentHost.currentIndex = index;
+            return Promise.resolve();
         }
         get canGoBack() {
             return this._parentHost.canGoBack;
@@ -6621,117 +6506,107 @@ var WebApp;
             this.pageViews[1].content = null;
             this.pageViews[1].className = "immediate prev";
         }
-        goBackAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._currentIndex > 0)
-                    yield this.goToAsync(this._currentIndex - 1);
-            });
+        async goBackAsync() {
+            if (this._currentIndex > 0)
+                await this.goToAsync(this._currentIndex - 1);
         }
-        goForwardAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._currentIndex > 0)
-                    yield this.goToAsync(this._currentIndex + 1);
-            });
+        async goForwardAsync() {
+            if (this._currentIndex > 0)
+                await this.goToAsync(this._currentIndex + 1);
         }
-        bringFrontAsync(page) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let pageIndex = WebApp.linq(this._pageStack).indexOf(a => a.page == page);
-                if (pageIndex != -1)
-                    yield page.host.goToAsync(pageIndex);
-            });
+        async bringFrontAsync(page) {
+            let pageIndex = WebApp.linq(this._pageStack).indexOf(a => a.page == page);
+            if (pageIndex != -1)
+                await page.host.goToAsync(pageIndex);
         }
-        loadAsync(page, options) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.current == page) {
-                    yield page.refreshAsync();
-                    return page;
-                }
-                this.cancelHidePrev();
-                let op = WebApp.Operation.begin("Hosting new page");
-                try {
-                    if (this.current && WebApp.Activity.isActivity(this.current))
-                        yield this.current.deactivateAsync();
-                    if ((options === null || options === void 0 ? void 0 : options.loadMode) == "clear")
-                        this._currentIndex = -1;
-                    if ((options === null || options === void 0 ? void 0 : options.loadMode) == "replace" && this.currentIndex >= 0)
-                        this._currentIndex--;
-                    while (this._pageStack.length > this._currentIndex + 1)
-                        this._pageStack.splice(this._pageStack.length - 1, 1);
-                    this._pageStack.push({ page: page, options: options });
-                    if (options && options.transaction)
-                        this.activeTransaction = options.transaction;
-                    else
-                        this.activeTransaction = this.defaultTransaction;
-                    this._currentIndex++;
-                    page.host = this;
-                    page.view.parentView = this;
-                    this.pageViews[this.backIndex].className = "immediate next";
-                    yield WebApp.PromiseUtils.delay(0);
-                    yield page.loadAsync();
-                    if (this._currentIndex > 0) {
-                        this.pageViews[this.backIndex].content = page.view;
-                        yield WebApp.PromiseUtils.delay(0);
-                        this.pageViews[this.frontIndex].className = "animate prev";
-                        this.pageViews[this.backIndex].className = "animate active";
-                        this._activeViewIndex = this.backIndex;
-                        this.hidePrev();
-                    }
-                    else {
-                        this.pageViews[this.frontIndex].content = page.view;
-                        this.pageViews[this.frontIndex].className = "active";
-                    }
-                    page.status = "active";
-                    if (WebApp.Activity.isActivity(this.current))
-                        yield this.current.activateAsync();
-                }
-                catch (e) {
-                    WebApp.app.handleError(this, e);
-                }
-                finally {
-                    op.end();
-                }
+        async loadAsync(page, options) {
+            if (this.current == page) {
+                await page.refreshAsync();
                 return page;
-            });
+            }
+            this.cancelHidePrev();
+            let op = WebApp.Operation.begin("Hosting new page");
+            try {
+                if (this.current && WebApp.Activity.isActivity(this.current))
+                    await this.current.deactivateAsync();
+                if ((options === null || options === void 0 ? void 0 : options.loadMode) == "clear")
+                    this._currentIndex = -1;
+                if ((options === null || options === void 0 ? void 0 : options.loadMode) == "replace" && this.currentIndex >= 0)
+                    this._currentIndex--;
+                while (this._pageStack.length > this._currentIndex + 1)
+                    this._pageStack.splice(this._pageStack.length - 1, 1);
+                this._pageStack.push({ page: page, options: options });
+                if (options && options.transaction)
+                    this.activeTransaction = options.transaction;
+                else
+                    this.activeTransaction = this.defaultTransaction;
+                this._currentIndex++;
+                page.host = this;
+                page.view.parentView = this;
+                this.pageViews[this.backIndex].className = "immediate next";
+                await WebApp.PromiseUtils.delay(0);
+                await page.loadAsync();
+                if (this._currentIndex > 0) {
+                    this.pageViews[this.backIndex].content = page.view;
+                    await WebApp.PromiseUtils.delay(0);
+                    this.pageViews[this.frontIndex].className = "animate prev";
+                    this.pageViews[this.backIndex].className = "animate active";
+                    this._activeViewIndex = this.backIndex;
+                    this.hidePrev();
+                }
+                else {
+                    this.pageViews[this.frontIndex].content = page.view;
+                    this.pageViews[this.frontIndex].className = "active";
+                }
+                page.status = "active";
+                if (WebApp.Activity.isActivity(this.current))
+                    await this.current.activateAsync();
+            }
+            catch (e) {
+                WebApp.app.handleError(this, e);
+            }
+            finally {
+                op.end();
+            }
+            return page;
         }
         get(index) {
             return this._pageStack[index].page;
         }
-        goToAsync(index) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (index < 0 || index >= this._pageStack.length || index == this._currentIndex)
-                    return;
-                this.cancelHidePrev();
-                let op = WebApp.Operation.begin("Going to " + index);
-                try {
-                    if (WebApp.Activity.isActivity(this.current))
-                        yield this.current.deactivateAsync();
-                    this.current.status = "hidden";
-                    let options = this._pageStack[this._currentIndex].options;
-                    if (options && options.transaction)
-                        this.activeTransaction = options.transaction;
-                    else
-                        this.activeTransaction = this.defaultTransaction;
-                    this._currentIndex = index;
-                    if (this.current.view.parentView == this)
-                        this.current.view.parentView = null;
-                    this.pageViews[this.backIndex].content = this._pageStack[this._currentIndex].page.view;
-                    this.pageViews[this.backIndex].className = "immmediate prev";
-                    yield WebApp.PromiseUtils.delay(0);
-                    this.pageViews[this.frontIndex].className = "animate next";
-                    this.pageViews[this.backIndex].className = "animate active";
-                    this._activeViewIndex = this.backIndex;
-                    this.current.status = "active";
-                    if (WebApp.Activity.isActivity(this.current))
-                        yield this.current.activateAsync();
-                    this.hidePrev();
-                }
-                catch (e) {
-                    WebApp.app.handleError(this, e);
-                }
-                finally {
-                    op.end();
-                }
-            });
+        async goToAsync(index) {
+            if (index < 0 || index >= this._pageStack.length || index == this._currentIndex)
+                return;
+            this.cancelHidePrev();
+            let op = WebApp.Operation.begin("Going to " + index);
+            try {
+                if (WebApp.Activity.isActivity(this.current))
+                    await this.current.deactivateAsync();
+                this.current.status = "hidden";
+                let options = this._pageStack[this._currentIndex].options;
+                if (options && options.transaction)
+                    this.activeTransaction = options.transaction;
+                else
+                    this.activeTransaction = this.defaultTransaction;
+                this._currentIndex = index;
+                if (this.current.view.parentView == this)
+                    this.current.view.parentView = null;
+                this.pageViews[this.backIndex].content = this._pageStack[this._currentIndex].page.view;
+                this.pageViews[this.backIndex].className = "immmediate prev";
+                await WebApp.PromiseUtils.delay(0);
+                this.pageViews[this.frontIndex].className = "animate next";
+                this.pageViews[this.backIndex].className = "animate active";
+                this._activeViewIndex = this.backIndex;
+                this.current.status = "active";
+                if (WebApp.Activity.isActivity(this.current))
+                    await this.current.activateAsync();
+                this.hidePrev();
+            }
+            catch (e) {
+                WebApp.app.handleError(this, e);
+            }
+            finally {
+                op.end();
+            }
         }
         cancelHidePrev() {
             if (this._hideTimerId) {
@@ -6797,15 +6672,13 @@ var WebApp;
             this.status = "close";
             new WebApp.TemplateBuilder(this, document.body).content(this);
         }
-        showAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.status == "open")
-                    return;
-                WebApp.app.unblock(true);
-                yield WebApp.PromiseUtils.delay(0);
-                this.status = "open";
-                return new Promise(res => this._showResolve = res);
-            });
+        async showAsync() {
+            if (this.status == "open")
+                return;
+            WebApp.app.unblock(true);
+            await WebApp.PromiseUtils.delay(0);
+            this.status = "open";
+            return new Promise(res => this._showResolve = res);
         }
         hide(actionName) {
             if (this.status != "open")
@@ -6833,10 +6706,10 @@ var WebApp;
                 else
                     action = options.action;
                 SnackBar.instance.action = WebApp.ActionView.fromAction(action, {
-                    executeAsync: () => __awaiter(this, void 0, void 0, function* () {
-                        yield action.executeAsync();
+                    executeAsync: async () => {
+                        await action.executeAsync();
                         SnackBar.instance.hide(action.name);
-                    })
+                    }
                 });
             }
             else
@@ -6895,28 +6768,24 @@ var WebApp;
             builder.template("ToastContainer", a => a);
             document.body.appendChild(Toast._container);
         }
-        showAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                Toast._items.add(this);
-                yield WebApp.PromiseUtils.delay(10);
-                this.visible = true;
-                let showMs = this.showTime.totalMilliseconds;
-                if (showMs == 0)
-                    showMs = Math.min(Math.max(this.message.length * 70, 2000), 7000);
-                setTimeout(() => this.hideAsync(), showMs);
-                return new Promise(res => this._showResolve = res);
-            });
+        async showAsync() {
+            Toast._items.add(this);
+            await WebApp.PromiseUtils.delay(10);
+            this.visible = true;
+            let showMs = this.showTime.totalMilliseconds;
+            if (showMs == 0)
+                showMs = Math.min(Math.max(this.message.length * 70, 2000), 7000);
+            setTimeout(() => this.hideAsync(), showMs);
+            return new Promise(res => this._showResolve = res);
         }
-        hideAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.visible = false;
-                yield WebApp.PromiseUtils.delay(600);
-                Toast._items.remove(this);
-                if (this._showResolve) {
-                    this._showResolve();
-                    this._showResolve = null;
-                }
-            });
+        async hideAsync() {
+            this.visible = false;
+            await WebApp.PromiseUtils.delay(600);
+            Toast._items.remove(this);
+            if (this._showResolve) {
+                this._showResolve();
+                this._showResolve = null;
+            }
         }
     }
     Toast._items = observableListOf();
@@ -7018,13 +6887,11 @@ var WebApp;
                 this.view.window.document.location.reload();
             });
         }
-        closeAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.view.window.close();
-                if ("goBackAsync" in this.host)
-                    yield this.host.goBackAsync();
-                return true;
-            });
+        async closeAsync() {
+            this.view.window.close();
+            if ("goBackAsync" in this.host)
+                await this.host.goBackAsync();
+            return true;
         }
     }
     WebApp.WebPage = WebPage;
@@ -7077,12 +6944,10 @@ var WebApp;
                 return this.content.loadAsync();
             return Promise.resolve();
         }
-        validateAsync(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (WebApp.TypeCheck.isValidable(this.content))
-                    this.isValid = yield this.content.validateAsync(force);
-                return this.isValid;
-            });
+        async validateAsync(force) {
+            if (WebApp.TypeCheck.isValidable(this.content))
+                this.isValid = await this.content.validateAsync(force);
+            return this.isValid;
         }
         select() {
             this.parentView.selectStepAsync(this.index);
@@ -7158,68 +7023,54 @@ var WebApp;
             if (!(config === null || config === void 0 ? void 0 : config.finishLabel))
                 this.prevLabel = WebApp.DynamicString.getValue(WebApp.Strings["wizard-finish"], WebApp.StringUsage.Action);
         }
-        finishAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if ((yield this.validateUntilAsync(this.content.count - 1)) !== true)
-                    return;
-                yield this.doFinishAsync();
-            });
+        async finishAsync() {
+            if (await this.validateUntilAsync(this.content.count - 1) !== true)
+                return;
+            await this.doFinishAsync();
         }
-        doFinishAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                return Promise.resolve();
-            });
+        async doFinishAsync() {
+            return Promise.resolve();
         }
         clearErrors() {
         }
-        validateUntilAsync(targetIndex) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let curStep = this.currentStepIndex;
-                while (curStep <= targetIndex) {
-                    if (!(yield this.content.get(curStep).validateAsync()))
-                        return curStep;
-                    curStep++;
-                }
-                return true;
-            });
+        async validateUntilAsync(targetIndex) {
+            let curStep = this.currentStepIndex;
+            while (curStep <= targetIndex) {
+                if (!await this.content.get(curStep).validateAsync())
+                    return curStep;
+                curStep++;
+            }
+            return true;
         }
-        selectStepAsync(index) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (index == this.currentStepIndex)
-                    return;
-                this.clearErrors();
-                if (index > this.currentStepIndex) {
-                    let result = yield this.validateUntilAsync(index - 1);
-                    if (result === true) {
-                        this.currentStepIndex = index;
-                        yield this.content.get(index).loadAsync();
-                    }
-                    else {
-                        this.currentStepIndex = result;
-                        if (result != this.currentStepIndex)
-                            yield this.content.get(result).loadAsync();
-                    }
-                }
-                else
+        async selectStepAsync(index) {
+            if (index == this.currentStepIndex)
+                return;
+            this.clearErrors();
+            if (index > this.currentStepIndex) {
+                let result = await this.validateUntilAsync(index - 1);
+                if (result === true) {
                     this.currentStepIndex = index;
-            });
+                    await this.content.get(index).loadAsync();
+                }
+                else {
+                    this.currentStepIndex = result;
+                    if (result != this.currentStepIndex)
+                        await this.content.get(result).loadAsync();
+                }
+            }
+            else
+                this.currentStepIndex = index;
         }
-        nextAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.currentStepIndex + 1 < this.content.count)
-                    yield this.selectStepAsync(this.currentStepIndex + 1);
-            });
+        async nextAsync() {
+            if (this.currentStepIndex + 1 < this.content.count)
+                await this.selectStepAsync(this.currentStepIndex + 1);
         }
-        previousAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.currentStepIndex > 0)
-                    yield this.selectStepAsync(this.currentStepIndex - 1);
-            });
+        async previousAsync() {
+            if (this.currentStepIndex > 0)
+                await this.selectStepAsync(this.currentStepIndex - 1);
         }
-        endAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.selectStepAsync(this.content.count - 1);
-            });
+        async endAsync() {
+            await this.selectStepAsync(this.content.count - 1);
         }
         hasPrevStep() {
             let curIndex = this.currentStepIndex - 1;
@@ -7274,56 +7125,52 @@ var WebApp;
                     this.saveItemAsync = config.saveItemAsync;
             }
         }
-        getContentAsync(host) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._host = host;
-                yield this.editor.beginEditAsync(this.value);
-                const container = new WebApp.Container({
-                    name: "editor-container",
-                    title: this.title,
-                    content: this.editor.view
+        async getContentAsync(host) {
+            this._host = host;
+            await this.editor.beginEditAsync(this.value);
+            const container = new WebApp.Container({
+                name: "editor-container",
+                title: this.title,
+                content: this.editor.view
+            });
+            if (WebApp.TypeCheck.isActivable(this.editor))
+                setTimeout(() => this.editor.activateAsync(), 200);
+            const actions = [];
+            if (this.saveOnCommit) {
+                this.editor.prop("value").subscribe(value => this.saveAsync());
+            }
+            else {
+                actions.push({
+                    name: "save",
+                    icon: "fas fa-save",
+                    displayName: this.saveLabel,
+                    priority: this.savePriority,
+                    executeAsync: () => this.saveAsync()
                 });
-                if (WebApp.TypeCheck.isActivable(this.editor))
-                    setTimeout(() => this.editor.activateAsync(), 200);
-                const actions = [];
-                if (this.saveOnCommit) {
-                    this.editor.prop("value").subscribe(value => this.saveAsync());
-                }
-                else {
-                    actions.push({
-                        name: "save",
-                        icon: "fas fa-save",
-                        displayName: this.saveLabel,
-                        priority: this.savePriority,
-                        executeAsync: () => this.saveAsync()
-                    });
-                }
-                return Promise.resolve({
-                    views: [container],
-                    actions: actions,
-                    styles: this.styles,
-                    title: this.title
-                });
+            }
+            return Promise.resolve({
+                views: [container],
+                actions: actions,
+                styles: this.styles,
+                title: this.title
             });
         }
         saveItemAsync(item) {
             return Promise.resolve(item);
         }
-        saveAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.saveOnCommit) {
-                    if (!this.editor.isValid)
-                        return;
-                }
-                else {
-                    if (!(yield this.editor.commitAsync(true)))
-                        return;
-                }
-                const result = yield this.saveItemAsync(this.editor.value);
-                if (result == null)
+        async saveAsync() {
+            if (this.saveOnCommit) {
+                if (!this.editor.isValid)
                     return;
-                yield this._host.closeAsync(result);
-            });
+            }
+            else {
+                if (!await this.editor.commitAsync(true))
+                    return;
+            }
+            const result = await this.saveItemAsync(this.editor.value);
+            if (result == null)
+                return;
+            await this._host.closeAsync(result);
         }
     }
     WebApp.ItemEditContent = ItemEditContent;
@@ -7335,16 +7182,14 @@ var WebApp;
             super();
             this._isRefreshing = false;
         }
-        refreshAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._isRefreshing = true;
-                try {
-                    yield this._listView.refreshAsync();
-                }
-                finally {
-                    this._isRefreshing = false;
-                }
-            });
+        async refreshAsync() {
+            this._isRefreshing = true;
+            try {
+                await this._listView.refreshAsync();
+            }
+            finally {
+                this._isRefreshing = false;
+            }
         }
         deactivateAsync() {
             var _a;
@@ -7356,46 +7201,44 @@ var WebApp;
             (_a = this._listView) === null || _a === void 0 ? void 0 : _a.activateListener();
             return this.refreshAsync();
         }
-        getContentAsync(host) {
+        async getContentAsync(host) {
             var _a;
-            return __awaiter(this, void 0, void 0, function* () {
-                const views = [];
-                const options = yield this.configureAsync(host);
-                this._listView = new WebApp.ListView(Object.assign({ itemsSource: options.itemsSource, itemsLoader: options.pageSize ? new WebApp.PagedItemsLoader({
-                        pageSize: options.pageSize
-                    }) : undefined }, options.listView));
-                if (options.filters) {
-                    if (options.filters.length > 1) {
-                        this._tabView = new WebApp.NavBar({
-                            styles: ["tab-view"],
-                            itemTemplate: "TextView",
-                            itemBehavoirs: ["ripple"],
-                            onItemSelected: item => {
-                                this._listView.filter = item.content;
-                                this.refreshAsync();
-                            },
-                            items: WebApp.linq(options.filters).select(a => ({
-                                text: a.name,
-                                content: a.content
-                            })).toArray()
-                        });
-                        views.push(this._tabView);
-                    }
-                    else if (options.filters.length == 1)
-                        this._listView.filter = options.filters[0].content;
+            const views = [];
+            const options = await this.configureAsync(host);
+            this._listView = new WebApp.ListView(Object.assign({ itemsSource: options.itemsSource, itemsLoader: options.pageSize ? new WebApp.PagedItemsLoader({
+                    pageSize: options.pageSize
+                }) : undefined }, options.listView));
+            if (options.filters) {
+                if (options.filters.length > 1) {
+                    this._tabView = new WebApp.NavBar({
+                        styles: ["tab-view"],
+                        itemTemplate: "TextView",
+                        itemBehavoirs: ["ripple"],
+                        onItemSelected: item => {
+                            this._listView.filter = item.content;
+                            this.refreshAsync();
+                        },
+                        items: WebApp.linq(options.filters).select(a => ({
+                            text: a.name,
+                            content: a.content
+                        })).toArray()
+                    });
+                    views.push(this._tabView);
                 }
-                views.push(this._listView);
-                if (this._tabView)
-                    this._tabView.selectedItem = this._tabView.content.get(0);
-                if (options.footer)
-                    options.footer.forEach(a => views.push(a));
-                this._listView.activateListener();
-                return Promise.resolve({
-                    title: (_a = options.title) !== null && _a !== void 0 ? _a : this.info.displayName,
-                    actions: options.actions,
-                    styles: options.styles,
-                    views: views
-                });
+                else if (options.filters.length == 1)
+                    this._listView.filter = options.filters[0].content;
+            }
+            views.push(this._listView);
+            if (this._tabView)
+                this._tabView.selectedItem = this._tabView.content.get(0);
+            if (options.footer)
+                options.footer.forEach(a => views.push(a));
+            this._listView.activateListener();
+            return Promise.resolve({
+                title: (_a = options.title) !== null && _a !== void 0 ? _a : this.info.displayName,
+                actions: options.actions,
+                styles: options.styles,
+                views: views
             });
         }
     }
@@ -7409,28 +7252,24 @@ var WebApp;
         refreshAsync() {
             return null;
         }
-        getContentAsync(host) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const views = [];
-                this._mapView = new WebApp.MapView({
-                    onMapLoaded: () => this.onMapLoaded(),
-                    manager: WebApp.Services.mapManager()
-                });
-                this._progress = new WebApp.ProgressView();
-                return {
-                    views: [this._mapView, this._progress],
-                    title: this.info.displayName
-                };
+        async getContentAsync(host) {
+            const views = [];
+            this._mapView = new WebApp.MapView({
+                onMapLoaded: () => this.onMapLoaded(),
+                manager: WebApp.Services.mapManager()
             });
+            this._progress = new WebApp.ProgressView();
+            return {
+                views: [this._mapView, this._progress],
+                title: this.info.displayName
+            };
         }
         createMapAsync(manager) {
             return Promise.resolve();
         }
-        onMapLoaded() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.createMapAsync(this._mapView.manager);
-                this._progress.visible = false;
-            });
+        async onMapLoaded() {
+            await this.createMapAsync(this._mapView.manager);
+            this._progress.visible = false;
         }
     }
     WebApp.MapContent = MapContent;
@@ -7467,64 +7306,60 @@ var WebApp;
                 return this.masterContent.deactivateAsync();
             return Promise.resolve();
         }
-        getContentAsync(host) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._host = host;
-                if (this.mode == "auto") {
-                    let curWidth = document.body.clientWidth / window.devicePixelRatio;
-                    if (curWidth > this.minWidth)
-                        this.mode = "split-h";
-                    else
-                        this.mode = "separate";
-                }
-                if (this.mode != "separate") {
-                    let views = [];
-                    this._masterContainer = new WebApp.ContentHostView({
-                        name: "master",
-                        contentProvider: this.masterContent
-                    });
-                    this._detailsContainer = new WebApp.ContentHostView({
-                        name: "details",
-                        emptyView: new WebApp.IconTextView({
-                            styles: ["empty-view"],
-                            icon: this.info.icon,
-                            text: WebApp.Format.message("msg-select-an-item", this.itemDisplayName)
-                        })
-                    });
-                    views.push(this._masterContainer);
-                    views.push(this._detailsContainer);
-                    return Promise.resolve({
-                        views: views,
-                        styles: WebApp.ArrayUtils.merge(this.styles, [this.mode]),
-                        title: this.info.displayName
-                    });
-                }
+        async getContentAsync(host) {
+            this._host = host;
+            if (this.mode == "auto") {
+                let curWidth = document.body.clientWidth / window.devicePixelRatio;
+                if (curWidth > this.minWidth)
+                    this.mode = "split-h";
                 else
-                    return this.masterContent.getContentAsync(host);
-            });
+                    this.mode = "separate";
+            }
+            if (this.mode != "separate") {
+                let views = [];
+                this._masterContainer = new WebApp.ContentHostView({
+                    name: "master",
+                    contentProvider: this.masterContent
+                });
+                this._detailsContainer = new WebApp.ContentHostView({
+                    name: "details",
+                    emptyView: new WebApp.IconTextView({
+                        styles: ["empty-view"],
+                        icon: this.info.icon,
+                        text: WebApp.Format.message("msg-select-an-item", this.itemDisplayName)
+                    })
+                });
+                views.push(this._masterContainer);
+                views.push(this._detailsContainer);
+                return Promise.resolve({
+                    views: views,
+                    styles: WebApp.ArrayUtils.merge(this.styles, [this.mode]),
+                    title: this.info.displayName
+                });
+            }
+            else
+                return this.masterContent.getContentAsync(host);
         }
-        showDetailsAsync(item) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (!item) {
-                    if (this.mode != "separate")
-                        yield this._detailsContainer.closeAsync();
+        async showDetailsAsync(item) {
+            if (!item) {
+                if (this.mode != "separate")
+                    await this._detailsContainer.closeAsync();
+            }
+            else {
+                const details = await this.masterContent.getDetailsAsync(item);
+                if (!details)
+                    return;
+                if (this.mode != "separate") {
+                    this._detailsContainer.contentProvider = details;
+                    await this._detailsContainer.loadAsync();
                 }
                 else {
-                    const details = yield this.masterContent.getDetailsAsync(item);
-                    if (!details)
-                        return;
-                    if (this.mode != "separate") {
-                        this._detailsContainer.contentProvider = details;
-                        yield this._detailsContainer.loadAsync();
-                    }
-                    else {
-                        yield WebApp.Actions.loadPageAsync(new WebApp.ContentActivity({
-                            providers: [details],
-                            name: details.info.name,
-                        }));
-                    }
+                    await WebApp.Actions.loadPageAsync(new WebApp.ContentActivity({
+                        providers: [details],
+                        name: details.info.name,
+                    }));
                 }
-            });
+            }
         }
         get info() { return this.masterContent.info; }
     }
@@ -7536,31 +7371,29 @@ var WebApp;
         constructor(options) {
             this._options = options;
         }
-        getContentAsync(host) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const views = [];
-                views.push(new WebApp.IconTextView({
-                    icon: this._options.icon,
-                    text: this._options.message,
-                    styles: ["message-view"]
-                }));
-                if (this._options.customActions) {
-                    this._options.customActions.forEach(action => views.push(new WebApp.ActionView({
-                        name: action.name,
-                        template: "ActionButton",
-                        styles: ["primary"],
-                        content: new WebApp.TextView({ content: WebApp.DynamicString.getValue(action.displayName, WebApp.StringUsage.Action) }),
-                        executeAsync: () => __awaiter(this, void 0, void 0, function* () {
-                            yield host.closeAsync();
-                            yield action.executeAsync();
-                        })
-                    })));
-                }
-                return Promise.resolve({
-                    views: views,
-                    title: this._options.title,
-                    styles: ["vertical", "margin-items-v", "scroll", "fit-items-h", "surface", "padding"],
-                });
+        async getContentAsync(host) {
+            const views = [];
+            views.push(new WebApp.IconTextView({
+                icon: this._options.icon,
+                text: this._options.message,
+                styles: ["message-view"]
+            }));
+            if (this._options.customActions) {
+                this._options.customActions.forEach(action => views.push(new WebApp.ActionView({
+                    name: action.name,
+                    template: "ActionButton",
+                    styles: ["primary"],
+                    content: new WebApp.TextView({ content: WebApp.DynamicString.getValue(action.displayName, WebApp.StringUsage.Action) }),
+                    executeAsync: async () => {
+                        await host.closeAsync();
+                        await action.executeAsync();
+                    }
+                })));
+            }
+            return Promise.resolve({
+                views: views,
+                title: this._options.title,
+                styles: ["vertical", "margin-items-v", "scroll", "fit-items-h", "surface", "padding"],
             });
         }
         get info() {
@@ -7587,28 +7420,26 @@ var WebApp;
                     this.editToItemAsync = config.editToItemAsync;
             }
         }
-        editAsync(value, validate) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const activity = new WebApp.ContentActivity({
-                    providers: [new WebApp.ItemEditContent({
-                            editor: this.editor,
-                            title: this.title,
-                            value: value,
-                            saveItemAsync: (edit) => __awaiter(this, void 0, void 0, function* () {
-                                if (validate) {
-                                    const valResult = yield validate(edit);
-                                    if (valResult == null)
-                                        return null;
-                                }
-                                return yield this.editToItemAsync(edit);
-                            })
-                        })]
-                });
-                const result = yield (yield WebApp.Actions.loadPageAsync(activity, { loadMode: "add" })).result;
-                if (result == null)
-                    return null;
-                return this.editor.value;
+        async editAsync(value, validate) {
+            const activity = new WebApp.ContentActivity({
+                providers: [new WebApp.ItemEditContent({
+                        editor: this.editor,
+                        title: this.title,
+                        value: value,
+                        saveItemAsync: async (edit) => {
+                            if (validate) {
+                                const valResult = await validate(edit);
+                                if (valResult == null)
+                                    return null;
+                            }
+                            return await this.editToItemAsync(edit);
+                        }
+                    })]
             });
+            const result = await (await WebApp.Actions.loadPageAsync(activity, { loadMode: "add" })).result;
+            if (result == null)
+                return null;
+            return this.editor.value;
         }
         editToItemAsync(edit) {
             return Promise.resolve(edit);
@@ -7657,18 +7488,16 @@ var WebApp;
         createEditValueProp() {
             this.prop("editValue").subscribe(() => this.notifyEditValueChangedAsync());
         }
-        notifyEditValueChangedAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                console.debug("value changed: ", this.debugName);
-                this._needValidation = true;
-                this.isDirty = true;
-                if (!this._isEditing) {
-                    if (this.commitMode == "onchange")
-                        yield this.commitAsync();
-                    else
-                        yield this.validateAsync();
-                }
-            });
+        async notifyEditValueChangedAsync() {
+            console.debug("value changed: ", this.debugName);
+            this._needValidation = true;
+            this.isDirty = true;
+            if (!this._isEditing) {
+                if (this.commitMode == "onchange")
+                    await this.commitAsync();
+                else
+                    await this.validateAsync();
+            }
         }
         onValueChanged(value, oldValue) {
             if (this.status == "commiting")
@@ -7678,24 +7507,22 @@ var WebApp;
         clear() {
             this.value = null;
         }
-        loadAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                console.group("begin load: ", this.debugName, " - status: ", this.status);
+        async loadAsync() {
+            console.group("begin load: ", this.debugName, " - status: ", this.status);
+            try {
+                if (this.status != "none")
+                    return;
+                this.status = "loading";
                 try {
-                    if (this.status != "none")
-                        return;
-                    this.status = "loading";
-                    try {
-                        yield this.loadAsyncWork();
-                    }
-                    finally {
-                        this.status = "loaded";
-                    }
+                    await this.loadAsyncWork();
                 }
                 finally {
-                    console.groupEnd();
+                    this.status = "loaded";
                 }
-            });
+            }
+            finally {
+                console.groupEnd();
+            }
         }
         clearError() {
             this.error = null;
@@ -7703,25 +7530,23 @@ var WebApp;
         loadAsyncWork() {
             return Promise.resolve();
         }
-        beginEditAsync(value) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._isEditing)
-                    return;
-                console.group("begin edit: ", this.debugName);
-                this._isEditing++;
-                try {
-                    if (this.status == "none")
-                        yield this.loadAsync();
-                    this.value = value;
-                    this.editValue = this.valueToEdit(value);
-                    yield this.beginEditWorkAsync(value);
-                    this._needValidation = true;
-                }
-                finally {
-                    this._isEditing--;
-                    console.groupEnd();
-                }
-            });
+        async beginEditAsync(value) {
+            if (this._isEditing)
+                return;
+            console.group("begin edit: ", this.debugName);
+            this._isEditing++;
+            try {
+                if (this.status == "none")
+                    await this.loadAsync();
+                this.value = value;
+                this.editValue = this.valueToEdit(value);
+                await this.beginEditWorkAsync(value);
+                this._needValidation = true;
+            }
+            finally {
+                this._isEditing--;
+                console.groupEnd();
+            }
         }
         valueToEdit(value) {
             return value;
@@ -7732,63 +7557,59 @@ var WebApp;
         beginEditWorkAsync(value) {
             return Promise.resolve();
         }
-        validateAsync(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                console.group("begin validation: " + this.debugName, " - needValidation: ", this._needValidation);
-                try {
-                    if (this._isEditing)
-                        return undefined;
-                    if (!this._needValidation && this.validationMode == "onchanged" && !force)
-                        return this.isValid;
-                    this.clearError();
-                    const validationResult = yield this.validateAsyncWork(force);
-                    if (validationResult !== undefined) {
-                        this.isValid = validationResult;
-                        this._needValidation = false;
-                    }
-                    console.debug("validation: ", this.debugName, " = ", this.isValid);
+        async validateAsync(force) {
+            console.group("begin validation: " + this.debugName, " - needValidation: ", this._needValidation);
+            try {
+                if (this._isEditing)
+                    return undefined;
+                if (!this._needValidation && this.validationMode == "onchanged" && !force)
                     return this.isValid;
+                this.clearError();
+                const validationResult = await this.validateAsyncWork(force);
+                if (validationResult !== undefined) {
+                    this.isValid = validationResult;
+                    this._needValidation = false;
                 }
-                finally {
-                    console.groupEnd();
-                }
-            });
+                console.debug("validation: ", this.debugName, " = ", this.isValid);
+                return this.isValid;
+            }
+            finally {
+                console.groupEnd();
+            }
         }
         validateAsyncWork(force) {
             return Promise.resolve(true);
         }
-        commitAsync(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                console.group("begin commit: ", this.debugName, " isDirty: ", this.isDirty, " - status: ", this.status);
+        async commitAsync(force) {
+            console.group("begin commit: ", this.debugName, " isDirty: ", this.isDirty, " - status: ", this.status);
+            try {
+                if (this._isEditing)
+                    return false;
+                if (!force && this.commitMode != "manual" && !this.isDirty)
+                    return true;
+                if (this.status != "loaded")
+                    return this.status == "commiting";
+                this.status = "commiting";
                 try {
-                    if (this._isEditing)
+                    if (!await this.validateAsync(force))
                         return false;
-                    if (!force && this.commitMode != "manual" && !this.isDirty)
-                        return true;
-                    if (this.status != "loaded")
-                        return this.status == "commiting";
-                    this.status = "commiting";
-                    try {
-                        if (!(yield this.validateAsync(force)))
-                            return false;
-                        if (!(yield this.commitAsyncWork(force)))
-                            return false;
-                        const newValue = this.editToValue(this.editValue);
-                        if (newValue !== undefined)
-                            this.value = newValue;
-                        if (this._onCommit)
-                            this._onCommit(this);
-                        this.isDirty = false;
-                        return true;
-                    }
-                    finally {
-                        this.status = "loaded";
-                    }
+                    if (!await this.commitAsyncWork(force))
+                        return false;
+                    const newValue = this.editToValue(this.editValue);
+                    if (newValue !== undefined)
+                        this.value = newValue;
+                    if (this._onCommit)
+                        this._onCommit(this);
+                    this.isDirty = false;
+                    return true;
                 }
                 finally {
-                    console.groupEnd();
+                    this.status = "loaded";
                 }
-            });
+            }
+            finally {
+                console.groupEnd();
+            }
         }
         activateAsync() {
             return Promise.resolve();
@@ -7878,11 +7699,9 @@ var WebApp;
         createItemListView(item) {
             return this.createItemView(item);
         }
-        notifyEditValueChangedAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield WebApp.BaseEditor.prototype["notifyEditValueChangedAsync"].call(this);
-                yield this.updateViewAsync();
-            });
+        async notifyEditValueChangedAsync() {
+            await WebApp.BaseEditor.prototype["notifyEditValueChangedAsync"].call(this);
+            await this.updateViewAsync();
         }
     }
     WebApp.BasePicker = BasePicker;
@@ -7899,21 +7718,19 @@ var WebApp;
         attach(element) {
             this._element = element;
         }
-        activateAsync() {
+        async activateAsync() {
             var _a;
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._element.nodeName == "INPUT" || this._element.nodeName == "TEXTAREA") {
-                    while (true) {
-                        const input = this._element;
-                        input.selectionStart = 0;
-                        input.selectionEnd = (_a = input.value) === null || _a === void 0 ? void 0 : _a.length;
-                        this._element.focus();
-                        if (this.hasFocus)
-                            break;
-                        yield WebApp.PromiseUtils.delay(100);
-                    }
+            if (this._element.nodeName == "INPUT" || this._element.nodeName == "TEXTAREA") {
+                while (true) {
+                    const input = this._element;
+                    input.selectionStart = 0;
+                    input.selectionEnd = (_a = input.value) === null || _a === void 0 ? void 0 : _a.length;
+                    this._element.focus();
+                    if (this.hasFocus)
+                        break;
+                    await WebApp.PromiseUtils.delay(100);
                 }
-            });
+            }
         }
         onFocusChanged(value) {
             if (!value && this.trackMode == "onlostfocus")
@@ -8048,14 +7865,12 @@ var WebApp;
             this._item = item;
             return this.editor.beginEditAsync(this.itemToEdit(item));
         }
-        commitAsync(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (yield this.editor.commitAsync(force)) {
-                    this.editToItem(this._item, this.editor.value);
-                    return true;
-                }
-                return false;
-            });
+        async commitAsync(force) {
+            if (await this.editor.commitAsync(force)) {
+                this.editToItem(this._item, this.editor.value);
+                return true;
+            }
+            return false;
         }
         itemToEdit(item) {
             throw "Not supported";
@@ -8143,52 +7958,50 @@ var WebApp;
         executeAddAsync(item) {
             throw "Not implemented";
         }
-        editAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.isEdit)
-                    return false;
-                if (!this.editor) {
-                    if (this.status == "added")
-                        this.editor = this.createAddEditor();
-                    else
-                        this.editor = this.createUpdateEditor();
-                }
-                this.isEdit = true;
-                if (this.editMode == "external") {
-                    let newItem = null;
-                    if (WebApp.TypeCheck.isAsyncEditor(this.editor)) {
-                        const editValue = yield this.editor.editAsync(this.item);
-                        if (editValue) {
-                            if (this.status == "added")
-                                newItem = yield this.executeAddAsync(editValue);
-                            else
-                                newItem = yield this.executeUpdateAsync(editValue);
-                        }
-                    }
-                    else {
-                        const activity = new WebApp.ContentActivity({
-                            providers: [new WebApp.ItemEditContent({
-                                    editor: this.editor,
-                                    title: item => this.status == "added" ? this.addTitle : this.editTitle,
-                                    value: this.item,
-                                    saveItemAsync: item => this.status == "added" ? this.executeAddAsync(item) : this.executeUpdateAsync(item)
-                                })]
-                        });
-                        newItem = yield (yield WebApp.Actions.loadPageAsync(activity)).result;
-                    }
-                    if (newItem) {
-                        this.item = newItem;
-                        this.status = "unchanged";
-                        this.isEdit = false;
-                        yield this.updateValueAsync();
-                    }
-                    else
-                        this.isEdit = false;
-                    this.editor = null;
-                    return newItem != null;
-                }
+        async editAsync() {
+            if (this.isEdit)
                 return false;
-            });
+            if (!this.editor) {
+                if (this.status == "added")
+                    this.editor = this.createAddEditor();
+                else
+                    this.editor = this.createUpdateEditor();
+            }
+            this.isEdit = true;
+            if (this.editMode == "external") {
+                let newItem = null;
+                if (WebApp.TypeCheck.isAsyncEditor(this.editor)) {
+                    const editValue = await this.editor.editAsync(this.item);
+                    if (editValue) {
+                        if (this.status == "added")
+                            newItem = await this.executeAddAsync(editValue);
+                        else
+                            newItem = await this.executeUpdateAsync(editValue);
+                    }
+                }
+                else {
+                    const activity = new WebApp.ContentActivity({
+                        providers: [new WebApp.ItemEditContent({
+                                editor: this.editor,
+                                title: item => this.status == "added" ? this.addTitle : this.editTitle,
+                                value: this.item,
+                                saveItemAsync: item => this.status == "added" ? this.executeAddAsync(item) : this.executeUpdateAsync(item)
+                            })]
+                    });
+                    newItem = await (await WebApp.Actions.loadPageAsync(activity)).result;
+                }
+                if (newItem) {
+                    this.item = newItem;
+                    this.status = "unchanged";
+                    this.isEdit = false;
+                    await this.updateValueAsync();
+                }
+                else
+                    this.isEdit = false;
+                this.editor = null;
+                return newItem != null;
+            }
+            return false;
         }
         cancelEdit() {
             this.isEdit = false;
@@ -8199,23 +8012,19 @@ var WebApp;
         clearErrors() {
             this.error = null;
         }
-        validateAsync(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.isEdit) {
-                    if (WebApp.TypeCheck.isValidable(this.editor))
-                        return yield this.editor.validateAsync();
-                }
-                else {
-                    if (WebApp.TypeCheck.isValidable(this.view))
-                        return yield this.view.validateAsync();
-                }
-                return true;
-            });
+        async validateAsync(force) {
+            if (this.isEdit) {
+                if (WebApp.TypeCheck.isValidable(this.editor))
+                    return await this.editor.validateAsync();
+            }
+            else {
+                if (WebApp.TypeCheck.isValidable(this.view))
+                    return await this.view.validateAsync();
+            }
+            return true;
         }
-        loadAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                this.updateView();
-            });
+        async loadAsync() {
+            this.updateView();
         }
         get itemsEditor() {
             return this.parentView;
@@ -8281,18 +8090,16 @@ var WebApp;
                 icon: "fas fa-plus",
                 operation: WebApp.OperationType.Local,
                 displayName: (_c = config === null || config === void 0 ? void 0 : config.addActionLabel) !== null && _c !== void 0 ? _c : WebApp.Format.action("add-item", this.itemsSource.displayName),
-                executeAsync: () => __awaiter(this, void 0, void 0, function* () { return yield this.addAsync(); })
+                executeAsync: async () => await this.addAsync()
             });
             if (this.value)
                 this.beginEditAsync(this.value);
         }
-        loadAsyncWork() {
-            return __awaiter(this, void 0, void 0, function* () {
-                const awaiters = [];
-                for (let item of this.content)
-                    awaiters.push(item.loadAsync());
-                yield Promise.all(awaiters);
-            });
+        async loadAsyncWork() {
+            const awaiters = [];
+            for (let item of this.content)
+                awaiters.push(item.loadAsync());
+            await Promise.all(awaiters);
         }
         clear() {
             this.content.clear();
@@ -8303,20 +8110,18 @@ var WebApp;
         }
         insert() {
         }
-        addAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                const item = this.newItem();
-                this.attachItem(item, true);
-                const itemView = this.createItem(this.itemToValue(item), item);
-                itemView.item = item;
-                itemView.status = "added";
-                if (yield itemView.editAsync()) {
-                    if (WebApp.linq(this.content).any(a => this.itemsSource.itemComparer(a.item, itemView.item)))
-                        return;
-                    this.content.add(itemView);
-                    yield this.notifyEditValueChangedAsync();
-                }
-            });
+        async addAsync() {
+            const item = this.newItem();
+            this.attachItem(item, true);
+            const itemView = this.createItem(this.itemToValue(item), item);
+            itemView.item = item;
+            itemView.status = "added";
+            if (await itemView.editAsync()) {
+                if (WebApp.linq(this.content).any(a => this.itemsSource.itemComparer(a.item, itemView.item)))
+                    return;
+                this.content.add(itemView);
+                await this.notifyEditValueChangedAsync();
+            }
         }
         openItem(item) {
         }
@@ -8349,38 +8154,38 @@ var WebApp;
             result.createUpdateEditor = () => this.createItemUpdateEditor(result.item);
             result.executeAddAsync = item => this.itemsSource.addItemAsync(item);
             result.executeUpdateAsync = editItem => this.itemsSource.updateItemAsync(editItem, result.item);
-            result.loadAsync = () => __awaiter(this, void 0, void 0, function* () {
+            result.loadAsync = async () => {
                 if (!result.item) {
-                    result.item = yield this.valueToItemAsync(result.value);
+                    result.item = await this.valueToItemAsync(result.value);
                     result.canOpen = this.isCapable(this.canOpen, result.item);
                     result.editTitle = WebApp.Format.title("edit-item", this.itemsSource.getItemText(result.item));
                     this.attachItem(result.item, result.status != "added");
                 }
                 result.view = this.createItemView(result.item);
                 result.updateView();
-            });
-            result.updateValueAsync = () => __awaiter(this, void 0, void 0, function* () {
+            };
+            result.updateValueAsync = async () => {
                 result.canOpen = this.isCapable(this.canOpen, result.item);
                 result.value = this.itemToValue(result.item);
                 result.view = this.createItemView(result.item);
                 result.editTitle = WebApp.Format.title("edit-item", this.itemsSource.getItemText(result.item));
                 result.updateView();
-                yield this.notifyEditValueChangedAsync();
-            });
-            result.removeAsync = () => __awaiter(this, void 0, void 0, function* () {
+                await this.notifyEditValueChangedAsync();
+            };
+            result.removeAsync = async () => {
                 if (result.status == "added")
                     this.content.remove(result);
                 else {
                     if (this.isConfirmRemove) {
-                        if (!(yield WebApp.Interaction.confirmAsync(WebApp.Format.message("msg-remove-confirm", this.itemsSource.displayName))))
+                        if (!await WebApp.Interaction.confirmAsync(WebApp.Format.message("msg-remove-confirm", this.itemsSource.displayName)))
                             return;
                     }
                     if (this.status == "none")
                         this.status = "loaded";
                     result.status = "removed";
-                    yield this.notifyEditValueChangedAsync();
+                    await this.notifyEditValueChangedAsync();
                 }
-            });
+            };
             result.value = value;
             if (this.status != "none")
                 result.loadAsync();
@@ -8427,67 +8232,63 @@ var WebApp;
             }
             return result;
         }
-        validateAsyncWork(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let isValid = true;
-                for (let item of this.content) {
-                    if (!(yield item.validateAsync(force)))
-                        isValid = false;
-                }
-                return isValid;
-            });
+        async validateAsyncWork(force) {
+            let isValid = true;
+            for (let item of this.content) {
+                if (!await item.validateAsync(force))
+                    isValid = false;
+            }
+            return isValid;
         }
-        commitAsyncWork(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let isValid = true;
-                let isChanged = false;
-                if (!isValid)
-                    return false;
-                for (let i = this.content.count - 1; i >= 0; i--) {
-                    const item = this.content.get(i);
-                    item.clearErrors();
-                    if (item.status == "removed") {
-                        if (yield this.itemsSource.removeItemAsync(item.item))
-                            this.content.removeAt(i);
-                        else {
-                            this.error = "";
-                            isValid = false;
-                        }
-                        isChanged = true;
+        async commitAsyncWork(force) {
+            let isValid = true;
+            let isChanged = false;
+            if (!isValid)
+                return false;
+            for (let i = this.content.count - 1; i >= 0; i--) {
+                const item = this.content.get(i);
+                item.clearErrors();
+                if (item.status == "removed") {
+                    if (await this.itemsSource.removeItemAsync(item.item))
+                        this.content.removeAt(i);
+                    else {
+                        this.error = "";
+                        isValid = false;
                     }
-                    else if (item.status == "modified" && !WebApp.TypeCheck.isAsyncEditor(item.editor)) {
-                        const updateItem = yield this.itemsSource.updateItemAsync(item.editor.value, item.item);
-                        if (updateItem) {
-                            item.item = updateItem;
-                            item.status = "unchanged";
-                            item.updateView();
-                        }
-                        else {
-                            this.error = "";
-                            isValid = false;
-                        }
-                        isChanged = true;
-                    }
-                    else if (item.status == "added" && !WebApp.TypeCheck.isAsyncEditor(item.editor)) {
-                        const addItem = yield this.itemsSource.addItemAsync(item.editor.value);
-                        if (addItem) {
-                            item.item = addItem;
-                            item.status = "unchanged";
-                            item.updateView();
-                        }
-                        else {
-                            this.error = "";
-                            isValid = false;
-                        }
-                        isChanged = true;
-                    }
+                    isChanged = true;
                 }
-                if (isValid) {
-                    if (isChanged)
-                        this.onValueChanged(this.editValue);
+                else if (item.status == "modified" && !WebApp.TypeCheck.isAsyncEditor(item.editor)) {
+                    const updateItem = await this.itemsSource.updateItemAsync(item.editor.value, item.item);
+                    if (updateItem) {
+                        item.item = updateItem;
+                        item.status = "unchanged";
+                        item.updateView();
+                    }
+                    else {
+                        this.error = "";
+                        isValid = false;
+                    }
+                    isChanged = true;
                 }
-                return isValid;
-            });
+                else if (item.status == "added" && !WebApp.TypeCheck.isAsyncEditor(item.editor)) {
+                    const addItem = await this.itemsSource.addItemAsync(item.editor.value);
+                    if (addItem) {
+                        item.item = addItem;
+                        item.status = "unchanged";
+                        item.updateView();
+                    }
+                    else {
+                        this.error = "";
+                        isValid = false;
+                    }
+                    isChanged = true;
+                }
+            }
+            if (isValid) {
+                if (isChanged)
+                    this.onValueChanged(this.editValue);
+            }
+            return isValid;
         }
         newItem() {
             return this.itemsSource.newItem();
@@ -8551,46 +8352,42 @@ var WebApp;
             }
             return Promise.resolve(!this.error);
         }
-        commitAsyncWork(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.fileUpload.status == "selected") {
-                    const result = yield this.fileUpload.uploadAsync(this.getUploadUrl(this.fileUpload.file.name));
-                    this.editValue.id = result;
-                    this.editValue.status = "new";
-                    this.editValue.type = this.mediaView.content.type;
-                    this.mediaView.content = {
-                        src: this.getMediaUrl(),
-                        type: this.mediaView.content.type
-                    };
-                    this.notifyEditValueChangedAsync();
-                }
-                return true;
-            });
+        async commitAsyncWork(force) {
+            if (this.fileUpload.status == "selected") {
+                const result = await this.fileUpload.uploadAsync(this.getUploadUrl(this.fileUpload.file.name));
+                this.editValue.id = result;
+                this.editValue.status = "new";
+                this.editValue.type = this.mediaView.content.type;
+                this.mediaView.content = {
+                    src: this.getMediaUrl(),
+                    type: this.mediaView.content.type
+                };
+                this.notifyEditValueChangedAsync();
+            }
+            return true;
         }
         getMediaUrl() {
             throw "Not Implemented";
         }
-        beginEditAsync(value) {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield WebApp.BaseEditor.prototype.beginEditAsync.call(this, value);
-                if (!this.editValue)
-                    this.editValue = {
-                        id: null,
-                        type: "empty",
-                        status: "empty"
-                    };
-                if (this.editValue.status == "empty")
-                    this.mediaView.content = {
-                        type: "image",
-                        src: this.noMediaUrl
-                    };
-                else {
-                    this.mediaView.content = {
-                        type: this.editValue.type,
-                        src: this.getMediaUrl()
-                    };
-                }
-            });
+        async beginEditAsync(value) {
+            await WebApp.BaseEditor.prototype.beginEditAsync.call(this, value);
+            if (!this.editValue)
+                this.editValue = {
+                    id: null,
+                    type: "empty",
+                    status: "empty"
+                };
+            if (this.editValue.status == "empty")
+                this.mediaView.content = {
+                    type: "image",
+                    src: this.noMediaUrl
+                };
+            else {
+                this.mediaView.content = {
+                    type: this.editValue.type,
+                    src: this.getMediaUrl()
+                };
+            }
         }
         change() {
             this.fileUpload.visible = true;
@@ -8611,14 +8408,14 @@ var WebApp;
                     name: "remove-item",
                     icon: "fas fa-trash",
                     displayName: "delete",
-                    executeAsync: () => __awaiter(this, void 0, void 0, function* () { return this.remove(); })
+                    executeAsync: async () => this.remove()
                 });
             }
             menu.addAction({
                 name: "edit-item",
                 icon: "fas fa-edit",
                 displayName: "change",
-                executeAsync: () => __awaiter(this, void 0, void 0, function* () { return this.change(); })
+                executeAsync: async () => this.change()
             });
             menu.showAsync(undefined, window.event);
         }
@@ -8633,33 +8430,31 @@ var WebApp;
             this.selector = null;
             this.items = observableListOf();
         }
-        selectAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                let mustRefresh = false;
-                if (this.selector == null) {
-                    this.selector = new WebApp.SelectMultipleItemsActivity({
-                        createItemEditor: () => this.createItemEditor(),
-                        createItemContentView: item => this.createItemView(item),
-                        createItemListView: item => this.createItemListView(item),
-                        itemsSource: this.itemsSource,
-                        addLabel: this.addLabel,
-                        tooltip: this.pickLabel,
-                        canAdd: this.canAdd
-                    });
-                    this.selector.filters = this.filters;
-                }
-                else
-                    mustRefresh = true;
-                this.selector.setSelectedItems(WebApp.linq(this.items).select(a => a.item).toArray());
-                if (mustRefresh)
-                    yield this.selector.refreshAsync();
-                const result = yield (yield WebApp.Actions.loadPageAsync(this.selector)).result;
-                if (result != null) {
-                    const newValue = WebApp.linq(result).select(a => this.itemsSource.getItemValue(a)).toArray();
-                    if (!WebApp.ArrayUtils.equals(newValue, this.editValue))
-                        this.editValue = newValue;
-                }
-            });
+        async selectAsync() {
+            let mustRefresh = false;
+            if (this.selector == null) {
+                this.selector = new WebApp.SelectMultipleItemsActivity({
+                    createItemEditor: () => this.createItemEditor(),
+                    createItemContentView: item => this.createItemView(item),
+                    createItemListView: item => this.createItemListView(item),
+                    itemsSource: this.itemsSource,
+                    addLabel: this.addLabel,
+                    tooltip: this.pickLabel,
+                    canAdd: this.canAdd
+                });
+                this.selector.filters = this.filters;
+            }
+            else
+                mustRefresh = true;
+            this.selector.setSelectedItems(WebApp.linq(this.items).select(a => a.item).toArray());
+            if (mustRefresh)
+                await this.selector.refreshAsync();
+            const result = await (await WebApp.Actions.loadPageAsync(this.selector)).result;
+            if (result != null) {
+                const newValue = WebApp.linq(result).select(a => this.itemsSource.getItemValue(a)).toArray();
+                if (!WebApp.ArrayUtils.equals(newValue, this.editValue))
+                    this.editValue = newValue;
+            }
         }
         valueToEdit(value) {
             return value ? value.slice() : [];
@@ -8667,37 +8462,35 @@ var WebApp;
         editToValue(value) {
             return value ? value.slice() : [];
         }
-        updateViewAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.status == "loading")
-                    return;
-                this.items.clear();
-                if (this.editValue) {
-                    this.status = "loading";
-                    try {
-                        for (let value of this.editValue) {
-                            const item = yield this.itemsSource.getItemByValueAsync(value);
-                            if (!item)
-                                continue;
-                            const itemView = new WebApp.RemovableItemView({
-                                item: item,
-                                content: this.createItemView(item),
-                                removeAsync: () => __awaiter(this, void 0, void 0, function* () {
-                                    this.items.remove(itemView);
-                                    let value = this.itemsSource.getItemValue(itemView.item);
-                                    let index = WebApp.linq(this.editValue).indexOf(a => this.itemsSource.equals(a, value));
-                                    this.editValue.splice(index, 1);
-                                    yield this.notifyEditValueChangedAsync();
-                                })
-                            });
-                            this.items.add(itemView);
-                        }
-                    }
-                    finally {
-                        this.status = "loaded";
+        async updateViewAsync() {
+            if (this.status == "loading")
+                return;
+            this.items.clear();
+            if (this.editValue) {
+                this.status = "loading";
+                try {
+                    for (let value of this.editValue) {
+                        const item = await this.itemsSource.getItemByValueAsync(value);
+                        if (!item)
+                            continue;
+                        const itemView = new WebApp.RemovableItemView({
+                            item: item,
+                            content: this.createItemView(item),
+                            removeAsync: async () => {
+                                this.items.remove(itemView);
+                                let value = this.itemsSource.getItemValue(itemView.item);
+                                let index = WebApp.linq(this.editValue).indexOf(a => this.itemsSource.equals(a, value));
+                                this.editValue.splice(index, 1);
+                                await this.notifyEditValueChangedAsync();
+                            }
+                        });
+                        this.items.add(itemView);
                     }
                 }
-            });
+                finally {
+                    this.status = "loaded";
+                }
+            }
         }
     }
     WebApp.MultiItemPicker = MultiItemPicker;
@@ -8759,35 +8552,31 @@ var WebApp;
             this.properties[config.name] = item;
             return item;
         }
-        beginEditWorkAsync(value) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (!this.value)
-                    this.value = {};
-                this.isDirty = true;
-                for (let propName in this.properties) {
-                    const prop = this.properties[propName];
-                    if (prop.value != undefined)
-                        yield prop.editor.beginEditAsync(prop.value);
-                }
-            });
+        async beginEditWorkAsync(value) {
+            if (!this.value)
+                this.value = {};
+            this.isDirty = true;
+            for (let propName in this.properties) {
+                const prop = this.properties[propName];
+                if (prop.value != undefined)
+                    await prop.editor.beginEditAsync(prop.value);
+            }
         }
         clearErrors() {
             for (let propName in this.properties)
                 this.properties[propName].error = null;
         }
-        validateAsyncWork(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let isValid = true;
-                const curValue = this.editValue;
-                for (let propName in this.properties) {
-                    const prop = this.properties[propName];
-                    if (!(yield prop.validateAsync(curValue, force))) {
-                        this.isValid = false;
-                        isValid = false;
-                    }
+        async validateAsyncWork(force) {
+            let isValid = true;
+            const curValue = this.editValue;
+            for (let propName in this.properties) {
+                const prop = this.properties[propName];
+                if (!await prop.validateAsync(curValue, force)) {
+                    this.isValid = false;
+                    isValid = false;
                 }
-                return isValid;
-            });
+            }
+            return isValid;
         }
         createProxy() {
             this._proxy = {};
@@ -8816,13 +8605,11 @@ var WebApp;
                 return this.editor(this.defaultProperty).activateAsync();
             return Promise.resolve();
         }
-        loadAsyncWork() {
-            return __awaiter(this, void 0, void 0, function* () {
-                const awaiters = [];
-                for (let propName in this.properties)
-                    awaiters.push(this.properties[propName].loadAsync());
-                yield Promise.all(awaiters);
-            });
+        async loadAsyncWork() {
+            const awaiters = [];
+            for (let propName in this.properties)
+                awaiters.push(this.properties[propName].loadAsync());
+            await Promise.all(awaiters);
         }
         clear() {
             this._isUpdating++;
@@ -8837,43 +8624,39 @@ var WebApp;
         editToValue(value) {
             return undefined;
         }
-        commitAsyncWork(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let isChanged = false;
-                let isValid = true;
-                for (let propName in this.properties) {
-                    const commitResult = yield this.commitPropertyAsync(propName, false);
-                    if (!commitResult.isValid)
-                        isValid = false;
-                    if (!commitResult.isChanged)
-                        isChanged = true;
-                }
-                if (isValid) {
-                    if (isChanged)
-                        this.onValueChanged(this.value);
-                }
-                return isValid;
-            });
+        async commitAsyncWork(force) {
+            let isChanged = false;
+            let isValid = true;
+            for (let propName in this.properties) {
+                const commitResult = await this.commitPropertyAsync(propName, false);
+                if (!commitResult.isValid)
+                    isValid = false;
+                if (!commitResult.isChanged)
+                    isChanged = true;
+            }
+            if (isValid) {
+                if (isChanged)
+                    this.onValueChanged(this.value);
+            }
+            return isValid;
         }
-        commitPropertyAsync(propName, validate) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const result = {
-                    isValid: true,
-                    isChanged: false
-                };
-                const prop = this.property(propName);
-                if (validate && !(yield prop.validateAsync(this.editValue, false)))
-                    result.isValid = false;
-                else if (!(yield prop.editor.commitAsync()))
-                    result.isValid = false;
-                else {
-                    if (!WebApp.ObjectUtils.equals(prop.value, this.value[propName])) {
-                        this.value[propName] = prop.value;
-                        result.isChanged = true;
-                    }
+        async commitPropertyAsync(propName, validate) {
+            const result = {
+                isValid: true,
+                isChanged: false
+            };
+            const prop = this.property(propName);
+            if (validate && !await prop.validateAsync(this.editValue, false))
+                result.isValid = false;
+            else if (!await prop.editor.commitAsync())
+                result.isValid = false;
+            else {
+                if (!WebApp.ObjectUtils.equals(prop.value, this.value[propName])) {
+                    this.value[propName] = prop.value;
+                    result.isChanged = true;
                 }
-                return result;
-            });
+            }
+            return result;
         }
         editor(propName) {
             return this.properties[propName].editor;
@@ -8881,25 +8664,23 @@ var WebApp;
         property(propName) {
             return this.properties[propName];
         }
-        onPropertyValueChanged(propName, value, oldValue) {
-            return __awaiter(this, void 0, void 0, function* () {
-                this._needValidation = true;
-                if (this._isUpdating || this._isEditing) {
-                    this._changesCount++;
-                    return;
+        async onPropertyValueChanged(propName, value, oldValue) {
+            this._needValidation = true;
+            if (this._isUpdating || this._isEditing) {
+                this._changesCount++;
+                return;
+            }
+            if (this.commitMode == "onchange") {
+                const commitResult = await this.commitPropertyAsync(propName, true);
+                if (commitResult.isChanged) {
+                    this._needValidation = true;
+                    this.isDirty = true;
                 }
-                if (this.commitMode == "onchange") {
-                    const commitResult = yield this.commitPropertyAsync(propName, true);
-                    if (commitResult.isChanged) {
-                        this._needValidation = true;
-                        this.isDirty = true;
-                    }
-                }
-                else
-                    yield this.notifyEditValueChangedAsync();
-                if (this._onPropertyChanged)
-                    this._onPropertyChanged(propName, value, oldValue);
-            });
+            }
+            else
+                await this.notifyEditValueChangedAsync();
+            if (this._onPropertyChanged)
+                this._onPropertyChanged(propName, value, oldValue);
         }
         set editValue(value) {
             if (this._isUpdating)
@@ -8956,33 +8737,31 @@ var WebApp;
             if (!this.saveLabel)
                 this.saveLabel = WebApp.Format.action("ok");
         }
-        editAsync(value, validate) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const popUp = new WebApp.PopUpContent({
-                    title: this.title,
-                    contentProvider: new WebApp.ItemEditContent({
-                        editor: this.editor,
-                        value: value,
-                        styles: this.styles,
-                        savePriority: this.savePriority,
-                        saveOnCommit: this.saveOnCommit,
-                        saveLabel: this.saveLabel,
-                        saveItemAsync: (edit) => __awaiter(this, void 0, void 0, function* () {
-                            if (validate) {
-                                const valResult = yield validate(edit);
-                                if (valResult == null)
-                                    return null;
-                            }
-                            return yield this.editToItemAsync(edit);
-                        })
-                    }),
-                    closeLabel: this.closeLabel
-                });
-                const result = yield (yield popUp.openAsync()).result;
-                if (!result)
-                    return null;
-                return this.editor.value;
+        async editAsync(value, validate) {
+            const popUp = new WebApp.PopUpContent({
+                title: this.title,
+                contentProvider: new WebApp.ItemEditContent({
+                    editor: this.editor,
+                    value: value,
+                    styles: this.styles,
+                    savePriority: this.savePriority,
+                    saveOnCommit: this.saveOnCommit,
+                    saveLabel: this.saveLabel,
+                    saveItemAsync: async (edit) => {
+                        if (validate) {
+                            const valResult = await validate(edit);
+                            if (valResult == null)
+                                return null;
+                        }
+                        return await this.editToItemAsync(edit);
+                    }
+                }),
+                closeLabel: this.closeLabel
             });
+            const result = await (await popUp.openAsync()).result;
+            if (!result)
+                return null;
+            return this.editor.value;
         }
         editToItemAsync(edit) {
             return Promise.resolve(edit);
@@ -9045,45 +8824,37 @@ var WebApp;
                 this.activeSectionName = this.sections.get(0).name;
             this.createEditValueProp();
         }
-        loadAsyncWork() {
-            return __awaiter(this, void 0, void 0, function* () {
-                for (let section of this.sections) {
-                    if (section.editor)
-                        yield section.editor.loadAsync();
-                }
-            });
+        async loadAsyncWork() {
+            for (let section of this.sections) {
+                if (section.editor)
+                    await section.editor.loadAsync();
+            }
         }
-        beginEditWorkAsync(value) {
-            return __awaiter(this, void 0, void 0, function* () {
-                for (let section of this.sections) {
-                    if (section.editor)
-                        yield section.editor.beginEditAsync(value);
-                }
-            });
+        async beginEditWorkAsync(value) {
+            for (let section of this.sections) {
+                if (section.editor)
+                    await section.editor.beginEditAsync(value);
+            }
         }
-        validateAsyncWork(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let isValid = true;
-                for (let section of this.sections) {
-                    if (section.editor)
-                        if (!(yield section.editor.validateAsync(force))) {
-                            isValid = false;
-                            this.activeSectionName = section.name;
-                        }
-                }
-                return isValid;
-            });
+        async validateAsyncWork(force) {
+            let isValid = true;
+            for (let section of this.sections) {
+                if (section.editor)
+                    if (!await section.editor.validateAsync(force)) {
+                        isValid = false;
+                        this.activeSectionName = section.name;
+                    }
+            }
+            return isValid;
         }
-        commitAsyncWork(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let isValid = true;
-                for (let section of this.sections) {
-                    if (section.editor)
-                        if (!(yield section.editor.commitAsync(force)))
-                            isValid = false;
-                }
-                return isValid;
-            });
+        async commitAsyncWork(force) {
+            let isValid = true;
+            for (let section of this.sections) {
+                if (section.editor)
+                    if (!await section.editor.commitAsync(force))
+                        isValid = false;
+            }
+            return isValid;
         }
         getSection(name) {
             return WebApp.linq(this.sections).first(a => a.name == name);
@@ -9116,51 +8887,47 @@ var WebApp;
                 executeAsync: () => Promise.resolve(this.clear())
             });
         }
-        selectAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                let mustRefresh = false;
-                if (this.selector == null) {
-                    this.selector = new WebApp.SelectSingleItemActivity({
-                        itemsSource: this.itemsSource,
-                        createItemEditor: () => this.createItemEditor(),
-                        createItemContentView: item => this.createItemListView(item),
-                        pageSize: this.pageSize,
-                        addLabel: this.addLabel,
-                        tooltip: this.pickLabel,
-                        canAdd: this.canAdd
-                    });
-                    this.selector.filters = this.filters;
-                }
-                else
-                    mustRefresh = true;
-                this.selector.selectedValue = this.editValue;
-                if (mustRefresh)
-                    yield this.selector.refreshAsync();
-                const result = yield (yield WebApp.Actions.loadPageAsync(this.selector)).result;
-                if (result != null)
-                    this.editValue = this.itemsSource.getItemValue(result);
-            });
+        async selectAsync() {
+            let mustRefresh = false;
+            if (this.selector == null) {
+                this.selector = new WebApp.SelectSingleItemActivity({
+                    itemsSource: this.itemsSource,
+                    createItemEditor: () => this.createItemEditor(),
+                    createItemContentView: item => this.createItemListView(item),
+                    pageSize: this.pageSize,
+                    addLabel: this.addLabel,
+                    tooltip: this.pickLabel,
+                    canAdd: this.canAdd
+                });
+                this.selector.filters = this.filters;
+            }
+            else
+                mustRefresh = true;
+            this.selector.selectedValue = this.editValue;
+            if (mustRefresh)
+                await this.selector.refreshAsync();
+            const result = await (await WebApp.Actions.loadPageAsync(this.selector)).result;
+            if (result != null)
+                this.editValue = this.itemsSource.getItemValue(result);
         }
         createItemEditor() {
             throw "Not Supported";
         }
-        updateViewAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.status == "loading")
-                    return;
-                if (this.editValue) {
-                    this.status = "loading";
-                    try {
-                        const item = yield this.itemsSource.getItemByValueAsync(this.editValue);
-                        this.contentView = this.createItemView(item);
-                    }
-                    finally {
-                        this.status = "loaded";
-                    }
+        async updateViewAsync() {
+            if (this.status == "loading")
+                return;
+            if (this.editValue) {
+                this.status = "loading";
+                try {
+                    const item = await this.itemsSource.getItemByValueAsync(this.editValue);
+                    this.contentView = this.createItemView(item);
                 }
-                else
-                    this.contentView = null;
-            });
+                finally {
+                    this.status = "loaded";
+                }
+            }
+            else
+                this.contentView = null;
         }
     }
     WebApp.SingleItemPicker = SingleItemPicker;
@@ -9203,7 +8970,7 @@ var WebApp;
                 config.items.forEach(a => this.items.add(this.createItemView(a)));
                 this.status = "loaded";
             }
-            this.prop("selectedItem").subscribe((value, oldValue) => __awaiter(this, void 0, void 0, function* () {
+            this.prop("selectedItem").subscribe(async (value, oldValue) => {
                 if (this._isSelecting)
                     return;
                 if (!value && this.emptyText) {
@@ -9218,12 +8985,12 @@ var WebApp;
                         value.isSelected = true;
                     this.selectedIndex = this.items.indexOf(value);
                     if (this.status != "loading")
-                        yield this.notifyEditValueChangedAsync();
+                        await this.notifyEditValueChangedAsync();
                 }
                 finally {
                     this._isSelecting = false;
                 }
-            }));
+            });
             this.prop("selectedIndex").subscribe(value => {
                 var _a;
                 if (value == -1 && this.emptyText) {
@@ -9259,19 +9026,17 @@ var WebApp;
             var _a;
             return (_a = this.selectedItem) === null || _a === void 0 ? void 0 : _a.value;
         }
-        loadAsyncWork() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.itemsSource) {
-                    this.items.clear();
-                    if (this.emptyText)
-                        this.items.add(this.createEmptyItem());
-                    const items = yield this.itemsSource.getItemsAsync(this.itemsSource.getFilter());
-                    if (items)
-                        items.forEach(a => this.items.add(this.createItemView(a)));
-                }
-                this.selectedIndex = 0;
-                this.isDirty = true;
-            });
+        async loadAsyncWork() {
+            if (this.itemsSource) {
+                this.items.clear();
+                if (this.emptyText)
+                    this.items.add(this.createEmptyItem());
+                const items = await this.itemsSource.getItemsAsync(this.itemsSource.getFilter());
+                if (items)
+                    items.forEach(a => this.items.add(this.createItemView(a)));
+            }
+            this.selectedIndex = 0;
+            this.isDirty = true;
         }
         createEmptyItem() {
             const result = new SelectorItemView({
@@ -9507,34 +9272,30 @@ var WebApp;
 (function (WebApp) {
     let Interaction;
     (function (Interaction) {
-        function showMessageAsync(options) {
+        async function showMessageAsync(options) {
             var _a;
-            return __awaiter(this, void 0, void 0, function* () {
-                const msgActions = (_a = options.actions) !== null && _a !== void 0 ? _a : ["ok"];
-                const msgBox = new WebApp.MessageBox({ message: options.message, icon: options.icon, title: options.title });
-                msgActions.forEach(a => {
-                    msgBox.addAction({
-                        name: a,
-                        displayName: WebApp.Format.action(a),
-                        executeAsync: () => Promise.resolve()
-                    });
+            const msgActions = (_a = options.actions) !== null && _a !== void 0 ? _a : ["ok"];
+            const msgBox = new WebApp.MessageBox({ message: options.message, icon: options.icon, title: options.title });
+            msgActions.forEach(a => {
+                msgBox.addAction({
+                    name: a,
+                    displayName: WebApp.Format.action(a),
+                    executeAsync: () => Promise.resolve()
                 });
-                if (options.customActions)
-                    options.customActions.forEach(a => msgBox.addAction(a));
-                const result = yield msgBox.showAsync();
-                return result;
             });
+            if (options.customActions)
+                options.customActions.forEach(a => msgBox.addAction(a));
+            const result = await msgBox.showAsync();
+            return result;
         }
         Interaction.showMessageAsync = showMessageAsync;
-        function confirmAsync(message) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const result = yield showMessageAsync({
-                    message: message,
-                    title: WebApp.Strings["confirm"],
-                    actions: ["yes", "no"]
-                });
-                return result == "yes";
+        async function confirmAsync(message) {
+            const result = await showMessageAsync({
+                message: message,
+                title: WebApp.Strings["confirm"],
+                actions: ["yes", "no"]
             });
+            return result == "yes";
         }
         Interaction.confirmAsync = confirmAsync;
         function info(message) {
@@ -9755,7 +9516,7 @@ var WebApp;
         };
         function custom(validator) {
             return {
-                validateAsync: (ctx) => __awaiter(this, void 0, void 0, function* () { return yield validator(ctx); })
+                validateAsync: async (ctx) => await validator(ctx)
             };
         }
         Validators.custom = custom;
@@ -9816,11 +9577,9 @@ var WebApp;
 (function (WebApp) {
     let ViewUtils;
     (function (ViewUtils) {
-        function loadAllAsync(items) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const loaders = WebApp.linq(items).ofType(a => WebApp.TypeCheck.isAsyncLoad(a)).select(a => a.loadAsync()).toArray();
-                return yield Promise.all(loaders);
-            });
+        async function loadAllAsync(items) {
+            const loaders = WebApp.linq(items).ofType(a => WebApp.TypeCheck.isAsyncLoad(a)).select(a => a.loadAsync()).toArray();
+            return await Promise.all(loaders);
         }
         ViewUtils.loadAllAsync = loadAllAsync;
         function formatForCss(name) {
@@ -9896,10 +9655,8 @@ var WebApp;
         getFilter(text, offset, pageSize) {
             return {};
         }
-        countAsync(filter) {
-            return __awaiter(this, void 0, void 0, function* () {
-                return (yield this.getItemsAsync(filter)).length;
-            });
+        async countAsync(filter) {
+            return (await this.getItemsAsync(filter)).length;
         }
         getItemByValueAsync(value) {
             const item = WebApp.Item.getItem(value);
@@ -10003,103 +9760,85 @@ var WebApp;
         }
         finalize(filter, items) {
         }
-        countAsync(filter) {
-            return __awaiter(this, void 0, void 0, function* () {
-                return WebApp.linq(this.items.entries()).select(a => a[1]).where(a => this.filterItem(filter, a)).count();
-            });
+        async countAsync(filter) {
+            return WebApp.linq(this.items.entries()).select(a => a[1]).where(a => this.filterItem(filter, a)).count();
         }
-        getItemsAsync(filter) {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.updateCacheAsync(false);
-                const items = yield WebApp.linq(this.items.entries()).select(a => a[1]).where(a => this.filterItem(filter, a)).toArrayAsync(10);
-                this.finalize(filter, items);
-                return items;
-            });
+        async getItemsAsync(filter) {
+            await this.updateCacheAsync(false);
+            const items = await WebApp.linq(this.items.entries()).select(a => a[1]).where(a => this.filterItem(filter, a)).toArrayAsync(10);
+            this.finalize(filter, items);
+            return items;
         }
-        getItemByValueAsync(value) {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.updateCacheAsync(false);
-                if (value == null)
-                    return null;
-                if (typeof value == "object" && typeof value["valueOf"] == "function")
-                    value = value["valueOf"]();
-                return Promise.resolve(this.items.get(value));
-            });
+        async getItemByValueAsync(value) {
+            await this.updateCacheAsync(false);
+            if (value == null)
+                return null;
+            if (typeof value == "object" && typeof value["valueOf"] == "function")
+                value = value["valueOf"]();
+            return Promise.resolve(this.items.get(value));
         }
-        addItemAsync(item) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const newItem = yield this.source.addItemAsync(item);
-                if (newItem != null)
-                    this.items.set(this.getItemValue(newItem, false), newItem);
-                return newItem;
-            });
+        async addItemAsync(item) {
+            const newItem = await this.source.addItemAsync(item);
+            if (newItem != null)
+                this.items.set(this.getItemValue(newItem, false), newItem);
+            return newItem;
         }
-        updateItemAsync(item) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const newItem = yield this.source.updateItemAsync(item);
-                if (newItem != null)
-                    this.items.set(this.getItemValue(newItem, false), newItem);
-                return newItem;
-            });
+        async updateItemAsync(item) {
+            const newItem = await this.source.updateItemAsync(item);
+            if (newItem != null)
+                this.items.set(this.getItemValue(newItem, false), newItem);
+            return newItem;
         }
-        removeItemAsync(item) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const result = yield this.source.removeItemAsync(item);
-                if (result)
-                    this.items.delete(this.getItemValue(item, false));
-                return result;
-            });
+        async removeItemAsync(item) {
+            const result = await this.source.removeItemAsync(item);
+            if (result)
+                this.items.delete(this.getItemValue(item, false));
+            return result;
         }
         filterItem(filter, item) {
             return true;
         }
-        readCacheAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.cache.key)
-                    return yield WebApp.Services.dbStorage.getItem(this.cache.key);
-            });
+        async readCacheAsync() {
+            if (this.cache.key)
+                return await WebApp.Services.dbStorage.getItem(this.cache.key);
         }
-        writeCacheAsync(items) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.cache.key)
-                    yield WebApp.Services.dbStorage.setItem(this.cache.key, items);
-            });
+        async writeCacheAsync(items) {
+            if (this.cache.key)
+                await WebApp.Services.dbStorage.setItem(this.cache.key, items);
         }
-        updateCacheAsync(force) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this.cache.lastUpdateTime && !force)
-                    return;
-                if (!this.cache.updateComplete.isSet) {
-                    yield this.cache.updateComplete.waitFor();
-                    return;
-                }
-                this.cache.updateComplete.reset();
+        async updateCacheAsync(force) {
+            if (this.cache.lastUpdateTime && !force)
+                return;
+            if (!this.cache.updateComplete.isSet) {
+                await this.cache.updateComplete.waitFor();
+                return;
+            }
+            this.cache.updateComplete.reset();
+            try {
+                let newItems;
                 try {
-                    let newItems;
-                    try {
-                        newItems = yield this.source.getItemsAsync(this.filter);
-                    }
-                    catch (ex) {
-                        console.error(ex);
-                    }
-                    let mustUpdate = true;
-                    if (newItems == null) {
-                        newItems = yield this.readCacheAsync();
-                        mustUpdate = false;
-                    }
-                    if (newItems != null) {
-                        this.items.clear();
-                        for (let item of newItems)
-                            this.items.set(this.getItemValue(item, false), item);
-                        this.cache.lastUpdateTime = new Date();
-                        if (mustUpdate)
-                            yield this.writeCacheAsync(newItems);
-                    }
+                    newItems = await this.source.getItemsAsync(this.filter);
                 }
-                finally {
-                    this.cache.updateComplete.set();
+                catch (ex) {
+                    console.error(ex);
                 }
-            });
+                let mustUpdate = true;
+                if (newItems == null) {
+                    newItems = await this.readCacheAsync();
+                    mustUpdate = false;
+                }
+                if (newItems != null) {
+                    this.items.clear();
+                    for (let item of newItems)
+                        this.items.set(this.getItemValue(item, false), item);
+                    this.cache.lastUpdateTime = new Date();
+                    if (mustUpdate)
+                        await this.writeCacheAsync(newItems);
+                }
+            }
+            finally {
+                this.cache.updateComplete.set();
+            }
         }
         get typeName() {
             return this.source.typeName;
@@ -10119,21 +9858,19 @@ var WebApp;
 var WebApp;
 (function (WebApp) {
     class FullItemsLoader {
-        loadItemsAsync(container, chunkSize) {
-            return __awaiter(this, void 0, void 0, function* () {
-                container.status = "loading";
-                const operation = WebApp.Operation.begin({ message: "Loading items", type: WebApp.OperationType.Local });
-                try {
-                    const items = yield container.itemsSource.getItemsAsync(container.filter);
-                    container.clear();
-                    if (items)
-                        yield WebApp.ArrayUtils.forEachAsync(items, chunkSize, a => container.addItem(a));
-                }
-                finally {
-                    operation.end();
-                    container.status = "loaded";
-                }
-            });
+        async loadItemsAsync(container, chunkSize) {
+            container.status = "loading";
+            const operation = WebApp.Operation.begin({ message: "Loading items", type: WebApp.OperationType.Local });
+            try {
+                const items = await container.itemsSource.getItemsAsync(container.filter);
+                container.clear();
+                if (items)
+                    await WebApp.ArrayUtils.forEachAsync(items, chunkSize, a => container.addItem(a));
+            }
+            finally {
+                operation.end();
+                container.status = "loaded";
+            }
         }
     }
     FullItemsLoader.instance = new FullItemsLoader();
@@ -10261,29 +9998,27 @@ var WebApp;
             this._container.clear();
             return this.loadNextPageAsync();
         }
-        loadNextPageAsync() {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (!this.canLoadNextPage)
-                    return;
-                if (this._container.itemsSource) {
-                    const filter = this.getFilter(this._container.itemsCount, this.pageSize);
-                    const operation = WebApp.Operation.begin({ message: "Laoding items from " + this._container.itemsCount, type: WebApp.OperationType.Local });
-                    try {
-                        this._container.status = "loading";
-                        const newItems = yield this._container.itemsSource.getItemsAsync(Object.assign(Object.assign({}, filter), this._container.filter));
-                        if (!newItems || newItems.length == 0)
-                            this._hasMoreItems = false;
-                        else {
-                            newItems.forEach(item => this._container.addItem(item));
-                            this._hasMoreItems = newItems.length == this.pageSize;
-                        }
-                    }
-                    finally {
-                        operation.end();
-                        this._container.status = "loaded";
+        async loadNextPageAsync() {
+            if (!this.canLoadNextPage)
+                return;
+            if (this._container.itemsSource) {
+                const filter = this.getFilter(this._container.itemsCount, this.pageSize);
+                const operation = WebApp.Operation.begin({ message: "Laoding items from " + this._container.itemsCount, type: WebApp.OperationType.Local });
+                try {
+                    this._container.status = "loading";
+                    const newItems = await this._container.itemsSource.getItemsAsync(Object.assign(Object.assign({}, filter), this._container.filter));
+                    if (!newItems || newItems.length == 0)
+                        this._hasMoreItems = false;
+                    else {
+                        newItems.forEach(item => this._container.addItem(item));
+                        this._hasMoreItems = newItems.length == this.pageSize;
                     }
                 }
-            });
+                finally {
+                    operation.end();
+                    this._container.status = "loaded";
+                }
+            }
         }
         onScroll(data) {
             if (data.pageBottom < 1 && this.canLoadNextPage)
@@ -10322,61 +10057,51 @@ var WebApp;
 var WebApp;
 (function (WebApp) {
     class DynamicPageManager {
-        createPageAsync(pageInfo) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const curOperation = WebApp.Operation.begin({ message: "Loading page '" + pageInfo.name + "'..." });
-                const clientPage = yield this.getClientPageAsync(pageInfo.name, curOperation);
-                if (!clientPage.isLoded)
-                    yield this.loadClientPageAsync(clientPage, curOperation);
-                const result = eval(clientPage.action);
-                let page;
-                if (result instanceof Promise)
-                    yield result;
-                if (page != null)
-                    page.url = WebApp.Format.replaceArgs(WebApp.app.baseUrl + clientPage.url, pageInfo.args);
-                page.args = pageInfo.args;
-                curOperation.end();
-                return page;
-            });
+        async createPageAsync(pageInfo) {
+            const curOperation = WebApp.Operation.begin({ message: "Loading page '" + pageInfo.name + "'..." });
+            const clientPage = await this.getClientPageAsync(pageInfo.name, curOperation);
+            if (!clientPage.isLoded)
+                await this.loadClientPageAsync(clientPage, curOperation);
+            const result = eval(clientPage.action);
+            let page;
+            if (result instanceof Promise)
+                await result;
+            if (page != null)
+                page.url = WebApp.Format.replaceArgs(WebApp.app.baseUrl + clientPage.url, pageInfo.args);
+            page.args = pageInfo.args;
+            curOperation.end();
+            return page;
         }
-        loadComponentsAsync(pageName) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const curOperation = WebApp.Operation.begin({ message: "Loading page '" + pageName + "'..." });
-                const clientPage = yield this.getClientPageAsync(pageName, curOperation);
-                if (clientPage && !clientPage.isLoded)
-                    yield this.loadClientPageAsync(clientPage, curOperation);
-                curOperation.end();
-            });
+        async loadComponentsAsync(pageName) {
+            const curOperation = WebApp.Operation.begin({ message: "Loading page '" + pageName + "'..." });
+            const clientPage = await this.getClientPageAsync(pageName, curOperation);
+            if (clientPage && !clientPage.isLoded)
+                await this.loadClientPageAsync(clientPage, curOperation);
+            curOperation.end();
         }
-        loadAppStructureAsync(operation) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (this._struture == null)
-                    this._struture = yield WebApp.Http.getJsonAsync("~/app.json");
-            });
+        async loadAppStructureAsync(operation) {
+            if (this._struture == null)
+                this._struture = await WebApp.Http.getJsonAsync("~/app.json");
         }
-        loadClientPageAsync(clientPage, operation) {
-            return __awaiter(this, void 0, void 0, function* () {
-                const loaders = [];
-                clientPage.isLoded = true;
-                if (clientPage.scripts)
-                    clientPage.scripts.forEach(a => loaders.push(new WebApp.ScriptLoader(a)));
-                if (clientPage.styles)
-                    clientPage.styles.forEach(a => loaders.push(new WebApp.StyleLoader(a)));
-                yield Promise.all(WebApp.linq(loaders).select(a => a.loadAsync(operation)).toArray());
-            });
+        async loadClientPageAsync(clientPage, operation) {
+            const loaders = [];
+            clientPage.isLoded = true;
+            if (clientPage.scripts)
+                clientPage.scripts.forEach(a => loaders.push(new WebApp.ScriptLoader(a)));
+            if (clientPage.styles)
+                clientPage.styles.forEach(a => loaders.push(new WebApp.StyleLoader(a)));
+            await Promise.all(WebApp.linq(loaders).select(a => a.loadAsync(operation)).toArray());
         }
-        getClientPageAsync(name, operation) {
-            return __awaiter(this, void 0, void 0, function* () {
-                yield this.loadAppStructureAsync(operation);
-                const result = {};
-                const pageInfo = this._struture.pages[name];
-                result.styles = [];
-                result.scripts = [];
-                result.action = pageInfo.action;
-                result.url = pageInfo.url;
-                this.includeClientPage(result, pageInfo.include);
-                return result;
-            });
+        async getClientPageAsync(name, operation) {
+            await this.loadAppStructureAsync(operation);
+            const result = {};
+            const pageInfo = this._struture.pages[name];
+            result.styles = [];
+            result.scripts = [];
+            result.action = pageInfo.action;
+            result.url = pageInfo.url;
+            this.includeClientPage(result, pageInfo.include);
+            return result;
         }
         includeClientPage(clientPage, include) {
             if (!include)
@@ -10454,11 +10179,11 @@ var WebApp;
                     }
                     navigator.geolocation.getCurrentPosition(() => setResult(true), error => setResult(error.code != error.PERMISSION_DENIED), { maximumAge: Infinity, timeout: 2000 });
                 }),
-                isGranted: () => __awaiter(this, void 0, void 0, function* () {
+                isGranted: async () => {
                     if ("permissions" in navigator)
-                        return (yield navigator.permissions.query({ name: "geolocation" })).state == "granted";
+                        return (await navigator.permissions.query({ name: "geolocation" })).state == "granted";
                     return localStorage.getItem("geolocation") == "granted";
-                })
+                }
             };
             this.notification = {
                 name: "notification",
@@ -10474,34 +10199,32 @@ var WebApp;
                 isGranted: () => Promise.resolve(!("Notification" in window) ? true : Notification.permission == "granted")
             };
         }
-        requireAsync(...permissions) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let toAsk = [];
-                let result = {};
-                for (let perm of permissions) {
-                    if (!(yield perm.permission.isGranted()))
-                        toAsk.push(perm);
-                    else
-                        result[perm.permission.name] = true;
-                }
-                if (toAsk.length > 0) {
-                    const editor = new WebApp.PopUpEditor({
-                        editor: new PermissionEditor(),
-                        saveLabel: "accept",
-                        savePriority: WebApp.ActionPriority.Evidence,
-                        title: "permission-request",
-                    });
-                    const editResult = yield editor.editAsync(toAsk);
-                    if (editResult) {
-                        for (let item of editResult) {
-                            if (item.granted)
-                                item.granted = yield item.permission.ask();
-                            result[item.permission.name] = item.granted;
-                        }
+        async requireAsync(...permissions) {
+            let toAsk = [];
+            let result = {};
+            for (let perm of permissions) {
+                if (!(await perm.permission.isGranted()))
+                    toAsk.push(perm);
+                else
+                    result[perm.permission.name] = true;
+            }
+            if (toAsk.length > 0) {
+                const editor = new WebApp.PopUpEditor({
+                    editor: new PermissionEditor(),
+                    saveLabel: "accept",
+                    savePriority: WebApp.ActionPriority.Evidence,
+                    title: "permission-request",
+                });
+                const editResult = await editor.editAsync(toAsk);
+                if (editResult) {
+                    for (let item of editResult) {
+                        if (item.granted)
+                            item.granted = await item.permission.ask();
+                        result[item.permission.name] = item.granted;
                     }
                 }
-                return result;
-            });
+            }
+            return result;
         }
     }
     WebApp.PermissionManager = PermissionManager;
@@ -11170,30 +10893,24 @@ var WebApp;
     (function (GeoPlot) {
         let Api;
         (function (Api) {
-            function saveState(id, state) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    let result = yield WebApp.Http.postJsonAsync("~/SaveState/" + id, state);
-                    if (!result.isSuccess)
-                        throw result.error;
-                    return result.data;
-                });
+            async function saveState(id, state) {
+                let result = await WebApp.Http.postJsonAsync("~/SaveState/" + id, state);
+                if (!result.isSuccess)
+                    throw result.error;
+                return result.data;
             }
             Api.saveState = saveState;
             /****************************************/
-            function loadState(id) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    let result = yield WebApp.Http.getJsonAsync("~/LoadState/" + id);
-                    if (!result.isSuccess)
-                        throw result.error;
-                    return result.data;
-                });
+            async function loadState(id) {
+                let result = await WebApp.Http.getJsonAsync("~/LoadState/" + id);
+                if (!result.isSuccess)
+                    throw result.error;
+                return result.data;
             }
             Api.loadState = loadState;
             /****************************************/
-            function loadStudioData() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    return yield WebApp.Http.getJsonAsync("~/StudioData");
-                });
+            async function loadStudioData() {
+                return await WebApp.Http.getJsonAsync("~/StudioData");
             }
             Api.loadStudioData = loadStudioData;
         })(Api = GeoPlot.Api || (GeoPlot.Api = {}));
@@ -11583,21 +11300,19 @@ var WebApp;
                 this.isExpanded = ko.observable(false);
                 this.actions = ko.observable();
                 this.value(value);
-                this.isExpanded.subscribe((value) => __awaiter(this, void 0, void 0, function* () {
+                this.isExpanded.subscribe(async (value) => {
                     if (value && !this._childLoaded) {
-                        yield this.loadChildNodes();
+                        await this.loadChildNodes();
                         this._childLoaded = true;
                     }
-                }));
+                });
                 this.isSelected.subscribe(a => {
                     if (a)
                         this._treeView.select(this);
                 });
             }
             /****************************************/
-            loadChildNodes() {
-                return __awaiter(this, void 0, void 0, function* () {
-                });
+            async loadChildNodes() {
             }
             /****************************************/
             clear() {
@@ -11972,11 +11687,9 @@ var WebApp;
                 document.body.appendChild(this._element);
             }
             /****************************************/
-            pick() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    yield this.open();
-                    return new Promise(res => this._onSelected = res);
-                });
+            async pick() {
+                await this.open();
+                return new Promise(res => this._onSelected = res);
             }
             /****************************************/
             addColor(color) {
@@ -11991,20 +11704,18 @@ var WebApp;
                 });
             }
             /****************************************/
-            open() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (this.isOpened())
-                        return;
-                    this.isOpened(true);
-                    if (window.event) {
-                        const mouseEvent = window.event;
-                        const coords = { x: mouseEvent.pageX, y: mouseEvent.pageY };
-                        //await PromiseUtils.delay(0);
-                        this._element.style.left = coords.x + "px";
-                        this._element.style.top = (coords.y - this._element.clientHeight) + "px";
-                    }
-                    document.body.addEventListener("mousedown", this._mouseDown);
-                });
+            async open() {
+                if (this.isOpened())
+                    return;
+                this.isOpened(true);
+                if (window.event) {
+                    const mouseEvent = window.event;
+                    const coords = { x: mouseEvent.pageX, y: mouseEvent.pageY };
+                    //await PromiseUtils.delay(0);
+                    this._element.style.left = coords.x + "px";
+                    this._element.style.top = (coords.y - this._element.clientHeight) + "px";
+                }
+                document.body.addEventListener("mousedown", this._mouseDown);
             }
             /****************************************/
             close() {
@@ -12067,21 +11778,19 @@ var WebApp;
                     WebApp.DomUtils.addClass(this._element, "drop");
             }
             /****************************************/
-            onDrop(ev) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    ev.preventDefault();
-                    this._dargEnterCount = 0;
-                    WebApp.DomUtils.removeClass(this._element, "drop");
-                    if (ev.dataTransfer.files.length == 1) {
-                        const file = ev.dataTransfer.files[0];
-                        if (file.name.toLowerCase().endsWith(".csv")) {
-                            const text = yield ev.dataTransfer.files[0].text();
-                            this.onFileDropped(text);
-                            return;
-                        }
+            async onDrop(ev) {
+                ev.preventDefault();
+                this._dargEnterCount = 0;
+                WebApp.DomUtils.removeClass(this._element, "drop");
+                if (ev.dataTransfer.files.length == 1) {
+                    const file = ev.dataTransfer.files[0];
+                    if (file.name.toLowerCase().endsWith(".csv")) {
+                        const text = await ev.dataTransfer.files[0].text();
+                        this.onFileDropped(text);
+                        return;
                     }
-                    M.toast({ html: $string("$(msg-not-supported-only-csv)") });
-                });
+                }
+                M.toast({ html: $string("$(msg-not-supported-only-csv)") });
             }
         }
         GeoPlot.FileDragDrop = FileDragDrop;
@@ -12199,98 +11908,86 @@ var WebApp;
                 this.fileDrop.onFileDropped = text => this.importText(text);
             }
             /****************************************/
-            importText(text, options) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    M.toast({ html: $string("$(msg-start-analysis)") });
-                    this.hasData(true);
-                    yield WebApp.PromiseUtils.delay(0);
-                    this._text = text;
-                    this._adapter = new WebApp.TextTableDataAdapter();
-                    this._options = yield this._adapter.analyzeAsync(this._text, options, 5000);
-                    if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
-                        return false;
-                    this.hasHeader(this._options.hasHeader);
-                    this.columnSeparator(this._options.columnSeparator);
-                    const cols = [];
-                    for (let col of this._options.columns) {
-                        var model = new ColumnViewModel(col);
-                        cols.push(model);
-                    }
-                    this.columns(cols);
-                    yield this.updatePreview();
-                    return true;
-                });
+            async importText(text, options) {
+                M.toast({ html: $string("$(msg-start-analysis)") });
+                this.hasData(true);
+                await WebApp.PromiseUtils.delay(0);
+                this._text = text;
+                this._adapter = new WebApp.TextTableDataAdapter();
+                this._options = await this._adapter.analyzeAsync(this._text, options, 5000);
+                if (!this._options.columnSeparator || !this._options.rowSeparator || !this._options.columns || this._options.columns.length < 2)
+                    return false;
+                this.hasHeader(this._options.hasHeader);
+                this.columnSeparator(this._options.columnSeparator);
+                const cols = [];
+                for (let col of this._options.columns) {
+                    var model = new ColumnViewModel(col);
+                    cols.push(model);
+                }
+                this.columns(cols);
+                await this.updatePreview();
+                return true;
             }
             /****************************************/
-            getSelectedData() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const result = [];
-                    yield this.getSelectedDataWork(this.treeView.root(), [], result);
-                    return result;
-                });
+            async getSelectedData() {
+                const result = [];
+                await this.getSelectedDataWork(this.treeView.root(), [], result);
+                return result;
             }
             /****************************************/
-            getSelectedDataWork(node, groups, result) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (!node.isVisible())
-                        return;
-                    if (node.value() instanceof SerieItem) {
-                        const serie = node.value().value;
-                        const source = {
-                            type: "data-import",
-                            options: this._options,
-                            serie: serie,
-                            groups: groups
-                        };
-                        result.push(source);
-                        return;
-                    }
-                    if (!node.isExpanded())
-                        yield node.loadChildNodes();
-                    if (node.value() instanceof GroupItem) {
-                        const group = node.value().value;
-                        let newGroups = groups.slice(0, groups.length);
-                        newGroups.push({ id: group.colId, value: group.name });
-                        groups = newGroups;
-                    }
-                    for (let childNode of node.nodes())
-                        yield this.getSelectedDataWork(childNode, groups, result);
-                });
+            async getSelectedDataWork(node, groups, result) {
+                if (!node.isVisible())
+                    return;
+                if (node.value() instanceof SerieItem) {
+                    const serie = node.value().value;
+                    const source = {
+                        type: "data-import",
+                        options: this._options,
+                        serie: serie,
+                        groups: groups
+                    };
+                    result.push(source);
+                    return;
+                }
+                if (!node.isExpanded())
+                    await node.loadChildNodes();
+                if (node.value() instanceof GroupItem) {
+                    const group = node.value().value;
+                    let newGroups = groups.slice(0, groups.length);
+                    newGroups.push({ id: group.colId, value: group.name });
+                    groups = newGroups;
+                }
+                for (let childNode of node.nodes())
+                    await this.getSelectedDataWork(childNode, groups, result);
             }
             /****************************************/
-            executeImport() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const data = yield this.getSelectedData();
-                    if (this._onGetData) {
-                        this._onGetData(data);
-                        this._onGetData = null;
-                    }
-                    this._model.close();
-                });
+            async executeImport() {
+                const data = await this.getSelectedData();
+                if (this._onGetData) {
+                    this._onGetData(data);
+                    this._onGetData = null;
+                }
+                this._model.close();
             }
             /****************************************/
-            applyChanges() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    this._options.hasHeader = this.hasHeader();
-                    this._options.columnSeparator = this.columnSeparator();
-                    this._options.columns.forEach((col, i) => {
-                        col.name = this.columns()[i].alias();
-                        col.type = this.columns()[i].type();
-                    });
-                    yield this.updatePreview(true);
+            async applyChanges() {
+                this._options.hasHeader = this.hasHeader();
+                this._options.columnSeparator = this.columnSeparator();
+                this._options.columns.forEach((col, i) => {
+                    col.name = this.columns()[i].alias();
+                    col.type = this.columns()[i].type();
                 });
+                await this.updatePreview(true);
             }
             /****************************************/
-            updateGroups() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const group = yield this._adapter.loadGroupAsync(this._text, this._options);
-                    let childNode = new GeoPlot.TreeNode(new GroupItem(group));
-                    this.treeView.root().clear();
-                    this.treeView.root().addNode(childNode);
-                    childNode.value().attachNode(childNode);
-                    this.updateNode(childNode, group);
-                    childNode.isExpanded(true);
-                });
+            async updateGroups() {
+                const group = await this._adapter.loadGroupAsync(this._text, this._options);
+                let childNode = new GeoPlot.TreeNode(new GroupItem(group));
+                this.treeView.root().clear();
+                this.treeView.root().addNode(childNode);
+                childNode.value().attachNode(childNode);
+                this.updateNode(childNode, group);
+                childNode.isExpanded(true);
             }
             /****************************************/
             updateNode(node, group) {
@@ -12298,7 +11995,7 @@ var WebApp;
                 if (group.groups) {
                     for (let item of WebApp.linq(group.groups)) {
                         let childNode = new GeoPlot.TreeNode(new GroupItem(item.value));
-                        childNode.loadChildNodes = () => __awaiter(this, void 0, void 0, function* () { return this.updateNode(childNode, item.value); });
+                        childNode.loadChildNodes = async () => this.updateNode(childNode, item.value);
                         node.addNode(childNode);
                         childNode.value().attachNode(childNode);
                     }
@@ -12312,15 +12009,13 @@ var WebApp;
                 }
             }
             /****************************************/
-            updateTable() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const result = yield this._adapter.loadTableAsync(this._text, this._options, 50);
-                    const table = {
-                        header: WebApp.linq(this._options.columns).where(a => a.type != WebApp.DaColumnType.Exclude).select(a => a.name).toArray(),
-                        rows: WebApp.linq(result).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
-                    };
-                    this.table(table);
-                });
+            async updateTable() {
+                const result = await this._adapter.loadTableAsync(this._text, this._options, 50);
+                const table = {
+                    header: WebApp.linq(this._options.columns).where(a => a.type != WebApp.DaColumnType.Exclude).select(a => a.name).toArray(),
+                    rows: WebApp.linq(result).select(a => WebApp.linq(a).select(b => this.format(b.value)).toArray()).toArray()
+                };
+                this.table(table);
             }
             /****************************************/
             format(value) {
@@ -12333,14 +12028,12 @@ var WebApp;
                 return value;
             }
             /****************************************/
-            updatePreview(force = false) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (force || this._options.rowsCount < 5000 - 1)
-                        yield this.updateGroups();
-                    else
-                        this.treeView.root().clear();
-                    yield this.updateTable();
-                });
+            async updatePreview(force = false) {
+                if (force || this._options.rowsCount < 5000 - 1)
+                    await this.updateGroups();
+                else
+                    this.treeView.root().clear();
+                await this.updateTable();
             }
             /****************************************/
             onNodeSelected(node) {
@@ -12380,24 +12073,22 @@ var WebApp;
                 this.table(null);
             }
             /****************************************/
-            importUrl() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const op = WebApp.Operation.begin($string("$(msg-download-progress)"));
-                    try {
-                        let request = yield fetch(this.sourceUrl());
-                        if (request.ok) {
-                            const text = yield request.text();
-                            if (text) {
-                                this.importText(text);
-                                return;
-                            }
+            async importUrl() {
+                const op = WebApp.Operation.begin($string("$(msg-download-progress)"));
+                try {
+                    let request = await fetch(this.sourceUrl());
+                    if (request.ok) {
+                        const text = await request.text();
+                        if (text) {
+                            this.importText(text);
+                            return;
                         }
-                        M.toast({ html: $string("$(msg-download-error): " + request.statusText) });
                     }
-                    finally {
-                        op.end();
-                    }
-                });
+                    M.toast({ html: $string("$(msg-download-error): " + request.statusText) });
+                }
+                finally {
+                    op.end();
+                }
             }
         }
         GeoPlot.DataImportControl = DataImportControl;
@@ -12564,11 +12255,9 @@ var WebApp;
                 }));
             }
             /****************************************/
-            updateAllSerie() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    for (let item of this.children)
-                        yield item.updateSerie();
-                });
+            async updateAllSerie() {
+                for (let item of this.children)
+                    await item.updateSerie();
             }
             /****************************************/
             canAccept(value) {
@@ -12726,6 +12415,45 @@ var WebApp;
 (function (WebApp) {
     var GeoPlot;
     (function (GeoPlot) {
+        function blendColor(p, c0, c1, l) {
+            let r, g, b, P, f, t, h, i = parseInt, m = Math.round, a = typeof (c1) == "string";
+            if (typeof (p) != "number" || p < -1 || p > 1 || typeof (c0) != "string" || (c0[0] != 'r' && c0[0] != '#') || (c1 && !a))
+                return null;
+            if (!this.pSBCr)
+                this.pSBCr = (d) => {
+                    let n = d.length, x = {};
+                    if (n > 9) {
+                        [r, g, b, a] = d = d.split(","), n = d.length;
+                        if (n < 3 || n > 4)
+                            return null;
+                        x.r = i(r[3] == "a" ? r.slice(5) : r.slice(4)), x.g = i(g), x.b = i(b), x.a = a ? parseFloat(a) : -1;
+                    }
+                    else {
+                        if (n == 8 || n == 6 || n < 4)
+                            return null;
+                        if (n < 6)
+                            d = "#" + d[1] + d[1] + d[2] + d[2] + d[3] + d[3] + (n > 4 ? d[4] + d[4] : "");
+                        d = i(d.slice(1), 16);
+                        if (n == 9 || n == 5)
+                            x.r = d >> 24 & 255, x.g = d >> 16 & 255, x.b = d >> 8 & 255, x.a = m((d & 255) / 0.255) / 1000;
+                        else
+                            x.r = d >> 16, x.g = d >> 8 & 255, x.b = d & 255, x.a = -1;
+                    }
+                    return x;
+                };
+            h = c0.length > 9, h = a ? c1.length > 9 ? true : c1 == "c" ? !h : false : h, f = this.pSBCr(c0), P = p < 0, t = c1 && c1 != "c" ? this.pSBCr(c1) : P ? { r: 0, g: 0, b: 0, a: -1 } : { r: 255, g: 255, b: 255, a: -1 }, p = P ? p * -1 : p, P = 1 - p;
+            if (!f || !t)
+                return null;
+            if (l)
+                r = m(P * f.r + p * t.r), g = m(P * f.g + p * t.g), b = m(P * f.b + p * t.b);
+            else
+                r = m((P * f.r ** 2 + p * t.r ** 2) ** 0.5), g = m((P * f.g ** 2 + p * t.g ** 2) ** 0.5), b = m((P * f.b ** 2 + p * t.b ** 2) ** 0.5);
+            a = f.a, t = t.a, f = a >= 0 || t >= 0, a = f ? a < 0 ? t : t < 0 ? a : a * P + t * p : 0;
+            if (h)
+                return "rgb" + (f ? "a(" : "(") + r + "," + g + "," + b + (f ? "," + m(a * 1000) / 1000 : "") + ")";
+            else
+                return "#" + (4294967296 + r * 16777216 + g * 65536 + b * 256 + (f ? m(a * 255) : 0)).toString(16).slice(1, f ? undefined : -2);
+        }
         function toSafeString(value) {
             if (value == null || value == undefined)
                 return undefined;
@@ -12759,6 +12487,7 @@ var WebApp;
                 this.showIntegration = ko.observable(true);
                 this.maxDay = ko.observable();
                 this.endDay = ko.observable();
+                this.startDay = ko.observable();
                 this._varsMap = {
                     "fun": null,
                     "sum": null,
@@ -12767,7 +12496,10 @@ var WebApp;
                     "value": null,
                     "time": null,
                     "tend": null,
-                    "xp": null
+                    "tstart": null,
+                    "xp": null,
+                    "s": null,
+                    "n3": null,
                 };
                 this.itemType = "regression";
                 this.icon = "show_chart";
@@ -12776,7 +12508,7 @@ var WebApp;
                 this.addFunction({
                     name: $string("$(log-normal)"),
                     type: "log-normal",
-                    value: "$y\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
+                    value: "$s\\sim $c\\cdot\\frac{ e^ {-\\frac{ \\left(\\ln\\ \\left($x - $a\\right) \\ -$u\\right)^ { 2}} { 2$o^ { 2} }}}{ \\left($x - $a\\right) \\sqrt{ 2\\pi } $o }",
                     vars: [{
                             name: "a",
                             label: $string("$(offset)"),
@@ -12805,7 +12537,7 @@ var WebApp;
                 this.addFunction({
                     name: $string("$(normal)"),
                     type: "normal",
-                    value: "$y\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
+                    value: "$s\\sim $c\\cdot\\ \\left(\\frac{1}{\\sqrt{2\\cdot\\pi}\\cdot $o}\\right)\\cdot e^{-\\frac{1}{2}\\cdot\\left(\\frac{\\left($x-$u\\right)}{$o}\\right)^{2}}",
                     vars: [
                         {
                             name: "c",
@@ -12830,7 +12562,7 @@ var WebApp;
                 this.addFunction({
                     name: $string("$(exponential)"),
                     type: "exponential",
-                    value: "$y\\sim $a^{\\left($x-$b\\right)}",
+                    value: "$s\\sim $a^{\\left($x-$b\\right)}",
                     vars: [
                         {
                             name: "a",
@@ -12849,7 +12581,7 @@ var WebApp;
                 this.addFunction({
                     name: $string("$(linear)"),
                     type: "linear",
-                    value: "$y\\sim $a+$m$x",
+                    value: "$s\\sim $a+$m$x",
                     vars: [
                         {
                             name: "a",
@@ -12873,8 +12605,12 @@ var WebApp;
                     if (!this.name() && a)
                         return this.name(a.value.name);
                 });
+                this.startDay.subscribe(a => this.updateStartDay());
                 this.endDay.subscribe(a => this.updateEndDay());
-                this.maxDay.subscribe(a => this.updateEndDay());
+                this.maxDay.subscribe(a => {
+                    this.updateEndDay();
+                    this.updateStartDay();
+                });
                 this.selectedFunction(this.functions[0]);
                 if (config)
                     this.setState(config);
@@ -12945,7 +12681,12 @@ var WebApp;
             }
             /****************************************/
             createParameters(result) {
-                result.push(WebApp.apply(new GeoPlot.ParameterViewModel({ value: this.endDay, name: $string("$(reg-days)") }), p => {
+                result.push(WebApp.apply(new GeoPlot.ParameterViewModel({ value: this.startDay, name: $string("$(start-day)") }), p => {
+                    p.max = this.maxDay;
+                    p.min(1);
+                    p.step(1);
+                }));
+                result.push(WebApp.apply(new GeoPlot.ParameterViewModel({ value: this.endDay, name: $string("$(end-day)") }), p => {
                     p.max = this.maxDay;
                     p.min(0);
                     p.step(1);
@@ -12972,12 +12713,18 @@ var WebApp;
                 }
                 if (state.showIntegration != undefined)
                     this.showIntegration(state.showIntegration);
+                if (state.startDay != undefined)
+                    this.startDay(state.startDay);
+                if (state.endDay != undefined)
+                    this.endDay(state.endDay);
             }
             /****************************************/
             getState() {
                 const state = super.getState();
                 state.function = this.selectedFunction().value;
                 state.showIntegration = this.showIntegration();
+                state.startDay = this.startDay();
+                state.endDay = this.endDay();
                 for (let item of this.selectedFunction().vars()) {
                     item.value.value = item.curValue();
                     item.value.maxValue = item.max();
@@ -12994,6 +12741,8 @@ var WebApp;
                 this.maxDay(WebApp.linq(this.parent.values).max(a => a.x));
                 if (this.endDay() == undefined)
                     this.endDay(this.maxDay());
+                if (this.startDay() == undefined)
+                    this.startDay(1);
             }
             /****************************************/
             updateEndDay() {
@@ -13011,11 +12760,27 @@ var WebApp;
                 });
             }
             /****************************************/
+            updateStartDay() {
+                if (!this._varsMap["tstart"])
+                    return;
+                this._graphCtx.updateExpression({
+                    type: "expression",
+                    id: this.getGraphId("start-day"),
+                    latex: this._varsMap["tstart"] + "=" + this.startDay(),
+                    slider: {
+                        min: "0",
+                        step: "1",
+                        max: (this.maxDay()).toString(),
+                    }
+                });
+            }
+            /****************************************/
             updateColor() {
                 this._graphCtx.setColor(this.getGraphId("main-func"), this.color());
                 this._graphCtx.setColor(this.getGraphId("sum-serie"), this.color());
                 this._graphCtx.setColor(this.getGraphId("sum-point"), this.color());
                 this._graphCtx.setColor(this.getGraphId("end-day-line"), this.color());
+                this._graphCtx.setColor(this.getGraphId("start-day-line"), this.color());
             }
             /****************************************/
             updateGraphWork() {
@@ -13047,6 +12812,7 @@ var WebApp;
                 }
                 this._graphCtx.generateVars(this._varsMap);
                 this._varsMap["x"] = this.getVar("xp");
+                const regColor = blendColor(-0.3, this.color(), false, true);
                 values.push({
                     type: "expression",
                     id: this.getGraphId("main"),
@@ -13058,8 +12824,8 @@ var WebApp;
                     type: "expression",
                     id: this.getGraphId("main-func"),
                     folderId: this.getGraphId("private"),
-                    latex: this.replaceVars(func.value.replace("$y\\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
-                    color: this.parent.color(),
+                    latex: this.replaceVars(func.value.replace("$s\\sim ", "$fun\\left(x\\right)=").replace(/\$x/g, "x")),
+                    color: regColor,
                     lineStyle: Desmos.Styles.DASHED
                 });
                 values.push({
@@ -13068,6 +12834,24 @@ var WebApp;
                     folderId: this.getGraphId("private"),
                     latex: this.replaceVars("$sum\\left(x\\right)=\\sum_{$n1=1}^{x}\\operatorname{round}\\left($fun\\left($n1\\right)\\right)"),
                     hidden: true
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("subserie-func"),
+                    folderId: this.getGraphId("private"),
+                    latex: this.replaceVars("$s=\\sum_{$n3=$xp}^{$xp}{$y}[$n3+1]"),
+                    hidden: true
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("subserie-hl"),
+                    folderId: this.getGraphId("private"),
+                    latex: this.replaceVars("($xp, $s)"),
+                    color: regColor,
+                    lines: false,
+                    lineStyle: Desmos.Styles.POINT,
+                    pointStyle: "NONE",
+                    points: true
                 });
                 values.push({
                     type: "expression",
@@ -13109,7 +12893,21 @@ var WebApp;
                     id: this.getGraphId("end-day"),
                     latex: this._varsMap["tend"] + "=" + this.endDay(),
                     folderId: this.getGraphId("public"),
-                    label: "Giorni Previsione",
+                    label: "Fine Previsione",
+                    slider: {
+                        min: (0).toString(),
+                        max: (this.maxDay()).toString(),
+                        hardMax: true,
+                        hardMin: true,
+                        step: "1"
+                    }
+                });
+                values.push({
+                    type: "expression",
+                    id: this.getGraphId("start-day"),
+                    latex: this._varsMap["tstart"] + "=" + this.startDay(),
+                    folderId: this.getGraphId("public"),
+                    label: "Inizio Previsione",
                     slider: {
                         min: (0).toString(),
                         max: (this.maxDay()).toString(),
@@ -13121,15 +12919,23 @@ var WebApp;
                 values.push({
                     type: "expression",
                     id: this.getGraphId("end-day-line"),
-                    color: this.color(),
+                    color: regColor,
                     latex: "x=" + this._varsMap["tend"],
                     folderId: this.getGraphId("private"),
                     lines: true
                 });
                 values.push({
                     type: "expression",
+                    id: this.getGraphId("start-day-line"),
+                    color: regColor,
+                    latex: "x=" + this._varsMap["tstart"],
+                    folderId: this.getGraphId("private"),
+                    lines: true
+                });
+                values.push({
+                    type: "expression",
                     id: this.getGraphId("end-day-serie"),
-                    latex: this.replaceVars("$xp=[0,...,$tend]+" + this.parent.getVar("ofs")),
+                    latex: this.replaceVars("$xp=[$tstart,...,$tend]+" + this.parent.getVar("ofs")),
                     folderId: this.getGraphId("private"),
                     hidden: true
                 });
@@ -13469,31 +13275,36 @@ var WebApp;
                 return this.addChildrenWork(configOrState instanceof GeoPlot.StudioSerieRegression ? configOrState : new GeoPlot.StudioSerieRegression(configOrState), updateGraph);
             }
             /****************************************/
-            changeColor() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const color = yield GeoPlot.ColorPicker.instance.pick();
-                    if (color)
-                        this.color(color);
-                });
+            async changeColor() {
+                const color = await GeoPlot.ColorPicker.instance.pick();
+                if (color)
+                    this.color(color);
             }
             /****************************************/
-            updateSerie() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (this.source.type == "geoplot" || !this.source.type) {
-                        if (!this._graphCtx.serieCalculator) {
-                            M.toast({ html: $string("$(msg-downloading-data)") });
-                            const model = yield GeoPlot.Api.loadStudioData();
-                            this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(new GeoPlot.RangeDayAreaDataSet(model.data), GeoPlot.InfectionDataSet, model.geo);
-                        }
-                        this.importValues(this._graphCtx.serieCalculator.getSerie(this.source));
-                        this._graphCtx.updateTable(this.getGraphId("table"), this.values);
-                        this.children.foreach(a => a.onParentChanged());
-                        this.onSerieChanged();
-                        M.toast({ html: $string("$(msg-update-complete)") });
+            async updateSerie() {
+                if (this.source.type == "geoplot" || !this.source.type) {
+                    if (!this._graphCtx.serieCalculator) {
+                        M.toast({ html: $string("$(msg-downloading-data)") });
+                        const model = await GeoPlot.Api.loadStudioData();
+                        this._graphCtx.serieCalculator = new GeoPlot.IndicatorCalculator(new GeoPlot.RangeDayAreaDataSet(model.data), GeoPlot.InfectionDataSet, model.geo);
                     }
-                    else
-                        M.toast({ html: $string("$(msg-update-not-supported)") });
-                });
+                    const daySource = this.source;
+                    if (daySource.range) {
+                        this._graphCtx.serieCalculator.data.startDay = daySource.range.start;
+                        this._graphCtx.serieCalculator.data.endDay = daySource.range.end;
+                    }
+                    else {
+                        this._graphCtx.serieCalculator.data.startDay = undefined;
+                        this._graphCtx.serieCalculator.data.endDay = undefined;
+                    }
+                    this.importValues(this._graphCtx.serieCalculator.getSerie(daySource));
+                    this._graphCtx.updateTable(this.getGraphId("table"), this.values);
+                    this.children.foreach(a => a.onParentChanged());
+                    this.onSerieChanged();
+                    M.toast({ html: $string("$(msg-update-complete)") });
+                }
+                else
+                    M.toast({ html: $string("$(msg-update-not-supported)") });
             }
             /****************************************/
             zoom() {
@@ -13839,6 +13650,30 @@ var WebApp;
                     showInFavorites: false,
                     compute: new GeoPlot.ConstIndicatorFunction((v, a) => a.demography.over65)
                 },
+                /*,
+                {
+                    id: "extimated-death",
+                    name: $string("Morti stimati"),
+                    validFor: ["country"],
+                    colorLight: "#f44336",
+                    colorDark: "#b71c1c",
+                    compute: new CombineIndicatorFunction({
+                        totalPositive: new SimpleIndicatorFunction(a => a.totalPositive),
+                        toatlTests: new SimpleIndicatorFunction(a => a.toatlTests),
+                        dailyDeath: new ConstIndicatorFunction((v, a) => 1450)
+                    }, values => Math.round((values.totalPositive / values.toatlTests) * values.dailyDeath))
+                },
+                {
+                    id: "healed-death",
+                    name: $string("$(death) + $(healed)"),
+                    validFor: ["country", "region"],
+                    colorLight: "#4caf50",
+                    colorDark: "#1b5e20",
+                    compute: new CombineIndicatorFunction({
+                        totalHealed: new SimpleIndicatorFunction(a => a.totalHealed),
+                        totalDeath: new SimpleIndicatorFunction(a => a.totalDeath)
+                    }, values => values.totalHealed + values.totalDeath)
+                }*/
             ],
             factors: [
                 {
@@ -14189,135 +14024,129 @@ var WebApp;
             return a => null;
         }
         /****************************************/
-        analyzeAsync(text, options, maxRows) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (!options)
-                    options = {};
-                //Separators
-                this.extractRowSeparator(text, options);
-                this.extractColumnSeparator(text, options);
-                //Header
-                this.extractHeader(text, options);
-                //Rows
-                let rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
-                if (maxRows)
-                    rows = rows.take(maxRows);
-                if (options.hasHeader)
-                    rows = rows.skip(1);
-                let curOp = WebApp.Operation.begin("Analazing rows...");
-                //col analysis
-                const colAnalysis = [];
-                let rowCount = 0;
-                yield rows.foreachAsync((row) => __awaiter(this, void 0, void 0, function* () {
-                    rowCount++;
-                    this.analyzeRow(WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray(), colAnalysis);
-                    if (rowCount % 200 == 0) {
-                        curOp.progress = { current: rowCount };
-                        yield WebApp.PromiseUtils.delay(0);
-                    }
-                }));
-                options.rowsCount = rowCount;
-                curOp.end();
-                const columns = WebApp.linq(options.columns);
-                //Parser
+        async analyzeAsync(text, options, maxRows) {
+            if (!options)
+                options = {};
+            //Separators
+            this.extractRowSeparator(text, options);
+            this.extractColumnSeparator(text, options);
+            //Header
+            this.extractHeader(text, options);
+            //Rows
+            let rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+            if (maxRows)
+                rows = rows.take(maxRows);
+            if (options.hasHeader)
+                rows = rows.skip(1);
+            let curOp = WebApp.Operation.begin("Analazing rows...");
+            //col analysis
+            const colAnalysis = [];
+            let rowCount = 0;
+            await rows.foreachAsync(async (row) => {
+                rowCount++;
+                this.analyzeRow(WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray(), colAnalysis);
+                if (rowCount % 200 == 0) {
+                    curOp.progress = { current: rowCount };
+                    await WebApp.PromiseUtils.delay(0);
+                }
+            });
+            options.rowsCount = rowCount;
+            curOp.end();
+            const columns = WebApp.linq(options.columns);
+            //Parser
+            colAnalysis.forEach((col, i) => {
+                if (!options.columns[i].parser)
+                    options.columns[i].parser = this.createParser(col);
+            });
+            //X-axis
+            if (!columns.any(a => a.type == DaColumnType.XAxis))
+                columns.first(a => a.type == DaColumnType.Exclude).type = DaColumnType.XAxis;
+            //Y-axis
+            if (!columns.any(a => a.type == DaColumnType.Serie)) {
                 colAnalysis.forEach((col, i) => {
-                    if (!options.columns[i].parser)
-                        options.columns[i].parser = this.createParser(col);
+                    if (col.numberCount > 0 && col.stringCount == 0)
+                        options.columns[i].type = DaColumnType.Serie;
                 });
-                //X-axis
-                if (!columns.any(a => a.type == DaColumnType.XAxis))
-                    columns.first(a => a.type == DaColumnType.Exclude).type = DaColumnType.XAxis;
-                //Y-axis
-                if (!columns.any(a => a.type == DaColumnType.Serie)) {
-                    colAnalysis.forEach((col, i) => {
-                        if (col.numberCount > 0 && col.stringCount == 0)
-                            options.columns[i].type = DaColumnType.Serie;
-                    });
-                }
-                //groups
-                if (!columns.any(a => a.type == DaColumnType.Group)) {
-                    colAnalysis.forEach((col, i) => {
-                        if (col.stringCount > 0 && col.emptyCount == 0) {
-                            var values = WebApp.linq(col.values);
-                            if (values.count() > 1 && values.any(a => a.value > 1))
-                                options.columns[i].type = DaColumnType.Group;
-                        }
-                    });
-                }
-                return options;
-            });
+            }
+            //groups
+            if (!columns.any(a => a.type == DaColumnType.Group)) {
+                colAnalysis.forEach((col, i) => {
+                    if (col.stringCount > 0 && col.emptyCount == 0) {
+                        var values = WebApp.linq(col.values);
+                        if (values.count() > 1 && values.any(a => a.value > 1))
+                            options.columns[i].type = DaColumnType.Group;
+                    }
+                });
+            }
+            return options;
         }
         /****************************************/
-        loadTableAsync(text, options, maxItems) {
-            return __awaiter(this, void 0, void 0, function* () {
-                var result = [];
-                var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
-                if (options.hasHeader)
-                    rows = rows.skip(1);
-                for (var row of rows) {
-                    const cols = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
-                    const item = {};
-                    for (let i = 0; i < cols.length; i++) {
-                        const col = options.columns[i];
-                        if (col.type == DaColumnType.Exclude)
-                            continue;
-                        item[col.id] = col.parser(cols[i]);
-                    }
-                    result.push(item);
-                    if (maxItems && result.length >= maxItems)
-                        break;
+        async loadTableAsync(text, options, maxItems) {
+            var result = [];
+            var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+            if (options.hasHeader)
+                rows = rows.skip(1);
+            for (var row of rows) {
+                const cols = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
+                const item = {};
+                for (let i = 0; i < cols.length; i++) {
+                    const col = options.columns[i];
+                    if (col.type == DaColumnType.Exclude)
+                        continue;
+                    item[col.id] = col.parser(cols[i]);
                 }
-                return result;
-            });
+                result.push(item);
+                if (maxItems && result.length >= maxItems)
+                    break;
+            }
+            return result;
         }
         /****************************************/
-        loadGroupAsync(text, options) {
-            return __awaiter(this, void 0, void 0, function* () {
-                var result = { name: $string("$(da-main-group)") };
-                var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
-                if (options.hasHeader)
-                    rows = rows.skip(1);
-                const xColumnIndex = WebApp.linq(options.columns).where(a => a.type == DaColumnType.XAxis).select((a, i) => i).first();
-                let curOp = WebApp.Operation.begin("Loading groups...");
-                let rowCount = 0;
-                let chunkCount;
-                yield rows.foreachAsync((row) => __awaiter(this, void 0, void 0, function* () {
-                    const values = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
-                    const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
-                    const item = {};
-                    let curGroup = result;
-                    for (let i = 0; i < values.length; i++) {
-                        const col = options.columns[i];
-                        if (col.type == DaColumnType.Exclude || col.type == DaColumnType.XAxis)
-                            continue;
-                        let value = col.parser(values[i]);
-                        if (col.type == DaColumnType.Group) {
-                            if (!curGroup.groups)
-                                curGroup.groups = {};
-                            if (value === "")
-                                value = $string("<$(empty)>");
-                            if (!(value in curGroup.groups))
-                                curGroup.groups[value] = { name: value, colId: col.id };
-                            curGroup = curGroup.groups[value];
-                        }
-                        else if (col.type == DaColumnType.Serie) {
-                            if (!curGroup.series)
-                                curGroup.series = {};
-                            if (!(col.id in curGroup.series))
-                                curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
-                            curGroup.series[col.id].values.push({ x: xValue, y: value });
-                        }
+        async loadGroupAsync(text, options) {
+            var result = { name: $string("$(da-main-group)") };
+            var rows = WebApp.linq(new WebApp.SplitEnumerator(text, options.rowSeparator));
+            if (options.hasHeader)
+                rows = rows.skip(1);
+            const xColumnIndex = WebApp.linq(options.columns).where(a => a.type == DaColumnType.XAxis).select((a, i) => i).first();
+            let curOp = WebApp.Operation.begin("Loading groups...");
+            let rowCount = 0;
+            let chunkCount;
+            await rows.foreachAsync(async (row) => {
+                const values = WebApp.linq(new WebApp.CsvSplitEnumerator(row, options.columnSeparator)).toArray();
+                const xValue = options.columns[xColumnIndex].parser(values[xColumnIndex]);
+                const item = {};
+                let curGroup = result;
+                for (let i = 0; i < values.length; i++) {
+                    const col = options.columns[i];
+                    if (col.type == DaColumnType.Exclude || col.type == DaColumnType.XAxis)
+                        continue;
+                    let value = col.parser(values[i]);
+                    if (col.type == DaColumnType.Group) {
+                        if (!curGroup.groups)
+                            curGroup.groups = {};
+                        if (value === "")
+                            value = $string("<$(empty)>");
+                        if (!(value in curGroup.groups))
+                            curGroup.groups[value] = { name: value, colId: col.id };
+                        curGroup = curGroup.groups[value];
                     }
-                    rowCount++;
-                    if (rowCount % 200 == 0) {
-                        curOp.progress = { current: rowCount, totCount: options.rowsCount };
-                        yield WebApp.PromiseUtils.delay(0);
+                    else if (col.type == DaColumnType.Serie) {
+                        if (!curGroup.series)
+                            curGroup.series = {};
+                        if (!(col.id in curGroup.series))
+                            curGroup.series[col.id] = { name: col.name, colId: col.id, values: [] };
+                        curGroup.series[col.id].values.push({ x: xValue, y: value });
                     }
-                }));
-                options.rowsCount = rowCount;
-                curOp.end();
-                return result;
+                }
+                rowCount++;
+                if (rowCount % 200 == 0) {
+                    curOp.progress = { current: rowCount, totCount: options.rowsCount };
+                    await WebApp.PromiseUtils.delay(0);
+                }
             });
+            options.rowsCount = rowCount;
+            curOp.end();
+            return result;
         }
     }
     WebApp.TextTableDataAdapter = TextTableDataAdapter;
@@ -14327,22 +14156,16 @@ var WebApp;
             super();
         }
         /****************************************/
-        loadGroupAsync(text, options) {
-            return __awaiter(this, void 0, void 0, function* () {
-                return null;
-            });
+        async loadGroupAsync(text, options) {
+            return null;
         }
         /****************************************/
-        loadTableAsync(text, options, maxItems) {
-            return __awaiter(this, void 0, void 0, function* () {
-                return null;
-            });
+        async loadTableAsync(text, options, maxItems) {
+            return null;
         }
         /****************************************/
-        analyzeAsync(text, options, maxRows) {
-            return __awaiter(this, void 0, void 0, function* () {
-                return null;
-            });
+        async analyzeAsync(text, options, maxRows) {
+            return null;
         }
     }
     WebApp.JsonDataAdapter = JsonDataAdapter;
@@ -15316,47 +15139,45 @@ var WebApp;
                 this.isZoomChart(!this.isZoomChart());
             }
             /****************************************/
-            copyMap() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const element = document.querySelector("svg.map");
-                    const svgText = element.outerHTML;
-                    const blob = new Blob([svgText], { type: "image/svg+xml" });
-                    if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
-                        const svgImage = document.createElement('img');
-                        svgImage.style.width = element.clientWidth + "px";
-                        svgImage.style.height = element.clientHeight + "px";
-                        svgImage.onload = function () {
-                            const canvas = document.createElement("canvas");
-                            canvas.width = element.clientWidth;
-                            canvas.height = element.clientHeight;
-                            const ctx = canvas.getContext("2d");
-                            ctx.fillStyle = "white";
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
-                            ctx.drawImage(svgImage, 0, 0);
-                            canvas.toBlob((pngBlob) => __awaiter(this, void 0, void 0, function* () {
-                                let item = new ClipboardItem({ [pngBlob.type]: pngBlob });
-                                yield navigator.clipboard.write([item]);
-                                M.toast({ html: $string("$(msg-map-copied)") });
-                            }));
-                        };
-                        svgImage.src = window.URL.createObjectURL(blob);
-                    }
-                    else {
-                        const element = document.createElement("a");
-                        element.href = window.URL.createObjectURL(blob);
-                        element.target = "_blan";
-                        element.download = "map.svg";
-                        element.click();
-                        M.toast({ html: $string("$(msg-no-copy)") });
-                    }
-                });
+            async copyMap() {
+                const element = document.querySelector("svg.map");
+                const svgText = element.outerHTML;
+                const blob = new Blob([svgText], { type: "image/svg+xml" });
+                if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
+                    const svgImage = document.createElement('img');
+                    svgImage.style.width = element.clientWidth + "px";
+                    svgImage.style.height = element.clientHeight + "px";
+                    svgImage.onload = function () {
+                        const canvas = document.createElement("canvas");
+                        canvas.width = element.clientWidth;
+                        canvas.height = element.clientHeight;
+                        const ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(svgImage, 0, 0);
+                        canvas.toBlob(async (pngBlob) => {
+                            let item = new ClipboardItem({ [pngBlob.type]: pngBlob });
+                            await navigator.clipboard.write([item]);
+                            M.toast({ html: $string("$(msg-map-copied)") });
+                        });
+                    };
+                    svgImage.src = window.URL.createObjectURL(blob);
+                }
+                else {
+                    const element = document.createElement("a");
+                    element.href = window.URL.createObjectURL(blob);
+                    element.target = "_blan";
+                    element.download = "map.svg";
+                    element.click();
+                    M.toast({ html: $string("$(msg-no-copy)") });
+                }
             }
             /****************************************/
             copyChart() {
-                this._chart.canvas.toBlob((blob) => __awaiter(this, void 0, void 0, function* () {
+                this._chart.canvas.toBlob(async (blob) => {
                     if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
                         let item = new ClipboardItem({ [blob.type]: blob });
-                        yield navigator.clipboard.write([item]);
+                        await navigator.clipboard.write([item]);
                         M.toast({ html: $string("$(msg-chart-copied)") });
                     }
                     else {
@@ -15368,48 +15189,49 @@ var WebApp;
                         element.click();
                         M.toast({ html: $string("$(msg-no-copy)") });
                     }
-                }));
+                });
                 this.tipManager.markAction("chartActionExecuted", "copy");
             }
             /****************************************/
-            copySerie() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const data = this._chart.data.datasets[0].data;
-                    let text = "";
-                    for (let i = 0; i < data.length; i++) {
-                        if (i > 0)
-                            text += "\n";
-                        text += WebApp.DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + WebApp.MathUtils.round(data[i].y, 1);
-                    }
-                    WebApp.DomUtils.copyText(text);
-                    M.toast({ html: $string("$(msg-serie-copied)") });
-                    this.tipManager.markAction("chartActionExecuted", "copySerie");
-                });
+            async copySerie() {
+                const data = this._chart.data.datasets[0].data;
+                let text = "";
+                for (let i = 0; i < data.length; i++) {
+                    if (i > 0)
+                        text += "\n";
+                    text += WebApp.DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + WebApp.MathUtils.round(data[i].y, 1);
+                }
+                WebApp.DomUtils.copyText(text);
+                M.toast({ html: $string("$(msg-serie-copied)") });
+                this.tipManager.markAction("chartActionExecuted", "copySerie");
             }
             /****************************************/
-            copySerieForStudio() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    let obj = {
-                        type: "serie",
-                        version: 1,
-                        color: this.selectedIndicator().colorLight,
-                        serie: {
-                            type: "geoplot",
-                            areaId: this.selectedArea.id,
-                            indicatorId: this.selectedIndicator().id,
-                            xAxis: "dayNumber",
-                            exeludedAreaIds: WebApp.linq(this._execludedArea.keys()).toArray(),
-                            factorId: this.selectedFactor().id,
-                            groupSize: this.groupSize(),
-                            isDelta: this.isDayDelta(),
-                        },
-                        title: this.factorDescription()
-                    };
-                    obj.values = this._calculator.getSerie(obj.serie);
-                    WebApp.DomUtils.copyText(JSON.stringify(obj));
-                    M.toast({ html: $string("$(msg-serie-copied-studio)") });
-                    this.tipManager.markAction("chartActionExecuted", "copySerieForStudio");
-                });
+            async copySerieForStudio() {
+                let obj = {
+                    type: "serie",
+                    version: 1,
+                    color: this.selectedIndicator().colorLight,
+                    serie: {
+                        type: "geoplot",
+                        areaId: this.selectedArea.id,
+                        indicatorId: this.selectedIndicator().id,
+                        xAxis: "dayNumber",
+                        exeludedAreaIds: WebApp.linq(this._execludedArea.keys()).toArray(),
+                        factorId: this.selectedFactor().id,
+                        groupSize: this.groupSize(),
+                        isDelta: this.isDayDelta(),
+                        startDay: this.startDay(),
+                        range: {
+                            start: this._calculator.data.startDay,
+                            end: this._calculator.data.endDay,
+                        }
+                    },
+                    title: this.factorDescription()
+                };
+                obj.values = this._calculator.getSerie(obj.serie);
+                WebApp.DomUtils.copyText(JSON.stringify(obj));
+                M.toast({ html: $string("$(msg-serie-copied-studio)") });
+                this.tipManager.markAction("chartActionExecuted", "copySerieForStudio");
             }
             /****************************************/
             play() {
@@ -15798,36 +15620,34 @@ var WebApp;
                 value.reference(this.selectedFactor().reference(value.data(), area));
             }
             /****************************************/
-            updateDetailsArea() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const detailsEl = document.querySelector(".details-map");
-                    if (!this.detailsArea()) {
-                        this.setViewMode("region");
-                        detailsEl.innerHTML = "";
+            async updateDetailsArea() {
+                const detailsEl = document.querySelector(".details-map");
+                if (!this.detailsArea()) {
+                    this.setViewMode("region");
+                    detailsEl.innerHTML = "";
+                }
+                else {
+                    await this.detailsLoading.waitFor();
+                    this.detailsLoading.reset();
+                    try {
+                        this.setViewMode("details", true);
+                        await WebApp.PromiseUtils.delay(0);
+                        detailsEl.innerHTML = "<span class = 'loading'><i class ='material-icons'>loop</i></span>";
+                        document.getSelection().empty();
+                        const mainData = JSON.parse(await (await fetch(WebApp.app.baseUrl + "AreaData/" + this.detailsArea().id)).text());
+                        const mapData = await (await fetch(WebApp.app.baseUrl + "AreaMap/" + this.detailsArea().id)).text();
+                        detailsEl.innerHTML = mapData;
+                        var svgMap = document.querySelector(".details-map svg");
+                        svgMap.addEventListener("click", e => this.onMapClick(e, false));
+                        svgMap.querySelector("#group_municipality").classList.add("active");
+                        this._detailsData = new GeoPlot.RangeDayAreaDataSet(mainData.data);
+                        this._detailsGeo = mainData.geo;
+                        this.setViewMode("details", true);
                     }
-                    else {
-                        yield this.detailsLoading.waitFor();
-                        this.detailsLoading.reset();
-                        try {
-                            this.setViewMode("details", true);
-                            yield WebApp.PromiseUtils.delay(0);
-                            detailsEl.innerHTML = "<span class = 'loading'><i class ='material-icons'>loop</i></span>";
-                            document.getSelection().empty();
-                            const mainData = JSON.parse(yield (yield fetch(WebApp.app.baseUrl + "AreaData/" + this.detailsArea().id)).text());
-                            const mapData = yield (yield fetch(WebApp.app.baseUrl + "AreaMap/" + this.detailsArea().id)).text();
-                            detailsEl.innerHTML = mapData;
-                            var svgMap = document.querySelector(".details-map svg");
-                            svgMap.addEventListener("click", e => this.onMapClick(e, false));
-                            svgMap.querySelector("#group_municipality").classList.add("active");
-                            this._detailsData = new GeoPlot.RangeDayAreaDataSet(mainData.data);
-                            this._detailsGeo = mainData.geo;
-                            this.setViewMode("details", true);
-                        }
-                        finally {
-                            this.detailsLoading.set();
-                        }
+                    finally {
+                        this.detailsLoading.set();
                     }
-                });
+                }
             }
             /****************************************/
             updateTopAreas() {
@@ -16014,12 +15834,12 @@ var WebApp;
                 const root = new GeoPlot.TreeNode();
                 root.actions(actions);
                 this.items.setRoot(root);
-                document.body.addEventListener("paste", (ev) => __awaiter(this, void 0, void 0, function* () {
+                document.body.addEventListener("paste", async (ev) => {
                     if (ev.target.tagName == "INPUT")
                         return;
-                    if (yield this.onPaste(ev.clipboardData))
+                    if (await this.onPaste(ev.clipboardData))
                         ev.preventDefault();
-                }));
+                });
                 M.Modal.init(document.getElementById("options"), {
                     onCloseEnd: () => this.updateOptions()
                 });
@@ -16047,14 +15867,12 @@ var WebApp;
                 });
             }
             /****************************************/
-            share() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const projectId = WebApp.StringUtils.uuidv4();
-                    yield GeoPlot.Api.saveState(projectId, this.getState());
-                    const url = WebApp.Uri.absolute("~/" + $language.split("-")[0] + "/Studio/" + projectId);
-                    yield WebApp.DomUtils.copyText(url);
-                    M.toast({ html: $string("$(msg-shared)") });
-                });
+            async share() {
+                const projectId = WebApp.StringUtils.uuidv4();
+                await GeoPlot.Api.saveState(projectId, this.getState());
+                const url = WebApp.Uri.absolute("~/" + $language.split("-")[0] + "/Studio/" + projectId);
+                await WebApp.DomUtils.copyText(url);
+                M.toast({ html: $string("$(msg-shared)") });
             }
             /****************************************/
             showOptions() {
@@ -16118,31 +15936,27 @@ var WebApp;
                 }
             }
             /****************************************/
-            loadState() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (this._projectId) {
-                        let result = yield GeoPlot.Api.loadState(this._projectId);
-                        this.setState(result);
-                    }
-                    else {
-                        const json = localStorage.getItem("studio");
-                        if (json)
-                            this.setState(JSON.parse(json));
-                    }
-                });
+            async loadState() {
+                if (this._projectId) {
+                    let result = await GeoPlot.Api.loadState(this._projectId);
+                    this.setState(result);
+                }
+                else {
+                    const json = localStorage.getItem("studio");
+                    if (json)
+                        this.setState(JSON.parse(json));
+                }
             }
             /****************************************/
-            saveState() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (this._projectId) {
-                        yield GeoPlot.Api.saveState(this._projectId, this.getState());
-                        M.toast({ html: $string("$(msg-saved)") });
-                    }
-                    else {
-                        localStorage.setItem("studio", JSON.stringify(this.getState()));
-                        M.toast({ html: $string("$(msg-saved-device)") });
-                    }
-                });
+            async saveState() {
+                if (this._projectId) {
+                    await GeoPlot.Api.saveState(this._projectId, this.getState());
+                    M.toast({ html: $string("$(msg-saved)") });
+                }
+                else {
+                    localStorage.setItem("studio", JSON.stringify(this.getState()));
+                    M.toast({ html: $string("$(msg-saved-device)") });
+                }
             }
             /****************************************/
             demo() {
@@ -16154,55 +15968,49 @@ var WebApp;
                 });
             }
             /****************************************/
-            onPaste(data) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    const text = data.getData("text/plain").toString();
-                    if (text)
-                        return yield this.importText(text);
-                    return false;
-                });
+            async onPaste(data) {
+                const text = data.getData("text/plain").toString();
+                if (text)
+                    return await this.importText(text);
+                return false;
             }
             /****************************************/
-            import() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    //var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
-                    let project = this.getSelectedProject();
-                    const data = yield this.dataImport.show();
-                    this.addImportedData(data, project);
+            async import() {
+                //var text = await (await fetch("https://raw.githubusercontent.com/datasets/covid-19/master/data/countries-aggregated.csv")).text();
+                let project = this.getSelectedProject();
+                const data = await this.dataImport.show();
+                this.addImportedData(data, project);
+                return true;
+            }
+            /****************************************/
+            async importText(text) {
+                let project = this.getSelectedProject();
+                if (!project && !this.projects.any())
+                    project = this.newProject();
+                if (!project) {
+                    M.toast({ html: $string("$(msg-select-project)") });
+                    return false;
+                }
+                const serie = GeoPlot.StudioSerie.fromText(text);
+                if (serie) {
+                    project.addSerie(serie);
+                    project.node.isExpanded(true);
+                    serie.node.isExpanded(true);
+                    serie.zoom();
+                    const reg = serie.addRegression(null, false);
+                    reg.updateGraph();
+                    reg.node.isSelected(true);
                     return true;
-                });
-            }
-            /****************************************/
-            importText(text) {
-                return __awaiter(this, void 0, void 0, function* () {
-                    let project = this.getSelectedProject();
-                    if (!project && !this.projects.any())
-                        project = this.newProject();
-                    if (!project) {
-                        M.toast({ html: $string("$(msg-select-project)") });
-                        return false;
-                    }
-                    const serie = GeoPlot.StudioSerie.fromText(text);
-                    if (serie) {
-                        project.addSerie(serie);
-                        project.node.isExpanded(true);
-                        serie.node.isExpanded(true);
-                        serie.zoom();
-                        const reg = serie.addRegression(null, false);
-                        reg.updateGraph();
-                        reg.node.isSelected(true);
-                        return true;
-                    }
-                    try {
-                        if (yield this.dataImport.importText(text))
-                            yield this.import();
-                    }
-                    catch (e) {
-                        console.error(e);
-                    }
-                    M.toast({ html: $string("$(msg-format-not-reconized)") });
-                    return false;
-                });
+                }
+                try {
+                    if (await this.dataImport.importText(text))
+                        await this.import();
+                }
+                catch (e) {
+                    console.error(e);
+                }
+                M.toast({ html: $string("$(msg-format-not-reconized)") });
+                return false;
             }
             /****************************************/
             addImportedData(data, project) {
@@ -16240,10 +16048,8 @@ var WebApp;
                 return WebApp.linq(items.apply(this));
             }
             /****************************************/
-            init() {
-                return __awaiter(this, void 0, void 0, function* () {
-                    this.loadState();
-                });
+            async init() {
+                this.loadState();
             }
         }
         GeoPlot.StudioPage = StudioPage;

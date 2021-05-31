@@ -6,7 +6,7 @@
 
     export class BaseTreeItem implements ITreeItem {
 
-        constructor() {
+        constructor() { 
             this.canDrag = false;
         }
 

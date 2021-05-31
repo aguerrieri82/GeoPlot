@@ -4,12 +4,11 @@
     "noEmitOnError": false,
     "removeComments": false,
     "sourceMap": true,
-    "target": "ES6",
+    "target": "ES2017",
     "outFile": "wwwroot/js/app.js",
-    "lib": [ "ES6", "dom", "es2017.string" ],
     "types": ["chart.js", "knockout", "materialize-css", "jquery"]
   },
-  "compileOnSave": true,
+  "compileOnSave": true, 
   "references": [
     {
       "path": "../Eusoft/WebApp/src/Eusoft.WebApp/",

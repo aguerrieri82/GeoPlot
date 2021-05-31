@@ -9,7 +9,7 @@ namespace WebApp.GeoPlot {
     }
 
     interface IDataRange {
-        startDay?: Date;
+        startDay?: Date; 
         endDay?: Date;
         id: number;
         name: string;
@@ -780,6 +780,11 @@ namespace WebApp.GeoPlot {
                     factorId: this.selectedFactor().id,
                     groupSize: this.groupSize(),
                     isDelta: this.isDayDelta(),
+                    startDay: this.startDay(),
+                    range: {
+                        start: this._calculator.data.startDay,
+                        end: this._calculator.data.endDay,
+                    }
                 },
                 title: this.factorDescription()
             };

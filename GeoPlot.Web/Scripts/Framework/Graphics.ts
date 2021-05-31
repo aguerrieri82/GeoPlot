@@ -49,7 +49,7 @@
 
         constructor(...values: (string | RgbColor)[]) {
             if (values.length > 0) {
-
+                 
                 if (typeof values[0] == "string")
                     this.colors = linq(values).select(a => new RgbColor(<string>a)).toArray();
                 else
