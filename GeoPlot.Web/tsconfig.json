@@ -4,23 +4,18 @@
     "noEmitOnError": false,
     "removeComments": false,
     "sourceMap": true,
+    "moduleResolution": "Node",
     "target": "ES2017",
-    "outFile": "wwwroot/js/app.js",
-    "types": ["chart.js", "knockout", "materialize-css", "jquery"]
-  },
-  "compileOnSave": true, 
-  "references": [
-    {
-      "path": "../Eusoft/WebApp/src/Eusoft.WebApp/",
-      "prepend": true
+    "outDir": "obj/js/",
+    "paths": {
+      "webapp-core": [ "../../Eusoft/WebApp/src/Eusoft.WebApp/Scripts/" ],
+      "desmos": ["./Scripts/Types/Desmos/"]
     }
-  ],
-  
-  "include": [
-    "scripts"
-  ],
+  },
+  "compileOnSave": true,
   "exclude": [
+    "obj",
     "node_modules",
-    "node_modules/@types/node"
+    "wwwroot"
   ]
 }

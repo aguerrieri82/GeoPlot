@@ -1,1565 +1,1590 @@
-﻿/// <reference path="../data/rangedayareadataset.ts" />
+﻿import { Chart, Plugin } from "chart.js";
+import { IInfectionData, InfectionDataSet } from "../Data/InfectionDataSet";
+import { RangeDayAreaDataSet } from "../Data/RangeDayAreaDataSet";
+import { ViewMode, ViewModes } from "../Data/ViewModes";
+import { LinearGradient } from "../Framework/Graphics";
+import { ITipPreferences, IViewActionTip, TipManager } from "../Framework/TipManager";
+import { IndicatorCalculator } from "../Indicators";
+import { IDayAreaDataSet, IFactor, IFunctionPoint, IGeoArea, IGeoAreaSet, IIndicator } from "../Types";
+import { Dictionary, DictionaryOf, discretize, exponential, formatDate, IDictionary, isNaNOrNull, linq, Signal, delayAsync, parseDate, App, copyText, round  } from "../WebApp";
+import { StudioData } from "./StudioPage";
+import { it, enUS } from "date-fns/locale";
 
-namespace WebApp.GeoPlot {
+type TData = IInfectionData; 
 
-    type TData = IInfectionData;
+interface IDayData {
+    topAreas?: AreaViewModel[];
+}
 
-    interface IDayData {
-        topAreas?: AreaViewModel[];
+interface IDataRange {
+    startDay?: Date;
+    endDay?: Date;
+    id: number;
+    name: string;
+}
+
+interface ISpecialDate {
+    date: Date;
+    visible?: boolean;
+    label?: string;
+    color?: string;
+    width?: number;
+    dash?: number[];
+    dashOffset?: number;
+}
+
+interface IPageState {
+    day?: number;
+    area?: string;
+    view?: ViewMode;
+    maxFactor?: number;
+    indicator?: keyof TData | string;
+    factor?: string;
+    dayDelta?: boolean;
+    groupSize?: number;
+    startDay?: number;
+    logScale?: boolean;
+    showEnvData?: boolean;
+    excludedArea?: string[];
+    detailsArea?: string;
+    dateRangeId?: number;
+}
+
+/****************************************/
+
+interface IOverviewViewActions extends Dictionary<number> {
+
+    areaSelected: number;
+    indicatorChanged: number;
+    indicatorSelected: number;
+    dayChanged: number;
+    viewChanged: number;
+    groupChanged: number;
+    scaleChanged: number;
+    topAreasOpened: number;
+    chartActionExecuted: number;
+    factorChanged: number;
+    maxFactorChanged: number;
+    deltaSelected: number;
+    regionExcluded: number;
+}
+
+/****************************************/
+
+interface IViewPreferences extends ITipPreferences<IOverviewViewActions> {
+    isFirstView: boolean;
+    version: number;
+}
+
+/****************************************/
+
+interface IGeoPlotViewModel {
+    geo: IGeoAreaSet;
+    data: IDayAreaDataSet<TData>;
+    debugMode: boolean;
+}
+
+/****************************************/
+
+interface IGroupDay {
+    number: number;
+    value: Date;
+    text: string;
+}
+
+/****************************************/
+
+class IndicatorViewModel {
+
+    select() {
+
     }
 
-    interface IDataRange {
-        startDay?: Date; 
-        endDay?: Date;
-        id: number;
-        name: string;
-    }
+    indicator: IIndicator<TData>;
+    value = ko.observable<number>();
+}
 
-    interface ISpecialDate {
-        date: Date;
-        visible?: boolean;
-        label?: string;
-        color?: string;
-        width?: number;
-        dash?: number[];
-        dashOffset?: number;
-    }
+/****************************************/
 
-    interface IPageState {
-        day?: number;
-        area?: string;
-        view?: ViewMode;
-        maxFactor?: number;
-        indicator?: keyof TData | string;
-        factor?: string;
-        dayDelta?: boolean;
-        groupSize?: number;
-        startDay?: number;
-        logScale?: boolean;
-        showEnvData?: boolean;
-        excludedArea?: string[];
-        detailsArea?: string;
-        dateRangeId?: number;
-    }
+class AreaViewModel {
 
-    /****************************************/
+    select() {
 
-    interface IOverviewViewActions extends Dictionary<number> {
-
-        areaSelected: number;
-        indicatorChanged: number;
-        indicatorSelected: number;
-        dayChanged: number;
-        viewChanged: number;
-        groupChanged: number;
-        scaleChanged: number;
-        topAreasOpened: number;
-        chartActionExecuted: number;
-        factorChanged: number;
-        maxFactorChanged: number;
-        deltaSelected: number;
-        regionExcluded: number;
-    }
-
-    /****************************************/
-
-    interface IViewPreferences extends ITipPreferences<IOverviewViewActions> {
-        isFirstView: boolean;
-        version: number;
-    }
-
-    /****************************************/
-
-    interface IGeoPlotViewModel {
-        geo: IGeoAreaSet;
-        data: IDayAreaDataSet<TData>;
-        debugMode: boolean;
-    }
-
-    /****************************************/
-
-    interface IGroupDay {
-        number: number;
-        value: Date;
-        text: string;
-    }
-
-    /****************************************/
-
-    class IndicatorViewModel {
-
-        select() {
-
-        }
-
-        indicator: IIndicator<TData>;
-        value = ko.observable<number>();
-    }
-
-    /****************************************/
-
-    class AreaViewModel {
-
-        select() {
-
-        }
-
-        /****************************************/
-
-        value: IGeoArea;
-
-        data = ko.observable<TData>();
-        factor = ko.observable<number>();
-        indicator = ko.observable<number>();
-        reference = ko.observable<any>();
-        indicators = ko.observable<IndicatorViewModel[]>();
     }
 
     /****************************************/
 
-    export class GeoPlotPage {
+    value: IGeoArea;
 
-        private readonly _mainData: RangeDayAreaDataSet<TData>;
-        private readonly _mainGeo: IGeoAreaSet;
-        private _detailsData: RangeDayAreaDataSet<TData>;
-        private _detailsGeo: IGeoAreaSet;
+    data = ko.observable<TData>();
+    factor = ko.observable<number>();
+    indicator = ko.observable<number>();
+    reference = ko.observable<any>();
+    indicators = ko.observable<IndicatorViewModel[]>();
+}
 
-        private _selectedArea: IGeoArea; ù
-        private _chart: Chart;
-        private _daysData: IDayData[];
-        private _topAreasVisible: boolean = false;
-        private _mapSvg: SVGSVGElement;
-        private _execludedArea = new Map<string, IGeoArea>();
-        private _dataSet = InfectionDataSet;
-        private _keepState = false;
-        private _debugMode = false;
-        private _preferences: IViewPreferences;
-        private _calculator: IndicatorCalculator<TData>;
+/****************************************/
 
-        private _tips: DictionaryOf<IOverviewViewActions, IViewActionTip> = {
-            areaSelected: {
-                order: 0,
-                featureName: "Zone",
-                html: "Puoi vedere i dati relativi ad una particolare area selezionadoli sulla mappa.",
-                elementSelector: ".card-map .center-align",
-                showAfter: 3,
-                showAction: () => {
+export class GeoPlotPage {
+
+    private readonly _mainData: RangeDayAreaDataSet<TData>;
+    private readonly _mainGeo: IGeoAreaSet;
+    private _detailsData: RangeDayAreaDataSet<TData>;
+    private _detailsGeo: IGeoAreaSet;
+
+    private _selectedArea: IGeoArea; ù
+    private _chart: Chart;
+    private _daysData: IDayData[];
+    private _topAreasVisible: boolean = false;
+    private _mapSvg: SVGSVGElement;
+    private _execludedArea = new Map<string, IGeoArea>();
+    private _dataSet = InfectionDataSet;
+    private _keepState = false;
+    private _debugMode = false;
+    private _preferences: IViewPreferences;
+    private _calculator: IndicatorCalculator<TData>;
+
+    private _tips: DictionaryOf<IOverviewViewActions, IViewActionTip> = {
+        areaSelected: {
+            order: 0,
+            featureName: "Zone",
+            html: "Puoi vedere i dati relativi ad una particolare area selezionadoli sulla mappa.",
+            elementSelector: ".card-map .center-align",
+            showAfter: 3,
+            showAction: () => {
+                this.viewMode("region");
+                this.selectedArea = this._calculator.geo.areas["r10"];
+            }
+        },
+        indicatorSelected: {
+            order: 1,
+            featureName: "Indicatori",
+            html: "Puoi vedere il grafico associato all'indicatore, facendo click sull'indicatore.",
+            elementSelector: ".indicators .summary-field",
+            showAfter: 15,
+            showAction: () => {
+                if (!this.currentArea())
+                    this._tips.areaSelected.showAction();
+                this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalDeath"));
+            }
+        },
+        dayChanged: {
+            order: 2,
+            featureName: "Cronologia",
+            html: "Puoi vedere gli indicatori dei giorni precedenti muovendo la slide.",
+            elementSelector: ".day input[type=range]",
+            showAfter: 20,
+            showAction: () => {
+                this.dayNumber(5);
+            }
+        },
+        indicatorChanged: {
+            order: 3,
+            featureName: "Indicatori",
+            html: "Puoi cambiare l'indicatore scegliendolo dal filtro nell'elenco.",
+            elementSelector: ".filter-indicator",
+            showAfter: 0
+        },
+        viewChanged: {
+            order: 4,
+            featureName: "Zone",
+            html: "Puoi vedere gli indicatori a livello regionale, nazionale o provinciale.",
+            elementSelector: "#areaTabs",
+            showAfter: 0,
+            showAction: () => {
+                this.viewMode("district");
+            }
+        },
+        topAreasOpened: {
+            order: 5,
+            featureName: "Zone",
+            html: "Puo vedere le zone più colpite di un qualsiasi indicatore scelto.",
+            elementSelector: "#topCases .card-title",
+            showAfter: 20,
+            showAction: () => {
+                if (this.viewMode() == "country")
                     this.viewMode("region");
-                    this.selectedArea = this._calculator.geo.areas["r10"];
-                }
-            },
-            indicatorSelected: {
-                order: 1,
-                featureName: "Indicatori",
-                html: "Puoi vedere il grafico associato all'indicatore, facendo click sull'indicatore.",
-                elementSelector: ".indicators .summary-field",
-                showAfter: 15,
-                showAction: () => {
-                    if (!this.currentArea())
-                        this._tips.areaSelected.showAction();
-                    this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalDeath"));
-                }
-            },
-            dayChanged: {
-                order: 2,
-                featureName: "Cronologia",
-                html: "Puoi vedere gli indicatori dei giorni precedenti muovendo la slide.",
-                elementSelector: ".day input[type=range]",
-                showAfter: 20,
-                showAction: () => {
-                    this.dayNumber(5);
-                }
-            },
-            indicatorChanged: {
-                order: 3,
-                featureName: "Indicatori",
-                html: "Puoi cambiare l'indicatore scegliendolo dal filtro nell'elenco.",
-                elementSelector: ".filter-indicator",
-                showAfter: 0
-            },
-            viewChanged: {
-                order: 4,
-                featureName: "Zone",
-                html: "Puoi vedere gli indicatori a livello regionale, nazionale o provinciale.",
-                elementSelector: "#areaTabs",
-                showAfter: 0,
-                showAction: () => {
-                    this.viewMode("district");
-                }
-            },
-            topAreasOpened: {
-                order: 5,
-                featureName: "Zone",
-                html: "Puo vedere le zone più colpite di un qualsiasi indicatore scelto.",
-                elementSelector: "#topCases .card-title",
-                showAfter: 20,
-                showAction: () => {
-                    if (this.viewMode() == "country")
-                        this.viewMode("region");
-                    M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
-                }
-            },
-            deltaSelected: {
-                order: 5.5,
-                featureName: "Indicatori",
-                html: "Puoi vedere l'incremento giornaliero dell'indicatore anzichè il valore totale.",
-                elementSelector: ".day-delta",
-                showAfter: 20,
-                showAction: () => {
-                    if (!this.currentArea())
-                        this._tips.areaSelected.showAction();
-                    this.isDayDelta(true);
-                }
-            },
-            factorChanged: {
-                order: 6,
-                featureName: "Indicatori",
-                html: "Puoi mettere in relazione qualsiasi indicatore a numerosi parametri (es. % Positivi su Tamponi).",
-                elementSelector: ".filter-factor",
-                showAfter: 30,
-                showAction: () => {
-                    if (!this.currentArea())
-                        this._tips.areaSelected.showAction();
-                    this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalPositive"));
-                    this.selectedFactor(linq(this._dataSet.factors).first(a => a.id == "population"));
-                }
-            },
-            groupChanged: {
-                order: 7,
-                featureName: "Grafico",
-                html: "Puo raggruppare i dati del grafico in gruppi da 1 a 7 giorni. Puoi anche scegliere la data d'inizio.",
-                elementSelector: ".row-chart-group .select-wrapper",
-                showAfter: 30,
-                showAction: () => {
-                    if (!this.currentArea())
-                        this._tips.areaSelected.showAction();
-                    var element = document.querySelector(".chart-options");
-                    if (element.classList.contains("closed"))
-                        element.classList.remove("closed");
-                    this.groupSize(2);
-                    M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
-                }
-            },
-            chartActionExecuted: {
-                order: 8,
-                featureName: "Grafico",
-                html: "Puoi portare il grafico a schermo interno, copiarlo, o copiare la serie numerico e incollarla in excel.",
-                elementSelector: ".chart .actions",
-                showAfter: 30
-            },
-            scaleChanged: {
-                order: 9,
-                featureName: "Grafico",
-                html: "Puoi cambiare da scala logaritmica a scala lineare.",
-                elementSelector: ".log-scale",
-                showAfter: 210,
-                showAction: () => {
-                    this.isLogScale(true);
-                }
-            },
-            maxFactorChanged: {
-                order: 10,
-                featureName: "Mappa",
-                html: "Puoi cambiare il riferimento rispetto al quale la mappa viene colorata. Normalmente è in base al valore massimo che si ha avuto globalmente.",
-                elementSelector: ".max-factor",
-                showAfter: 60,
-                showAction: () => {
-                    if (!this.currentArea())
-                        this._tips.areaSelected.showAction();
-                    this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalPositive"));
-                    this.autoMaxFactor(false);
-                    this.maxFactor(1000);
-                }
-            },
-            regionExcluded: {
-                order: 11,
-                featureName: "Mappa",
-                html: "Nella vista nazionale puoi escludere dagli indicatori il valore di una o più regioni cliccando sulla mappa.",
-                elementSelector: ".card-map .center-align",
-                showAfter: 0,
-                showAction: () => {
-                    if (this.viewMode() != "country")
-                        this.viewMode("country");
-                    this._execludedArea.set("R8", this._calculator.geo.areas["r8"]);
-                    this.updateIndicator();
-                }
+                M.Collapsible.getInstance(document.getElementById("topCases")).open(0);
+            }
+        },
+        deltaSelected: {
+            order: 5.5,
+            featureName: "Indicatori",
+            html: "Puoi vedere l'incremento giornaliero dell'indicatore anzichè il valore totale.",
+            elementSelector: ".day-delta",
+            showAfter: 20,
+            showAction: () => {
+                if (!this.currentArea())
+                    this._tips.areaSelected.showAction();
+                this.isDayDelta(true);
+            }
+        },
+        factorChanged: {
+            order: 6,
+            featureName: "Indicatori",
+            html: "Puoi mettere in relazione qualsiasi indicatore a numerosi parametri (es. % Positivi su Tamponi).",
+            elementSelector: ".filter-factor",
+            showAfter: 30,
+            showAction: () => {
+                if (!this.currentArea())
+                    this._tips.areaSelected.showAction();
+                this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalPositive"));
+                this.selectedFactor(linq(this._dataSet.factors).first(a => a.id == "population"));
+            }
+        },
+        groupChanged: {
+            order: 7,
+            featureName: "Grafico",
+            html: "Puo raggruppare i dati del grafico in gruppi da 1 a 7 giorni. Puoi anche scegliere la data d'inizio.",
+            elementSelector: ".row-chart-group .select-wrapper",
+            showAfter: 30,
+            showAction: () => {
+                if (!this.currentArea())
+                    this._tips.areaSelected.showAction();
+                var element = document.querySelector(".chart-options");
+                if (element.classList.contains("closed"))
+                    element.classList.remove("closed");
+                this.groupSize(2);
+                M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+            }
+        },
+        chartActionExecuted: {
+            order: 8,
+            featureName: "Grafico",
+            html: "Puoi portare il grafico a schermo interno, copiarlo, o copiare la serie numerico e incollarla in excel.",
+            elementSelector: ".chart .actions",
+            showAfter: 30
+        },
+        scaleChanged: {
+            order: 9,
+            featureName: "Grafico",
+            html: "Puoi cambiare da scala logaritmica a scala lineare.",
+            elementSelector: ".log-scale",
+            showAfter: 210,
+            showAction: () => {
+                this.isLogScale(true);
+            }
+        },
+        maxFactorChanged: {
+            order: 10,
+            featureName: "Mappa",
+            html: "Puoi cambiare il riferimento rispetto al quale la mappa viene colorata. Normalmente è in base al valore massimo che si ha avuto globalmente.",
+            elementSelector: ".max-factor",
+            showAfter: 60,
+            showAction: () => {
+                if (!this.currentArea())
+                    this._tips.areaSelected.showAction();
+                this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == "totalPositive"));
+                this.autoMaxFactor(false);
+                this.maxFactor(1000);
+            }
+        },
+        regionExcluded: {
+            order: 11,
+            featureName: "Mappa",
+            html: "Nella vista nazionale puoi escludere dagli indicatori il valore di una o più regioni cliccando sulla mappa.",
+            elementSelector: ".card-map .center-align",
+            showAfter: 0,
+            showAction: () => {
+                if (this.viewMode() != "country")
+                    this.viewMode("country");
+                this._execludedArea.set("R8", this._calculator.geo.areas["r8"]);
+                this.updateIndicator();
             }
         }
+    }
 
-        private _specialDates: IDictionary<ISpecialDate> = {
-            current: {
-                date: undefined,
-                color: "#000",
-                width: 0.5,
-                label: "Giorno corrente"
-            },
-            "dpcm8": {
-                date: new Date(2020, 2, 7),
-                color: "#000",
-                dash: [5, 5],
-                width: 1,
-                visible: true,
-                label: "DPCM 8 Marzo (italia zona rossa)"
-            },
-            "dpcm9": {
-                date: new Date(2020, 2, 9),
-                color: "#000",
-                dash: [5, 5],
-                width: 1,
-                visible: true,
-                label: "DPCM 9 Marzo (italia zona rossa)"
-            },
-            "dpcm11": {
-                date: new Date(2020, 2, 11),
-                color: "#000",
-                dash: [5, 5],
-                width: 1,
-                visible: true,
-                label: "DPCM 11 Marzo (chiusura attività)"
-            },
-            "mds20": {
-                date: new Date(2020, 2, 20),
-                color: "#070",
-                dash: [5, 5],
-                width: 1,
-                visible: false,
-                label: "MDS 20 Marzo (chiura parchi, motoria nelle vicinane)"
-            },
-            "dpcm22": {
-                date: new Date(2020, 2, 21),
-                color: "#000",
-                dash: [5, 5],
-                width: 1,
-                visible: true,
-                label: "DPCM 22 Marzo (chiusura ulteriore attività)"
-            },
-            "dpcm25": {
-                date: new Date(2020, 2, 24),
-                color: "#000",
-                dash: [5, 5],
-                width: 1,
-                visible: true,
-                label: "DPCM 25 Marzo (maggiori sanzioni)"
-            }
-        };
+    private _specialDates: IDictionary<ISpecialDate> = {
+        current: {
+            date: undefined,
+            color: "#000",
+            width: 0.5,
+            label: "Giorno corrente"
+        },
+        "dpcm8": {
+            date: new Date(2020, 2, 7),
+            color: "#000",
+            dash: [5, 5],
+            width: 1,
+            visible: true,
+            label: "DPCM 8 Marzo (italia zona rossa)"
+        },
+        "dpcm9": {
+            date: new Date(2020, 2, 9),
+            color: "#000",
+            dash: [5, 5],
+            width: 1,
+            visible: true,
+            label: "DPCM 9 Marzo (italia zona rossa)"
+        },
+        "dpcm11": {
+            date: new Date(2020, 2, 11),
+            color: "#000",
+            dash: [5, 5],
+            width: 1,
+            visible: true,
+            label: "DPCM 11 Marzo (chiusura attività)"
+        },
+        "mds20": {
+            date: new Date(2020, 2, 20),
+            color: "#070",
+            dash: [5, 5],
+            width: 1,
+            visible: false,
+            label: "MDS 20 Marzo (chiura parchi, motoria nelle vicinane)"
+        },
+        "dpcm22": {
+            date: new Date(2020, 2, 21),
+            color: "#000",
+            dash: [5, 5],
+            width: 1,
+            visible: true,
+            label: "DPCM 22 Marzo (chiusura ulteriore attività)"
+        },
+        "dpcm25": {
+            date: new Date(2020, 2, 24),
+            color: "#000",
+            dash: [5, 5],
+            width: 1,
+            visible: true,
+            label: "DPCM 25 Marzo (maggiori sanzioni)"
+        }
+    };
 
-        _dataRanges: IDataRange[] = [
-            {
-                id: 0,
-                name: "$(all)",
-            },
-            {
-                id: 0,
-                name: "1° $(wave)",
-                endDay: new Date(2020, 7, 31)
-            },
-            {
-                id: 0,
-                name: "2° $(wave)",
-                startDay: new Date(2020, 8, 1)
-            },
-        ]
+    _dataRanges: IDataRange[] = [
+        {
+            id: 0,
+            name: "$(all)",
+        },
+        {
+            id: 0,
+            name: "1° $(wave)",
+            endDay: new Date(2020, 7, 31)
+        },
+        {
+            id: 0,
+            name: "2° $(wave)",
+            startDay: new Date(2020, 8, 1)
+        },
+    ]
 
-        constructor(model: IGeoPlotViewModel) {
+    constructor(model: IGeoPlotViewModel) {
 
-            this._mainData = new RangeDayAreaDataSet(model.data);
-            this._mainGeo = model.geo;
-            this._debugMode = model.debugMode;
-            this._calculator = new IndicatorCalculator(this._mainData, this._dataSet, this._mainGeo);
+        this._mainData = new RangeDayAreaDataSet(model.data);
+        this._mainGeo = model.geo;
+        this._debugMode = model.debugMode;
+        this._calculator = new IndicatorCalculator(this._mainData, this._dataSet, this._mainGeo);
 
-            this.dataRange.subscribe(value => {
+        this.dataRange.subscribe(value => {
 
-                const findDayIndex = (date: Date) => {
-                    return this._mainData.days.indexOf(a => DateUtils.parse(a.date).getTime() >= date.getTime());
-                };
+            const findDayIndex = (date: Date) => {
+                return this._mainData.days.indexOf(a => parseDate(a.date).getTime() >= date.getTime());
+            };
 
-                this._mainData.startDay = undefined;
-                this._mainData.endDay = undefined;
+            this._mainData.startDay = undefined;
+            this._mainData.endDay = undefined;
 
-                this._mainData.startDay = value.startDay ? findDayIndex(value.startDay) : undefined;
-                this._mainData.endDay = value.endDay ? findDayIndex(value.endDay) : undefined;
-
-                this.updateDays();
-                this.dayNumber(this._mainData.count - 1);
-            });
-
-            this.dayNumber.subscribe(value => {
-                if (value != this._calculator.data.count - 1)
-                    this.tipManager.markAction("dayChanged");
-                this.updateDayData();
-                this._specialDates.current.date = new Date(this._calculator.data.get(value).date);
-                this.updateChart();
-            });
-
-            this._mapSvg = document.getElementsByTagName("svg").item(0);
-            this._mapSvg.addEventListener("click", e => this.onMapClick(e, false))
-            this._mapSvg.addEventListener("dblclick", e => this.onMapClick(e, true))
+            this._mainData.startDay = value.startDay ? findDayIndex(value.startDay) : undefined;
+            this._mainData.endDay = value.endDay ? findDayIndex(value.endDay) : undefined;
 
             this.updateDays();
+            this.dayNumber(this._mainData.count - 1);
+        });
 
-            const areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
+        this.dayNumber.subscribe(value => {
+            if (value != this._calculator.data.count - 1)
+                this.tipManager.markAction("dayChanged");
+            this.updateDayData();
+            this._specialDates.current.date = new Date(this._calculator.data.get(value).date);
+            this.updateChart();
+        });
 
-            areaTabs.options.onShow = (el: HTMLDivElement) => {
+        this._mapSvg = document.getElementsByTagName("svg").item(0);
+        this._mapSvg.addEventListener("click", e => this.onMapClick(e, false))
+        this._mapSvg.addEventListener("dblclick", e => this.onMapClick(e, true))
 
-                this.setViewMode(<ViewMode>el.dataset["viewMode"]);
-            };
+        this.updateDays();
 
-            const topCasesView = M.Collapsible.init(document.getElementById("topCases"));
+        const areaTabs = M.Tabs.init(document.getElementById("areaTabs"));
 
-            topCasesView.options.onOpenStart = () => {
-                if (!this._daysData)
-                    this.updateTopAreas();
-                this._topAreasVisible = true;
-                this.tipManager.markAction("topAreasOpened");
-            }
+        areaTabs.options.onShow = (el: HTMLDivElement) => {
 
-            topCasesView.options.onCloseEnd = () => {
-                this._topAreasVisible = false;
-            }
+            this.setViewMode(<ViewMode>el.dataset["viewMode"]);
+        };
 
-            this.indicators = ko.computed(() => linq(this._dataSet.indicators)
-                .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
-                .toArray());
+        const topCasesView = M.Collapsible.init(document.getElementById("topCases"));
 
-            this.factors = ko.computed(() => linq(this._dataSet.factors)
-                .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
-                .toArray());
-
-            this.detailsArea.subscribe(value => {
-                this.updateDetailsArea();
-            });
-
-            this.selectedIndicator.subscribe(value => {
-                if (!value)
-                    return;
-                this.updateIndicator();
-                if (value.id != "totalPositive")
-                    this.tipManager.markAction("indicatorChanged", value.id);
-            });
-
-            this.selectedFactor.subscribe(value => {
-                if (!value)
-                    return;
-                this.updateIndicator();
-                if (value.id != "none")
-                    this.tipManager.markAction("factorChanged", value.id);
-                setTimeout(() => M.FormSelect.init(document.querySelectorAll(".row-chart-group select")));
-            });
-
-            this.autoMaxFactor.subscribe(value => {
-                if (value) {
-                    this.updateMaxFactor();
-                    this.updateMap();
-                }
-                this.updateUrl();
-            });
-
-            this.maxFactor.subscribe(value => {
-                if (!this.autoMaxFactor()) {
-                    this.updateMap();
-                    this.tipManager.markAction("maxFactorChanged", value.toString());
-                }
-                this.updateUrl();
-            });
-
-            this.isDayDelta.subscribe(value => {
-                this.computeStartDayForGroup();
-                this.updateIndicator();
-                if (value)
-                    this.tipManager.markAction("deltaSelected");
-
-            });
-
-            this.isLogScale.subscribe(value => {
-                this.updateChart();
-                this.updateUrl();
-                if (value)
-                    this.tipManager.markAction("scaleChanged");
-            });
-
-            this.isZoomChart.subscribe(value => {
-                this.updateChart();
-            });
-
-            this.groupSize.subscribe(value => {
-                this.computeStartDayForGroup();
-                this.updateChart();
-                this.updateUrl();
-                if (value > 1)
-                    this.tipManager.markAction("groupChanged", value.toString());
-            });
-
-            this.startDay.subscribe(value => {
-                this.updateChart();
-                this.updateUrl();
-            });
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const stateRaw = urlParams.get("state");
-            this._keepState = urlParams.get("keepState") == "true";
-
-            this.loadPreferences();
-
-            this.tipManager = new TipManager<IOverviewViewActions>(this._tips, () => this._preferences, () => this.savePreferences());
-
-            this.tipManager.engageUser();
-
-            let state: IPageState;
-
-            if (stateRaw && this._keepState)
-                state = <IPageState>JSON.parse(atob(stateRaw));
-            else
-                state = {};
-
-            setTimeout(() => this.loadState(state), 0);
-
-            if (!this._debugMode)
-                window.addEventListener("beforeunload", () => this.savePreferences());
-
-            //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
+        topCasesView.options.onOpenStart = () => {
+            if (!this._daysData)
+                this.updateTopAreas();
+            this._topAreasVisible = true;
+            this.tipManager.markAction("topAreasOpened");
         }
 
-        /****************************************/
-
-        protected isDefaultState(state: IPageState) {
-            return (!state.day || state.day == this._calculator.data.count - 1) &&
-                (!state.view || state.view == "region") &&
-                !state.area &&
-                (!state.indicator || state.indicator == "totalPositive") &&
-                (!state.factor || state.factor == "none") &&
-                !state.maxFactor &&
-                !state.dayDelta &&
-                !state.logScale &&
-                !state.showEnvData &&
-                state.dateRangeId == 0,
-                (!state.groupSize || state.groupSize == 1) &&
-                (state.startDay == undefined || state.startDay == 0) &&
-                (!state.excludedArea) &&
-                (!state.detailsArea);
+        topCasesView.options.onCloseEnd = () => {
+            this._topAreasVisible = false;
         }
 
-        /****************************************/
+        this.indicators = ko.computed(() => linq(this._dataSet.indicators)
+            .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
+            .toArray());
 
-        loadState(state: IPageState) {
+        this.factors = ko.computed(() => linq(this._dataSet.factors)
+            .where(a => !a.validFor || a.validFor.indexOf(this.viewMode()) != -1)
+            .toArray());
 
-            if (!state.view)
-                state.view = "region";
+        this.detailsArea.subscribe(value => {
+            this.updateDetailsArea();
+        });
 
-            const viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
-            viewTabs.select(ViewModes[state.view].tab);
+        this.selectedIndicator.subscribe(value => {
+            if (!value)
+                return;
+            this.updateIndicator();
+            if (value.id != "totalPositive")
+                this.tipManager.markAction("indicatorChanged", value.id);
+        });
 
-            document.body.scrollTop = 0;
+        this.selectedFactor.subscribe(value => {
+            if (!value)
+                return;
+            this.updateIndicator();
+            if (value.id != "none")
+                this.tipManager.markAction("factorChanged", value.id);
+            setTimeout(() => M.FormSelect.init(document.querySelectorAll(".row-chart-group select")));
+        });
 
-            if (!state.dateRangeId)
-                this.dataRange(this.dataRanges[0]);
-            else
-                this.dataRange(linq(this.dataRanges).first(a => a.id == state.dateRangeId));
-
-            if (state.logScale != undefined)
-                this.isLogScale(state.logScale);
-
-            if (state.groupSize)
-                this.groupSize(state.groupSize);
-
-            if (state.startDay != undefined)
-                this.startDay(state.startDay);
-
-            if (state.dayDelta != undefined)
-                this.isDayDelta(state.dayDelta);
-
-            if (state.showEnvData != undefined)
-                this.isShowEnvData(state.showEnvData);
-
-            if (state.maxFactor) {
-                this.autoMaxFactor(false);
-                this.maxFactor(state.maxFactor);
+        this.autoMaxFactor.subscribe(value => {
+            if (value) {
+                this.updateMaxFactor();
+                this.updateMap();
             }
+            this.updateUrl();
+        });
 
-            this.dayNumber(state.day != undefined ? state.day : this._calculator.data.count - 1);
-
-            if (state.excludedArea) {
-                this._execludedArea.clear();
-                for (let areaId of state.excludedArea)
-                    this._execludedArea.set(areaId, this._calculator.geo.areas[areaId.toLowerCase()]);
+        this.maxFactor.subscribe(value => {
+            if (!this.autoMaxFactor()) {
+                this.updateMap();
+                this.tipManager.markAction("maxFactorChanged", value.toString());
             }
+            this.updateUrl();
+        });
 
-            if (state.indicator)
-                this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == state.indicator));
+        this.isDayDelta.subscribe(value => {
+            this.computeStartDayForGroup();
+            this.updateIndicator();
+            if (value)
+                this.tipManager.markAction("deltaSelected");
 
-            if (state.factor)
-                this.selectedFactor(linq(this._dataSet.factors).first(a => a.id == state.factor));
+        });
 
-            if (state.area)
-                this.selectedArea = this._calculator.geo.areas[state.area.toLowerCase()];
+        this.isLogScale.subscribe(value => {
+            this.updateChart();
+            this.updateUrl();
+            if (value)
+                this.tipManager.markAction("scaleChanged");
+        });
 
-            if (state.detailsArea)
-                this.detailsArea(this._calculator.geo.areas[state.detailsArea]);
+        this.isZoomChart.subscribe(value => {
+            this.updateChart();
+        });
+
+        this.groupSize.subscribe(value => {
+            this.computeStartDayForGroup();
+            this.updateChart();
+            this.updateUrl();
+            if (value > 1)
+                this.tipManager.markAction("groupChanged", value.toString());
+        });
+
+        this.startDay.subscribe(value => {
+            this.updateChart();
+            this.updateUrl();
+        });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const stateRaw = urlParams.get("state");
+        this._keepState = urlParams.get("keepState") == "true";
+
+        this.loadPreferences();
+
+        this.tipManager = new TipManager<IOverviewViewActions>(this._tips, () => this._preferences, () => this.savePreferences());
+
+        this.tipManager.engageUser();
+
+        let state: IPageState;
+
+        if (stateRaw && this._keepState)
+            state = <IPageState>JSON.parse(atob(stateRaw));
+        else
+            state = {};
+
+        setTimeout(() => this.loadState(state), 0);
+
+        if (!this._debugMode)
+            window.addEventListener("beforeunload", () => this.savePreferences());
+
+        //Templating.template(document.querySelector("#template"), "TestComponent", Templating.model({ isChecked: false }));
+    }
+
+    /****************************************/
+
+    protected isDefaultState(state: IPageState) {
+        return (!state.day || state.day == this._calculator.data.count - 1) &&
+            (!state.view || state.view == "region") &&
+            !state.area &&
+            (!state.indicator || state.indicator == "totalPositive") &&
+            (!state.factor || state.factor == "none") &&
+            !state.maxFactor &&
+            !state.dayDelta &&
+            !state.logScale &&
+            !state.showEnvData &&
+            state.dateRangeId == 0,
+            (!state.groupSize || state.groupSize == 1) &&
+            (state.startDay == undefined || state.startDay == 0) &&
+            (!state.excludedArea) &&
+            (!state.detailsArea);
+    }
+
+    /****************************************/
+
+    loadState(state: IPageState) {
+
+        if (!state.view)
+            state.view = "region";
+
+        const viewTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+        viewTabs.select(ViewModes[state.view].tab);
+
+        document.body.scrollTop = 0;
+
+        if (!state.dateRangeId)
+            this.dataRange(this.dataRanges[0]);
+        else
+            this.dataRange(linq(this.dataRanges).first(a => a.id == state.dateRangeId));
+
+        if (state.logScale != undefined)
+            this.isLogScale(state.logScale);
+
+        if (state.groupSize)
+            this.groupSize(state.groupSize);
+
+        if (state.startDay != undefined)
+            this.startDay(state.startDay);
+
+        if (state.dayDelta != undefined)
+            this.isDayDelta(state.dayDelta);
+
+        if (state.showEnvData != undefined)
+            this.isShowEnvData(state.showEnvData);
+
+        if (state.maxFactor) {
+            this.autoMaxFactor(false);
+            this.maxFactor(state.maxFactor);
         }
 
-        /****************************************/
+        this.dayNumber(state.day != undefined ? state.day : this._calculator.data.count - 1);
 
-        saveStata(): IPageState {
-
-            return {
-                view: this.viewMode() == "region" ? undefined : this.viewMode(),
-                indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
-                factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
-                dayDelta: this.isDayDelta() ? true : undefined,
-                maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
-                day: this.dayNumber() == this._calculator.data.count - 1 ? undefined : this.dayNumber(),
-                area: this.selectedArea ? this.selectedArea.id : undefined,
-                groupSize: this.groupSize() == 1 ? undefined : this.groupSize(),
-                startDay: this.startDay() == 0 ? undefined : this.startDay(),
-                logScale: this.isLogScale() ? true : undefined,
-                excludedArea: this._execludedArea.size > 0 ? linq(this._execludedArea.keys()).toArray() : undefined,
-                showEnvData: this.isShowEnvData() ? true : undefined,
-                detailsArea: this.detailsArea() ? this.detailsArea().id : undefined,
-                dateRangeId: this.dataRange().id
-            };
+        if (state.excludedArea) {
+            this._execludedArea.clear();
+            for (let areaId of state.excludedArea)
+                this._execludedArea.set(areaId, this._calculator.geo.areas[areaId.toLowerCase()]);
         }
 
-        /****************************************/
+        if (state.indicator)
+            this.selectedIndicator(linq(this._dataSet.indicators).first(a => a.id == state.indicator));
 
-        loadPreferences() {
-            let json = localStorage.getItem("preferences");
+        if (state.factor)
+            this.selectedFactor(linq(this._dataSet.factors).first(a => a.id == state.factor));
 
-            if (json) {
+        if (state.area)
+            this.selectedArea = this._calculator.geo.areas[state.area.toLowerCase()];
 
-                try {
-                    this._preferences = JSON.parse(json);
-                }
-                catch {
-                }
+        if (state.detailsArea)
+            this.detailsArea(this._calculator.geo.areas[state.detailsArea]);
+    }
 
-                if (!this._preferences || this._preferences.version != 1) {
-                    this._preferences = this.getDefaultPreferences();
-                    this._preferences.isFirstView = false;
-                    this._preferences.showTips = false;
-                    this.savePreferences();
-                }
+    /****************************************/
+
+    saveStata(): IPageState {
+
+        return {
+            view: this.viewMode() == "region" ? undefined : this.viewMode(),
+            indicator: this.selectedIndicator() ? this.selectedIndicator().id : undefined,
+            factor: this.selectedFactor() ? this.selectedFactor().id : undefined,
+            dayDelta: this.isDayDelta() ? true : undefined,
+            maxFactor: this.autoMaxFactor() ? undefined : this.maxFactor(),
+            day: this.dayNumber() == this._calculator.data.count - 1 ? undefined : this.dayNumber(),
+            area: this.selectedArea ? this.selectedArea.id : undefined,
+            groupSize: this.groupSize() == 1 ? undefined : this.groupSize(),
+            startDay: this.startDay() == 0 ? undefined : this.startDay(),
+            logScale: this.isLogScale() ? true : undefined,
+            excludedArea: this._execludedArea.size > 0 ? linq(this._execludedArea.keys()).toArray() : undefined,
+            showEnvData: this.isShowEnvData() ? true : undefined,
+            detailsArea: this.detailsArea() ? this.detailsArea().id : undefined,
+            dateRangeId: this.dataRange().id
+        };
+    }
+
+    /****************************************/
+
+    loadPreferences() {
+        let json = localStorage.getItem("preferences");
+
+        if (json) {
+
+            try {
+                this._preferences = JSON.parse(json);
             }
-            else
+            catch {
+            }
+
+            if (!this._preferences || this._preferences.version != 1) {
                 this._preferences = this.getDefaultPreferences();
+                this._preferences.isFirstView = false;
+                this._preferences.showTips = false;
+                this.savePreferences();
+            }
         }
+        else
+            this._preferences = this.getDefaultPreferences();
+    }
 
-        /****************************************/
+    /****************************************/
 
-        protected getDefaultPreferences(): IViewPreferences {
-            return ({
-                isFirstView: true,
-                showTips: true,
-                version: 1,
-                actions: {
-                    areaSelected: 0,
-                    indicatorSelected: 0,
-                    indicatorChanged: 0,
-                    dayChanged: 0,
-                    viewChanged: 0,
-                    chartActionExecuted: 0,
-                    factorChanged: 0,
-                    groupChanged: 0,
-                    maxFactorChanged: 0,
-                    scaleChanged: 0,
-                    topAreasOpened: 0,
-                    deltaSelected: 0,
-                    regionExcluded: 0
-                }
-            });
+    protected getDefaultPreferences(): IViewPreferences {
+        return ({
+            isFirstView: true,
+            showTips: true,
+            version: 1,
+            actions: {
+                areaSelected: 0,
+                indicatorSelected: 0,
+                indicatorChanged: 0,
+                dayChanged: 0,
+                viewChanged: 0,
+                chartActionExecuted: 0,
+                factorChanged: 0,
+                groupChanged: 0,
+                maxFactorChanged: 0,
+                scaleChanged: 0,
+                topAreasOpened: 0,
+                deltaSelected: 0,
+                regionExcluded: 0
+            }
+        });
+    }
+
+    /****************************************/
+
+    savePreferences() {
+        this._preferences.isFirstView = false;
+        localStorage.setItem("preferences", JSON.stringify(this._preferences));
+    }
+
+
+    /****************************************/
+
+    toggleChartZoom() {
+
+        this._preferences.actions.chartActionExecuted++;
+        this.isZoomChart(!this.isZoomChart());
+    }
+
+    /****************************************/
+
+    async copyMap() {
+        const element = document.querySelector("svg.map");
+        const svgText = element.outerHTML;
+        const blob = new Blob([svgText], { type: "image/svg+xml" });
+
+        if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
+            const svgImage = document.createElement('img');
+            svgImage.style.width = element.clientWidth + "px";
+            svgImage.style.height = element.clientHeight + "px";
+            svgImage.onload = function () {
+
+                const canvas = document.createElement("canvas");
+                canvas.width = element.clientWidth;
+                canvas.height = element.clientHeight;
+
+                const ctx = canvas.getContext("2d");
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(svgImage, 0, 0);
+
+                canvas.toBlob(async pngBlob => {
+                    let item = new ClipboardItem({ [pngBlob.type]: pngBlob });
+                    await navigator.clipboard.write([item]);
+                    M.toast({ html: $string("$(msg-map-copied)") })
+                })
+            }
+            svgImage.src = window.URL.createObjectURL(blob);
         }
-
-        /****************************************/
-
-        savePreferences() {
-            this._preferences.isFirstView = false;
-            localStorage.setItem("preferences", JSON.stringify(this._preferences));
+        else {
+            const element = document.createElement("a");
+            element.href = window.URL.createObjectURL(blob);
+            element.target = "_blan";
+            element.download = "map.svg";
+            element.click();
+            M.toast({ html: $string("$(msg-no-copy)") })
         }
+    }
 
+    /****************************************/
 
-        /****************************************/
-
-        toggleChartZoom() {
-
-            this._preferences.actions.chartActionExecuted++;
-            this.isZoomChart(!this.isZoomChart());
-        }
-
-        /****************************************/
-
-        async copyMap() {
-            const element = document.querySelector("svg.map");
-            const svgText = element.outerHTML;
-            const blob = new Blob([svgText], { type: "image/svg+xml" });
-
+    copyChart() {
+        this._chart.canvas.toBlob(async blob => {
             if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
-                const svgImage = document.createElement('img');
-                svgImage.style.width = element.clientWidth + "px";
-                svgImage.style.height = element.clientHeight + "px";
-                svgImage.onload = function () {
-
-                    const canvas = document.createElement("canvas");
-                    canvas.width = element.clientWidth;
-                    canvas.height = element.clientHeight;
-
-                    const ctx = canvas.getContext("2d");
-                    ctx.fillStyle = "white";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(svgImage, 0, 0);
-
-                    canvas.toBlob(async pngBlob => {
-                        let item = new ClipboardItem({ [pngBlob.type]: pngBlob });
-                        await navigator.clipboard.write([item]);
-                        M.toast({ html: $string("$(msg-map-copied)") })
-                    })
-                }
-                svgImage.src = window.URL.createObjectURL(blob);
+                let item = new ClipboardItem({ [blob.type]: blob });
+                await navigator.clipboard.write([item]);
+                M.toast({ html: $string("$(msg-chart-copied)") })
             }
             else {
+                const url = window.URL.createObjectURL(blob);
                 const element = document.createElement("a");
-                element.href = window.URL.createObjectURL(blob);
+                element.href = url;
                 element.target = "_blan";
-                element.download = "map.svg";
+                element.download = this._chart.options.plugins.title.text + ".png";
                 element.click();
                 M.toast({ html: $string("$(msg-no-copy)") })
             }
+        });
+        this.tipManager.markAction("chartActionExecuted", "copy");
+    }
+
+    /****************************************/
+
+    async copySerie() {
+
+        const data = this._chart.data.datasets[0].data as unknown as IFunctionPoint[];
+        let text = "";
+        for (let i = 0; i < data.length; i++) {
+            if (i > 0)
+                text += "\n";
+            text += formatDate(data[i].x as Date, $string("$(date-format)")) + "\t" + i + "\t" + round(data[i].y, 1);
         }
 
-        /****************************************/
+        copyText(text);
 
-        copyChart() {
-            this._chart.canvas.toBlob(async blob => {
-                if (navigator["clipboard"] && navigator["clipboard"]["write"]) {
-                    let item = new ClipboardItem({ [blob.type]: blob });
-                    await navigator.clipboard.write([item]);
-                    M.toast({ html: $string("$(msg-chart-copied)") })
-                }
-                else {
-                    const url = window.URL.createObjectURL(blob);
-                    const element = document.createElement("a");
-                    element.href = url;
-                    element.target = "_blan";
-                    element.download = this._chart.options.title.text + ".png";
-                    element.click();
-                    M.toast({ html: $string("$(msg-no-copy)") })
-                }
-            });
-            this.tipManager.markAction("chartActionExecuted", "copy");
-        }
+        M.toast({ html: $string("$(msg-serie-copied)") })
+        this.tipManager.markAction("chartActionExecuted", "copySerie");
+    }
 
-        /****************************************/
+    /****************************************/
 
-        async copySerie() {
+    async copySerieForStudio() {
 
-            const data = <{ x: Date, y: number }[]>this._chart.data.datasets[0].data;
-            let text = "";
-            for (let i = 0; i < data.length; i++) {
-                if (i > 0)
-                    text += "\n";
-                text += DateUtils.format(data[i].x, $string("$(date-format)")) + "\t" + i + "\t" + MathUtils.round(data[i].y, 1);
-            }
-
-            DomUtils.copyText(text);
-
-            M.toast({ html: $string("$(msg-serie-copied)") })
-            this.tipManager.markAction("chartActionExecuted", "copySerie");
-        }
-
-        /****************************************/
-
-        async copySerieForStudio() {
-
-            let obj: StudioData = {
-                type: "serie",
-                version: 1,
-                color: this.selectedIndicator().colorLight,
-                serie: {
-                    type: "geoplot",
-                    areaId: this.selectedArea.id,
-                    indicatorId: this.selectedIndicator().id,
-                    xAxis: "dayNumber",
-                    exeludedAreaIds: linq(this._execludedArea.keys()).toArray(),
-                    factorId: this.selectedFactor().id,
-                    groupSize: this.groupSize(),
-                    isDelta: this.isDayDelta(),
-                    startDay: this.startDay(),
-                    range: {
-                        start: this._calculator.data.startDay,
-                        end: this._calculator.data.endDay,
-                    }
-                },
-                title: this.factorDescription()
-            };
-
-            obj.values = this._calculator.getSerie(obj.serie);
-
-            DomUtils.copyText(JSON.stringify(obj));
-
-            M.toast({ html: $string("$(msg-serie-copied-studio)") })
-
-            this.tipManager.markAction("chartActionExecuted", "copySerieForStudio");
-        }
-
-        /****************************************/
-
-        play() {
-            if (this.dayNumber() == this._calculator.data.count - 1)
-                this.dayNumber(0);
-            this.isPlaying(true);
-            this.nextFrame();
-        }
-
-        /****************************************/
-
-        pause() {
-            this.isPlaying(false);
-        }
-
-        /****************************************/
-
-        setViewMode(mode: ViewMode, fromModel = false) {
-
-            if (fromModel) {
-                const areaTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
-                areaTabs.select(ViewModes[mode].tab);
-            }
-
-            if (mode == "details") {
-
-                if (this._detailsGeo && this._detailsData) {
-                    this._calculator.geo = this._detailsGeo;
-                    this._calculator.data = this._detailsData;
-                }
-            }
-            else {
-                this._calculator.geo = this._mainGeo;
-                this._calculator.data = this._mainData;
-            }
-
-            this.totalDays(this._calculator.data.count - 1);
-
-            if (mode != "region")
-                this.tipManager.markAction("viewChanged", mode);
-
-            this.viewMode(mode);
-
-            const districtGroup = document.getElementById("group_district");
-
-            if (mode == "district" || mode == "details")
-                districtGroup.style.removeProperty("display");
-            else
-                districtGroup.style.display = "none";
-
-            this.selectedArea = null;
-
-            this._chart = null;
-
-            this._execludedArea.clear();
-
-            this.clearMap();
-
-            this.updateMaxFactor();
-
-            this.updateDayData();
-
-            if (this.viewMode() == "country") {
-                this.selectedArea = this._calculator.geo.areas["it"];
-                this.tipManager.showTip("regionExcluded", { timeout: 5 });
-            }
-            else {
-                if (this._topAreasVisible)
-                    this.updateTopAreas();
-                else
-                    this._daysData = undefined;
-            }
-
-            setTimeout(() =>
-                M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
-        }
-
-        /****************************************/
-
-        get selectedArea() {
-            return this._selectedArea;
-        }
-
-        set selectedArea(value: IGeoArea) {
-            if (value == this._selectedArea)
-                return;
-
-            if (this._selectedArea) {
-                const element = document.getElementById(this._selectedArea.id.toUpperCase());
-                if (element)
-                    element.classList.remove("selected");
-            }
-
-            this._selectedArea = value;
-
-            if (this._selectedArea) {
-                const element = document.getElementById(this._selectedArea.id.toUpperCase());
-                if (element) {
-                    element.classList.add("selected");
-                    const parent = element.parentElement;
-                    element.remove();
-                    parent.appendChild(element);
-                }
-            }
-            this.changeArea();
-        }
-
-        /****************************************/
-
-        protected getFactorValue(dayNumberOrGroup: number | number[], areaOrId: string | IGeoArea): number {
-
-            return this._calculator.getFactorValue({
-                dayNumberOrGroup: dayNumberOrGroup,
-                areaOrId: areaOrId,
-                factorId: this.selectedFactor().id,
+        let obj: StudioData = {
+            type: "serie",
+            version: 1,
+            color: this.selectedIndicator().colorLight,
+            serie: {
+                type: "geoplot",
+                areaId: this.selectedArea.id,
                 indicatorId: this.selectedIndicator().id,
-                isDayDelta: this.isDayDelta(),
-                execludedAreas: linq(this._execludedArea.keys()).toArray()
-            });
+                xAxis: "dayNumber",
+                exeludedAreaIds: linq(this._execludedArea.keys()).toArray(),
+                factorId: this.selectedFactor().id,
+                groupSize: this.groupSize(),
+                isDelta: this.isDayDelta(),
+                startDay: this.startDay(),
+                range: {
+                    start: this._calculator.data.startDay,
+                    end: this._calculator.data.endDay,
+                }
+            },
+            title: this.factorDescription()
+        };
+
+        obj.values = this._calculator.getSerie(obj.serie);
+
+        copyText(JSON.stringify(obj));
+
+        M.toast({ html: $string("$(msg-serie-copied-studio)") })
+
+        this.tipManager.markAction("chartActionExecuted", "copySerieForStudio");
+    }
+
+    /****************************************/
+
+    play() {
+        if (this.dayNumber() == this._calculator.data.count - 1)
+            this.dayNumber(0);
+        this.isPlaying(true);
+        this.nextFrame();
+    }
+
+    /****************************************/
+
+    pause() {
+        this.isPlaying(false);
+    }
+
+    /****************************************/
+
+    setViewMode(mode: ViewMode, fromModel = false) {
+
+        if (fromModel) {
+            const areaTabs = M.Tabs.getInstance(document.getElementById("areaTabs"));
+            areaTabs.select(ViewModes[mode].tab);
         }
 
-        /****************************************/
+        if (mode == "details") {
 
-        protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicatorId: keyof TData | string): number {
-
-            return this._calculator.getIndicatorValue({
-                dayNumber: dayNumber,
-                areaOrId: areaOrId,
-                indicatorId: indicatorId,
-                isDayDelta: this.isDayDelta(),
-                execludedAreas: linq(this._execludedArea.keys()).toArray()
-            });
-        }
-
-        /****************************************/
-
-        protected computeStartDayForGroup() {
-
-            let totDays = this._calculator.data.count - this.startDay();
-            const module = (totDays % this.groupSize());
-            if (module != 0) {
-                const invModule = this.groupSize() - module;
-                if (this.startDay() - invModule >= 0)
-                    this.startDay(this.startDay() - invModule);
-                else if (this.startDay() + module < this._calculator.data.count - 1)
-                    this.startDay(this.startDay() + module);
-
-                M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+            if (this._detailsGeo && this._detailsData) {
+                this._calculator.geo = this._detailsGeo;
+                this._calculator.data = this._detailsData;
             }
         }
+        else {
+            this._calculator.geo = this._mainGeo;
+            this._calculator.data = this._mainData;
+        }
 
-        /****************************************/
+        this.totalDays(this._calculator.data.count - 1);
 
-        private onMapClick(e: MouseEvent, isDouble: boolean) {
+        if (mode != "region")
+            this.tipManager.markAction("viewChanged", mode);
 
-            const item = <SVGPolygonElement>e.target;
-            const areaId = item.parentElement.id;
-            const area = this._calculator.geo.areas[areaId.toLowerCase()];
+        this.viewMode(mode);
 
-            if (!area)
-                return;
+        const districtGroup = document.getElementById("group_district");
 
-            if (!isDouble) {
-                if (this.viewMode() == "country") {
-                    if (this._execludedArea.has(areaId))
-                        this._execludedArea.delete(areaId);
-                    else {
-                        this._execludedArea.set(areaId, area);
-                        M.toast({ html: $string("$(msg-region-ex)").replace("[region]", area.name) });
-                    }
-                    this.updateIndicator();
-                }
+        if (mode == "district" || mode == "details")
+            districtGroup.style.removeProperty("display");
+        else
+            districtGroup.style.display = "none";
+
+        this.selectedArea = null;
+
+        this._chart = null;
+
+        this._execludedArea.clear();
+
+        this.clearMap();
+
+        this.updateMaxFactor();
+
+        this.updateDayData();
+
+        if (this.viewMode() == "country") {
+            this.selectedArea = this._calculator.geo.areas["it"];
+            this.tipManager.showTip("regionExcluded", { timeout: 5 });
+        }
+        else {
+            if (this._topAreasVisible)
+                this.updateTopAreas();
+            else
+                this._daysData = undefined;
+        }
+
+        setTimeout(() =>
+            M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
+    }
+
+    /****************************************/
+
+    get selectedArea() {
+        return this._selectedArea;
+    }
+
+    set selectedArea(value: IGeoArea) {
+        if (value == this._selectedArea)
+            return;
+
+        if (this._selectedArea) {
+            const element = document.getElementById(this._selectedArea.id.toUpperCase());
+            if (element)
+                element.classList.remove("selected");
+        }
+
+        this._selectedArea = value;
+
+        if (this._selectedArea) {
+            const element = document.getElementById(this._selectedArea.id.toUpperCase());
+            if (element) {
+                element.classList.add("selected");
+                const parent = element.parentElement;
+                element.remove();
+                parent.appendChild(element);
+            }
+        }
+        this.changeArea();
+    }
+
+    /****************************************/
+
+    protected getFactorValue(dayNumberOrGroup: number | number[], areaOrId: string | IGeoArea): number {
+
+        return this._calculator.getFactorValue({
+            dayNumberOrGroup: dayNumberOrGroup,
+            areaOrId: areaOrId,
+            factorId: this.selectedFactor().id,
+            indicatorId: this.selectedIndicator().id,
+            isDayDelta: this.isDayDelta(),
+            execludedAreas: linq(this._execludedArea.keys()).toArray()
+        });
+    }
+
+    /****************************************/
+
+    protected getIndicatorValue(dayNumber: number, areaOrId: string | IGeoArea, indicatorId: keyof TData | string): number {
+
+        return this._calculator.getIndicatorValue({
+            dayNumber: dayNumber,
+            areaOrId: areaOrId,
+            indicatorId: indicatorId,
+            isDayDelta: this.isDayDelta(),
+            execludedAreas: linq(this._execludedArea.keys()).toArray()
+        });
+    }
+
+    /****************************************/
+
+    protected computeStartDayForGroup() {
+
+        let totDays = this._calculator.data.count - this.startDay();
+        const module = (totDays % this.groupSize());
+        if (module != 0) {
+            const invModule = this.groupSize() - module;
+            if (this.startDay() - invModule >= 0)
+                this.startDay(this.startDay() - invModule);
+            else if (this.startDay() + module < this._calculator.data.count - 1)
+                this.startDay(this.startDay() + module);
+
+            M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+        }
+    }
+
+    /****************************************/
+
+    private onMapClick(e: MouseEvent, isDouble: boolean) {
+
+        const item = <SVGPolygonElement>e.target;
+        const areaId = item.parentElement.id;
+        const area = this._calculator.geo.areas[areaId.toLowerCase()];
+
+        if (!area)
+            return;
+
+        if (!isDouble) {
+            if (this.viewMode() == "country") {
+                if (this._execludedArea.has(areaId))
+                    this._execludedArea.delete(areaId);
                 else {
-                    //if (item.parentElement.classList.contains(this.viewMode()))
-                    this.selectedArea = area;
+                    this._execludedArea.set(areaId, area);
+                    M.toast({ html: $string("$(msg-region-ex)").replace("[region]", area.name) });
                 }
-
-                this.tipManager.markAction("areaSelected", area.name);
+                this.updateIndicator();
             }
             else {
-                if (this.viewMode() == "region" || this.viewMode() == "district")
-                    this.detailsArea(area);
+                //if (item.parentElement.classList.contains(this.viewMode()))
+                this.selectedArea = area;
             }
+
+            this.tipManager.markAction("areaSelected", area.name);
         }
+        else {
+            if (this.viewMode() == "region" || this.viewMode() == "district")
+                this.detailsArea(area);
+        }
+    }
 
 
         /****************************************/top
 
-        protected nextFrame() {
+    protected nextFrame() {
 
-            if (!this.isPlaying())
-                return;
+        if (!this.isPlaying())
+            return;
 
-            if (this.dayNumber() >= this._calculator.data.count - 1)
-                this.pause();
-            else
-                this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
+        if (this.dayNumber() >= this._calculator.data.count - 1)
+            this.pause();
+        else
+            this.dayNumber(parseInt(this.dayNumber().toString()) + 1);
 
-            setTimeout(() => this.nextFrame(), 200);
-        }
+        setTimeout(() => this.nextFrame(), 200);
+    }
 
-        /****************************************/
+    /****************************************/
 
-        protected changeArea() {
-            if (this._selectedArea == null)
-                this.currentArea(null);
-            else {
-                var isEmptyArea = !this.currentArea();
+    protected changeArea() {
+        if (this._selectedArea == null)
+            this.currentArea(null);
+        else {
+            var isEmptyArea = !this.currentArea();
 
-                const area = new AreaViewModel();
+            const area = new AreaViewModel();
 
-                area.value = this._selectedArea;
+            area.value = this._selectedArea;
 
-                this.updateArea(area);
+            this.updateArea(area);
 
-                this.currentArea(area)
-
-                this.updateFactorDescription();
-
-                this.updateAreaIndicators();
-
-                this.updateChart();
-
-                if (isEmptyArea) {
-                    M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
-                    M.Tooltip.init(document.querySelectorAll(".row-chart-group .tooltipped"));
-                }
-            }
-
-            this.updateUrl();
-        }
-
-        /****************************************/
-
-        protected updateAreaIndicators() {
-            if (!this.currentArea())
-                return;
-            if (!this.currentArea().indicators()) {
-                const items: IndicatorViewModel[] = [];
-                for (let indicator of this.indicators()) {
-
-                    if (indicator.showInFavorites === false)
-                        continue;
-
-                    let item = new IndicatorViewModel();
-                    item.indicator = indicator;
-                    item.select = () => {
-                        this.tipManager.markAction("indicatorSelected", item.indicator.id);
-                        this.selectedIndicator(indicator);
-                        setTimeout(() =>
-                            M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
-                    }
-                    items.push(item);
-                }
-                this.currentArea().indicators(items);
-            }
-
-            const areaId = this.currentArea().value.id.toLowerCase();
-
-            for (let item of this.currentArea().indicators())
-                item.value(this.getIndicatorValue(this.dayNumber(), areaId, item.indicator.id))
-        }
-
-        /****************************************/
-
-        protected updateFactorDescription() {
-
-            let desc = "";
-
-            if (this.isDayDelta())
-                desc = "$(new) ";
-
-            desc += this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name);
-            if (this.currentArea())
-                desc += " - " + this.currentArea().value.name;
-
-            if (this._execludedArea.size > 0) {
-                desc += " - $(except) (";
-                let i = 0;
-                for (let key of this._execludedArea.keys()) {
-                    if (i > 0)
-                        desc += ", ";
-                    desc += this._execludedArea.get(key).name;
-                    i++;
-                }
-                desc += ")";
-            }
-
-            this.factorDescription($string(desc));
-        }
-
-        /****************************************/
-
-        protected updateIndicator() {
-
-            if (!this.selectedIndicator() || !this.selectedFactor())
-                return;
+            this.currentArea(area)
 
             this.updateFactorDescription();
 
-            /*
-            if (this.selectedFactor().id != "none") {
- 
-                if (this.groupSize() != 1)
-                    this.groupSize(1);
-            }*/
+            this.updateAreaIndicators();
 
-            this.updateMaxFactor();
-            this.updateDayData();
             this.updateChart();
-            this.updateUrl();
 
-            if (this._topAreasVisible)
-                this.updateTopAreas();
+            if (isEmptyArea) {
+                M.FormSelect.init(document.querySelectorAll(".row-chart-group select"));
+                M.Tooltip.init(document.querySelectorAll(".row-chart-group .tooltipped"));
+            }
         }
 
-        /****************************************/
+        this.updateUrl();
+    }
 
-        protected updateMaxFactor() {
+    /****************************************/
 
-            if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
-                return;
+    protected updateAreaIndicators() {
+        if (!this.currentArea())
+            return;
+        if (!this.currentArea().indicators()) {
+            const items: IndicatorViewModel[] = [];
+            for (let indicator of this.indicators()) {
 
-            let result = Number.NEGATIVE_INFINITY;
-            let curView = ViewModes[this.viewMode()];
+                if (indicator.showInFavorites === false)
+                    continue;
 
-
-            let count = 0;
-            let list = [];
-            this._calculator.data.days.foreach((day, i) => {
-                for (let areaId in day.values) {
-                    if (!curView.validateId(areaId))
-                        continue;
-                    if (!this._calculator.geo.areas[areaId])
-                        continue;
-
-                    const factor = Math.abs(this.getFactorValue(i, areaId));
-                    if (!MathUtils.isNaNOrNull(factor) && factor != Number.POSITIVE_INFINITY && factor > result)
-                        result = factor;
-
-                    if (factor != 0)
-                        list.push(factor);
+                let item = new IndicatorViewModel();
+                item.indicator = indicator;
+                item.select = () => {
+                    this.tipManager.markAction("indicatorSelected", item.indicator.id);
+                    this.selectedIndicator(indicator);
+                    setTimeout(() =>
+                        M.FormSelect.init(document.querySelectorAll(".row-indicator select")));
                 }
-            });
-            /*
-            list = linq(list).orderBy(a => a).toArray();
-            var index = Math.floor(list.length / 2);
-            result = list[index];*/
-
-            this.maxFactor(parseFloat(result.toFixed(1)));
+                items.push(item);
+            }
+            this.currentArea().indicators(items);
         }
 
+        const areaId = this.currentArea().value.id.toLowerCase();
 
-        /****************************************/
+        for (let item of this.currentArea().indicators())
+            item.value(this.getIndicatorValue(this.dayNumber(), areaId, item.indicator.id))
+    }
 
-        protected initChart() {
-            const canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
+    /****************************************/
 
-            const referencesPlugIn: Chart.PluginServiceRegistrationOptions = {
-                afterDraw: chart => {
+    protected updateFactorDescription() {
 
-                    const data = chart.data.datasets[0].data;
+        let desc = "";
 
-                    if (!data || data.length == 0)
-                        return;
+        if (this.isDayDelta())
+            desc = "$(new) ";
 
-                    const xScale = chart["scales"]["x-axis-0"];
-                    const ctx = chart.ctx;
+        desc += this.selectedFactor().description.replace("[indicator]", this.selectedIndicator().name);
+        if (this.currentArea())
+            desc += " - " + this.currentArea().value.name;
 
-                    for (let key in this._specialDates) {
+        if (this._execludedArea.size > 0) {
+            desc += " - $(except) (";
+            let i = 0;
+            for (let key of this._execludedArea.keys()) {
+                if (i > 0)
+                    desc += ", ";
+                desc += this._execludedArea.get(key).name;
+                i++;
+            }
+            desc += ")";
+        }
 
-                        let item = this._specialDates[key];
-                        if (!item.date || item.visible === false)
-                            continue;
+        this.factorDescription($string(desc));
+    }
 
-                        let offset = <number>xScale["getPixelForValue"]({ x: item.date });
+    /****************************************/
 
-                        ctx.lineWidth = item.width || 1;
+    protected updateIndicator() {
 
-                        ctx.beginPath();
-                        ctx.moveTo(offset, chart.chartArea.top);
-                        ctx.lineTo(offset, chart.chartArea.bottom);
-                        ctx.strokeStyle = item.color || "#000";
+        if (!this.selectedIndicator() || !this.selectedFactor())
+            return;
 
-                        if (item.dash)
-                            ctx.setLineDash(item.dash);
-                        else
-                            ctx.setLineDash([]);
-                        if (item.dashOffset)
-                            ctx.lineDashOffset = item.dashOffset;
-                        ctx.stroke();
+        this.updateFactorDescription();
+
+        /*
+        if (this.selectedFactor().id != "none") {
+ 
+            if (this.groupSize() != 1)
+                this.groupSize(1);
+        }*/
+
+        this.updateMaxFactor();
+        this.updateDayData();
+        this.updateChart();
+        this.updateUrl();
+
+        if (this._topAreasVisible)
+            this.updateTopAreas();
+    }
+
+    /****************************************/
+
+    protected updateMaxFactor() {
+
+        if (!this.selectedFactor() || !this.selectedIndicator() || !this.autoMaxFactor())
+            return;
+
+        let result = Number.NEGATIVE_INFINITY;
+        let curView = ViewModes[this.viewMode()];
+
+
+        let count = 0;
+        let list = [];
+        this._calculator.data.days.foreach((day, i) => {
+            for (let areaId in day.values) {
+                if (!curView.validateId(areaId))
+                    continue;
+                if (!this._calculator.geo.areas[areaId])
+                    continue;
+
+                const factor = Math.abs(this.getFactorValue(i, areaId));
+                if (!isNaNOrNull(factor) && factor != Number.POSITIVE_INFINITY && factor > result)
+                    result = factor;
+
+                if (factor != 0)
+                    list.push(factor);
+            }
+        });
+        /*
+        list = linq(list).orderBy(a => a).toArray();
+        var index = Math.floor(list.length / 2);
+        result = list[index];*/
+
+        this.maxFactor(parseFloat(result.toFixed(1)));
+    }
+
+
+    /****************************************/
+
+    protected initChart() {
+        const canvas = <HTMLCanvasElement>document.querySelector("#areaGraph");
+
+        const referencesPlugIn: Plugin<any> = {
+            id: "lines",
+            afterDraw: chart => {
+
+                const data = chart.data.datasets[0].data;
+
+                if (!data || data.length == 0)
+                    return;
+
+                const xScale = chart.scales.xAxes;
+                const ctx = chart.ctx;
+
+                for (let key in this._specialDates) {
+
+                    let item = this._specialDates[key];
+                    if (!item.date || item.visible === false)
+                        continue;
+                    
+                    let offset = xScale.getPixelForValue(item.date.getTime());
+
+                    ctx.lineWidth = item.width || 1;
+
+                    ctx.beginPath();
+                    ctx.moveTo(offset, chart.chartArea.top);
+                    ctx.lineTo(offset, chart.chartArea.bottom);
+                    ctx.strokeStyle = item.color || "#000";
+
+                    if (item.dash)
+                        ctx.setLineDash(item.dash);
+                    else
+                        ctx.setLineDash([]);
+                    if (item.dashOffset)
+                        ctx.lineDashOffset = item.dashOffset;
+                    ctx.stroke();
+                }
+            }
+        };
+
+        const bkPlugin: Plugin<any> = {
+            id: "bk",
+            beforeDraw: function (chart, args, options) {
+                var ctx = chart.ctx;
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, chart.width, chart.height);
+            }
+        };
+
+        this._chart = new Chart(canvas, {
+            plugins: [bkPlugin, referencesPlugIn],
+            type: "line",
+            data: {
+                datasets: [
+                    {
+                        fill: "origin",
+                        data: [],
+                        borderWidth: 1
                     }
-                }
-            };
-
-            this._chart = new Chart(canvas, {
-                plugins: [referencesPlugIn],
-                type: "line",
-                data: {
-                    datasets: [
-                        {
-                            lineTension: 0,
-                            data: [],
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    maintainAspectRatio: false,
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: false
+                    },
                     legend: {
                         display: true,
                         position: "bottom"
                     },
-                    title: {
-                        display: false,
-                    },
-                    tooltips: {
+                    tooltip: {
                         callbacks: {
-                            label: (t, d) => {
-                                return t.xLabel + ": " + MathUtils.round(parseFloat(t.value), 1);
+                            label: item => {
+                                return round(item.parsed.y, 1);
                             }
                         }
-                    },
-                    scales: {
-                        xAxes: [{
-                            type: "time",
-                            distribution: "linear",
-                            time: {
-                                unit: "day",
-                                tooltipFormat: "DD/MMM"
-                            }
-
-                        }],
-
                     }
+                },
+ 
+                scales: {
+                    xAxes: {
+                        type: "time",
+                        adapters: {
+                            date: {
+                                locale: $language == "it-IT" ? it : enUS,
+                            }
+                        },
+                        time: {
+                            unit: "day",
+                            tooltipFormat: "dd/MMM"
+                        }
+
+                    },
                 }
-            });
-        }
+            }
+        });
+    }
 
     /****************************************/
 
-        protected updateDays() {
-            const days = [];
-            this._calculator.data.days.foreach((day, i) =>
-                days.push({ number: i, value: new Date(day.date), text: DateUtils.format(day.date, $string("$(date-format-short)")) })
-            );
-            this.days(days);
-            this.totalDays(this._calculator.data.count - 1);
+    protected updateDays() {
+        const days = [];
+        this._calculator.data.days.foreach((day, i) =>
+            days.push({ number: i, value: new Date(day.date), text: formatDate(day.date, $string("$(date-format-short)")) })
+        );
+        this.days(days);
+        this.totalDays(this._calculator.data.count - 1);
+    }
+
+    /****************************************/
+
+    protected updateChart() {
+
+        if (!this.selectedIndicator() || !this.currentArea() || !this.selectedFactor())
+            return;
+
+        if (this._chart == null)
+            this.initChart();
+
+        const area = this.currentArea().value;
+        const areaId = area.id.toLowerCase();
+        const field = this.selectedIndicator().id;
+
+        this._chart.data.datasets[0].label = this.factorDescription();
+        this._chart.options.plugins.title.text = this._chart.data.datasets[0].label;
+
+        if (this.isLogScale())
+            this._chart.options.scales.y.type = "logarithmic";
+        else
+            this._chart.options.scales.y.type = "linear";
+
+        this._chart.options.scales.y.min = 0;
+
+        this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
+        this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
+
+        this._chart.data.datasets[0].data = this._calculator.getSerie({
+            type: "geoplot",
+            areaId: area.id,
+            indicatorId: this.selectedIndicator().id,
+            xAxis: "date",
+            startDay: this.startDay(),
+            exeludedAreaIds: linq(this._execludedArea.keys()).toArray(),
+            factorId: this.selectedFactor().id,
+            groupSize: this.groupSize(),
+            isDelta: this.isDayDelta()
+        }) as any;
+
+        this._chart.update();
+    }
+
+    /****************************************/
+
+    protected updateArea(value: AreaViewModel, dayNumber?: number) {
+
+        if (!value || !this.selectedIndicator() || !this.selectedFactor())
+            return;
+
+        if (dayNumber == undefined)
+            dayNumber = this.dayNumber();
+
+        const id = value.value.id.toLowerCase();
+        const area = value.value;
+
+        /*
+        if (!day || !day.values[id]) {
+            M.toast({
+                html: $string("$(msg-no-data)")});
+            return;
+        }*/
+
+        value.data(this._calculator.getDataAtDay(dayNumber, id));
+
+        value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
+
+        value.factor(this.getFactorValue(dayNumber, area));
+
+        value.reference(this.selectedFactor().reference(value.data(), area));
+
+    }
+
+    /****************************************/
+
+    protected async updateDetailsArea() {
+
+        const detailsEl = <HTMLElement>document.querySelector(".details-map");
+
+        if (!this.detailsArea()) {
+            this.setViewMode("region");
+            detailsEl.innerHTML = "";
         }
+        else {
 
-        /****************************************/
+            await this.detailsLoading.waitFor();
 
-        protected updateChart() {
+            this.detailsLoading.reset();
 
-            if (!this.selectedIndicator() || !this.currentArea() || !this.selectedFactor())
-                return;
+            try {
 
-            if (this._chart == null)
-                this.initChart();
+                this.setViewMode("details", true);
 
-            const area = this.currentArea().value;
-            const areaId = area.id.toLowerCase();
-            const field = this.selectedIndicator().id;
+                await delayAsync(0);
 
-            this._chart.data.datasets[0].label = this.factorDescription();
-            this._chart.options.title.text = this._chart.data.datasets[0].label;
+                detailsEl.innerHTML = "<span class = 'loading'><i class ='material-icons'>loop</i></span>";
 
-            if (this.isLogScale())
-                this._chart.options.scales.yAxes[0].type = "logarithmic";
-            else
-                this._chart.options.scales.yAxes[0].type = "linear";
+                document.getSelection().empty();
 
-            this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
-            this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
+                const mainData = <IGeoPlotViewModel>JSON.parse(await (await fetch(App.baseUrl + "AreaData/" + this.detailsArea().id)).text());
+                const mapData = await (await fetch(App.baseUrl + "AreaMap/" + this.detailsArea().id)).text();
 
-            this._chart.data.datasets[0].data = this._calculator.getSerie({
-                type: "geoplot",
-                areaId: area.id,
-                indicatorId: this.selectedIndicator().id,
-                xAxis: "date",
-                startDay: this.startDay(),
-                exeludedAreaIds: linq(this._execludedArea.keys()).toArray(),
-                factorId: this.selectedFactor().id,
-                groupSize: this.groupSize(),
-                isDelta: this.isDayDelta()
-            });
+                detailsEl.innerHTML = mapData;
 
-            this._chart.update();
-        }
+                var svgMap = <HTMLElement>document.querySelector(".details-map svg");
+                svgMap.addEventListener("click", e => this.onMapClick(e, false));
 
-        /****************************************/
+                svgMap.querySelector("#group_municipality").classList.add("active");
 
-        protected updateArea(value: AreaViewModel, dayNumber?: number) {
+                this._detailsData = new RangeDayAreaDataSet(mainData.data);
+                this._detailsGeo = mainData.geo;
 
-            if (!value || !this.selectedIndicator() || !this.selectedFactor())
-                return;
-
-            if (dayNumber == undefined)
-                dayNumber = this.dayNumber();
-
-            const id = value.value.id.toLowerCase();
-            const area = value.value;
-
-            /*
-            if (!day || !day.values[id]) {
-                M.toast({
-                    html: $string("$(msg-no-data)")});
-                return;
-            }*/
-
-            value.data(this._calculator.getDataAtDay(dayNumber, id));
-
-            value.indicator(this.getIndicatorValue(dayNumber, id, this.selectedIndicator().id));
-
-            value.factor(this.getFactorValue(dayNumber, area));
-
-            value.reference(this.selectedFactor().reference(value.data(), area));
-
-        }
-
-        /****************************************/
-
-        protected async updateDetailsArea() {
-
-            const detailsEl = <HTMLElement>document.querySelector(".details-map");
-
-            if (!this.detailsArea()) {
-                this.setViewMode("region");
-                detailsEl.innerHTML = "";
+                this.setViewMode("details", true);
             }
-            else {
+            finally {
 
-                await this.detailsLoading.waitFor();
-
-                this.detailsLoading.reset();
-
-                try {
-
-                    this.setViewMode("details", true);
-
-                    await PromiseUtils.delay(0);
-
-                    detailsEl.innerHTML = "<span class = 'loading'><i class ='material-icons'>loop</i></span>";
-
-                    document.getSelection().empty();
-
-                    const mainData = <IGeoPlotViewModel>JSON.parse(await (await fetch(app.baseUrl + "AreaData/" + this.detailsArea().id)).text());
-                    const mapData = await (await fetch(app.baseUrl + "AreaMap/" + this.detailsArea().id)).text();
-
-                    detailsEl.innerHTML = mapData;
-
-                    var svgMap = <HTMLElement>document.querySelector(".details-map svg");
-                    svgMap.addEventListener("click", e => this.onMapClick(e, false));
-
-                    svgMap.querySelector("#group_municipality").classList.add("active");
-
-                    this._detailsData = new RangeDayAreaDataSet(mainData.data);
-                    this._detailsGeo = mainData.geo;
-
-                    this.setViewMode("details", true);
-                }
-                finally {
-
-                    this.detailsLoading.set();
-                }
+                this.detailsLoading.set();
             }
         }
+    }
 
-        /****************************************/
+    /****************************************/
 
-        protected updateTopAreas() {
+    protected updateTopAreas() {
 
-            this._daysData = [];
+        this._daysData = [];
 
-            this._calculator.data.days.foreach((day, i) => {
+        this._calculator.data.days.foreach((day, i) => {
 
-                const item: IDayData = {};
+            const item: IDayData = {};
 
-                const isInArea = ViewModes[this.viewMode()].validateId;
+            const isInArea = ViewModes[this.viewMode()].validateId;
 
-                item.topAreas = linq(day.values).select(a => ({
-                    factor: this.getFactorValue(i, a.key),
-                    value: a
-                })).where(a => !MathUtils.isNaNOrNull(a.factor))
-                    .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
+            item.topAreas = linq(day.values).select(a => ({
+                factor: this.getFactorValue(i, a.key),
+                value: a
+            })).where(a => !isNaNOrNull(a.factor))
+                .orderByDesc(a => a.factor).where(a => isInArea(a.value.key)).select(a => {
 
-                        const area = new AreaViewModel();
+                    const area = new AreaViewModel();
 
-                        area.value = this._calculator.geo.areas[a.value.key.toLowerCase()];
+                    area.value = this._calculator.geo.areas[a.value.key.toLowerCase()];
 
-                        area.select = () => this.selectedArea = area.value;
+                    area.select = () => this.selectedArea = area.value;
 
-                        this.updateArea(area, i);
+                    this.updateArea(area, i);
 
-                        return area;
+                    return area;
 
-                    }).take(25).toArray();
+                }).take(25).toArray();
 
-                this._daysData.push(item);
-            });
+            this._daysData.push(item);
+        });
 
+        this.topAreas(this._daysData[this.dayNumber()].topAreas);
+    }
+
+    /****************************************/
+
+    protected updateDayData() {
+
+        const day = this._calculator.data.get(this.dayNumber());
+
+        if (!day) {
+            console.warn("No day data: " + this.dayNumber());
+            return;
+        }
+
+        this.currentData(formatDate(day.date, $string("$(date-format)")));
+
+        this.updateMap();
+
+        this.updateArea(this.currentArea());
+
+        this.updateAreaIndicators();
+
+        if (this._daysData && this._topAreasVisible)
             this.topAreas(this._daysData[this.dayNumber()].topAreas);
+
+        this.updateUrl();
+    }
+
+    /****************************************/
+
+    protected updateUrl() {
+        if (!this._keepState)
+            return;
+        const state = this.saveStata();
+        let url = App.baseUrl + "Overview";
+        if (!this.isDefaultState(state))
+            url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
+        history.replaceState(null, null, url);
+    }
+
+    /****************************************/
+
+    protected clearMap() {
+
+        const day = this._calculator.data.get(this.dayNumber());
+
+        if (!day || !day.values) {
+            console.warn("No day data: " + this.dayNumber());
+            return;
         }
 
-        /****************************************/
+        for (const key in day.values) {
+            const element = document.getElementById(key.toUpperCase());
+            if (element) {
+                //element.style.fillOpacity = "1";
+                element.style.removeProperty("fill");
+            }
+        }
+    }
 
-        protected updateDayData() {
+    /****************************************/
+
+    protected updateMap() {
+
+        if (!this.selectedIndicator() || !this.selectedFactor())
+            return;
+
+
+        if (this.viewMode() != "country") {
 
             const day = this._calculator.data.get(this.dayNumber());
 
-            if (!day) {
-                console.warn("No day data: " + this.dayNumber());
-                return;
-            }
+            var indicator = this.selectedIndicator();
 
-            this.currentData(DateUtils.format(day.date, $string("$(date-format)")));
-
-            this.updateMap();
-
-            this.updateArea(this.currentArea());
-
-            this.updateAreaIndicators();
-
-            if (this._daysData && this._topAreasVisible)
-                this.topAreas(this._daysData[this.dayNumber()].topAreas);
-
-            this.updateUrl();
-        }
-
-        /****************************************/
-
-        protected updateUrl() {
-            if (!this._keepState)
-                return;
-            const state = this.saveStata();
-            let url = app.baseUrl + "Overview";
-            if (!this.isDefaultState(state))
-                url += "?state=" + encodeURIComponent(btoa(JSON.stringify(state))) + "&keepState=true";
-            history.replaceState(null, null, url);
-        }
-
-        /****************************************/
-
-        protected clearMap() {
-
-            const day = this._calculator.data.get(this.dayNumber());
-
-            if (!day || !day.values) {
-                console.warn("No day data: " + this.dayNumber());
-                return;
-            }
+            const gradient = indicator.gradient ? indicator.gradient : new LinearGradient("#fff", indicator.colorDark);
 
             for (const key in day.values) {
                 const element = document.getElementById(key.toUpperCase());
                 if (element) {
-                    //element.style.fillOpacity = "1";
-                    element.style.removeProperty("fill");
-                }
-            }
-        }
 
-        /****************************************/
+                    const area = this._calculator.geo.areas[key];
 
-        protected updateMap() {
-
-            if (!this.selectedIndicator() || !this.selectedFactor())
-                return;
+                    if (area.type != ViewModes[this.viewMode()].areaType)
+                        continue;
 
 
-            if (this.viewMode() != "country") {
+                    let factor = this.getFactorValue(this.dayNumber(), area);
+                    if (factor == Number.POSITIVE_INFINITY)
+                        factor = NaN;
 
-                const day = this._calculator.data.get(this.dayNumber());
-
-                var indicator = this.selectedIndicator();
-
-                const gradient = indicator.gradient ? indicator.gradient : new LinearGradient("#fff", indicator.colorDark);
-
-                for (const key in day.values) {
-                    const element = document.getElementById(key.toUpperCase());
-                    if (element) {
-
-                        const area = this._calculator.geo.areas[key];
-
-                        if (area.type != ViewModes[this.viewMode()].areaType)
-                            continue;
+                    if (indicator.canBeNegative)
+                        factor = 0.5 + (factor / (this.maxFactor() * 2));
+                    else
+                        factor = factor / this.maxFactor();
 
 
-                        let factor = this.getFactorValue(this.dayNumber(), area);
-                        if (factor == Number.POSITIVE_INFINITY)
-                            factor = NaN;
+                    factor = Math.min(1, Math.max(0, factor));
 
-                        if (indicator.canBeNegative)
-                            factor = 0.5 + (factor / (this.maxFactor() * 2));
+                    if (isNaNOrNull(factor)) {
+                        if (element.classList.contains("valid"))
+                            element.classList.remove("valid");
+                        element.style.removeProperty("fill");
+                    }
+                    else {
+                        if (!element.classList.contains("valid"))
+                            element.classList.add("valid");
+
+                        let value: number;
+                        if (!indicator.canBeNegative)
+                            value = discretize(exponential(factor), 20);
                         else
-                            factor = factor / this.maxFactor();
+                            value = discretize(factor, 20);
+                        element.style.fill = gradient.valueAt(value).toString();
 
-
-                        factor = Math.min(1, Math.max(0, factor));
-
-                        if (MathUtils.isNaNOrNull(factor)) {
-                            if (element.classList.contains("valid"))
-                                element.classList.remove("valid");
-                            element.style.removeProperty("fill");
-                        }
-                        else {
-                            if (!element.classList.contains("valid"))
-                                element.classList.add("valid");
-
-                            let value: number;
-                            if (!indicator.canBeNegative)
-                                value = MathUtils.discretize(MathUtils.exponential(factor), 20);
-                            else
-                                value = MathUtils.discretize(factor, 20);
-                            element.style.fill = gradient.valueAt(value).toString();
-
-                        }
                     }
                 }
             }
-            else if (this.viewMode() != "details") {
-                linq(document.querySelectorAll(".main-map g.region")).foreach((element: HTMLElement) => {
-                    if (this._execludedArea.has(element.id))
-                        element.style.fill = "#444";
-                    else
-                        element.style.fill = "#FFF";
-                });
-            }
         }
-
-        get dataRanges() {
-            return this._dataRanges;
+        else if (this.viewMode() != "details") {
+            linq(document.querySelectorAll(".main-map g.region")).foreach((element: HTMLElement) => {
+                if (this._execludedArea.has(element.id))
+                    element.style.fill = "#444";
+                else
+                    element.style.fill = "#FFF";
+            });
         }
-
-        /****************************************/
-
-        dayNumber = ko.observable(0);
-        totalDays = ko.observable(0);
-        detailsLoading = new Signal(true);
-        detailsArea = ko.observable<IGeoArea>();
-        currentData = ko.observable<string>();
-        currentArea = ko.observable<AreaViewModel>();
-        topAreas = ko.observable<AreaViewModel[]>();
-        viewMode = ko.observable<ViewMode>("district");
-        selectedIndicator = ko.observable<IIndicator<TData>>();
-        selectedFactor = ko.observable<IFactor<TData>>();
-        autoMaxFactor = ko.observable<boolean>(true);
-        maxFactor = ko.observable<number>();
-        isPlaying = ko.observable(false);
-        isLogScale = ko.observable<boolean>(false);
-        isDayDelta = ko.observable<boolean>(false);
-        isZoomChart = ko.observable<boolean>(false);
-        isShowEnvData = ko.observable<boolean>(false);
-        groupSize = ko.observable<number>(1);
-        startDay = ko.observable<number>(0);
-        dataRange = ko.observable<IDataRange>();
-        days = ko.observable<IGroupDay[]>();
-        tipManager: TipManager<IOverviewViewActions>;
-        isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
-        groupDays = [1, 2, 3, 4, 5, 6, 7];
-        factorDescription = ko.observable<string>();
-        indicators: KnockoutObservable<IIndicator<TData>[]>;
-        factors: KnockoutObservable<IFactor<TData>[]>;
-
     }
+
+    get dataRanges() {
+        return this._dataRanges;
+    }
+
+    /****************************************/
+
+    dayNumber = ko.observable(0);
+    totalDays = ko.observable(0);
+    detailsLoading = new Signal(true);
+    detailsArea = ko.observable<IGeoArea>();
+    currentData = ko.observable<string>();
+    currentArea = ko.observable<AreaViewModel>();
+    topAreas = ko.observable<AreaViewModel[]>();
+    viewMode = ko.observable<ViewMode>("district");
+    selectedIndicator = ko.observable<IIndicator<TData>>();
+    selectedFactor = ko.observable<IFactor<TData>>();
+    autoMaxFactor = ko.observable<boolean>(true);
+    maxFactor = ko.observable<number>();
+    isPlaying = ko.observable(false);
+    isLogScale = ko.observable<boolean>(false);
+    isDayDelta = ko.observable<boolean>(false);
+    isZoomChart = ko.observable<boolean>(false);
+    isShowEnvData = ko.observable<boolean>(false);
+    groupSize = ko.observable<number>(1);
+    startDay = ko.observable<number>(0);
+    dataRange = ko.observable<IDataRange>();
+    days = ko.observable<IGroupDay[]>();
+    tipManager: TipManager<IOverviewViewActions>;
+    isNoFactorSelected = ko.computed(() => this.selectedFactor() && this.selectedFactor().id == 'none');
+    groupDays = [1, 2, 3, 4, 5, 6, 7];
+    factorDescription = ko.observable<string>();
+    indicators: KnockoutObservable<IIndicator<TData>[]>;
+    factors: KnockoutObservable<IFactor<TData>[]>;
+
 }

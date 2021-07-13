@@ -9,8 +9,18 @@
   </PropertyGroup>
 
 
+  <Target Condition="'$(Configuration)' == 'Release'" Name="WebPack" AfterTargets="Build">
+    <Exec Command="npm run webpack" />
+  </Target>
+
+
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="5.0.0-rc.1.20451.17" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <TypeScriptCompile Remove="node_modules\**" />
   </ItemGroup>
 
 
@@ -31,8 +41,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Eusoft\WebApp\src\Eusoft.WebApp.Localization\Eusoft.WebApp.Localization.csproj" />
-    <ProjectReference Include="..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj" />
+    <ProjectReference Include="..\..\Eusoft\WebApp\src\Eusoft.WebApp.Localization\Eusoft.WebApp.Localization.csproj" />
+    <ProjectReference Include="..\..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj" />
     <ProjectReference Include="..\Geo.Data\Geo.Data.csproj" />
     <ProjectReference Include="..\GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj" />
   </ItemGroup>

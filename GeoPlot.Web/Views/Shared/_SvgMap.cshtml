@@ -68,7 +68,7 @@
     </style>
     @foreach (var areaType in typeOrder)
     {
-        <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: WebApp.GeoPlot.ViewModes[viewMode()].areaType == @((int)areaType) }">
+        <g class="group" id="group_@(areaType.ToString().ToLower())" data-bind="css: { active: GeoPlot.ViewModes[viewMode()].areaType == @((int)areaType) }">
             @foreach (var area in Model.Geo.Areas.Where(a => a.Value.Type == areaType))
             {
                 <g id="@area.Key" class="area @area.Value.Type.ToString().ToLower()">

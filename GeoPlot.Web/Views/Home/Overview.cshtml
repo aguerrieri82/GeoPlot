@@ -57,7 +57,7 @@
                         <div class="card-section">
                             <div class="flex-col-3">
                                 <div class="summary-field">
-                                    <label><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></label>
+                                    <label><span data-bind="text: GeoPlot.capitalizeFirst(selectedIndicator().name)"></span></label>
                                     <span data-bind="text: formatNumber(currentArea().indicator())"></span>
                                 </div>
                                 <div class="summary-field">
@@ -97,7 +97,7 @@
                             </div>
                         </div>
                         <div class="card-section expandable indicators">
-                            <h6 class="section-title" onclick="expandCollapse(this)">
+                            <h6 class="section-title" onclick="GeoPlot.expandCollapse(this)">
                                 <span string="$(indicators)"></span>
                                 <i class="material-icons">chevron_right</i>
                             </h6>
@@ -111,7 +111,7 @@
                             </div>
                         </div>
                         <div class="card-section expandable closed chart-options">
-                            <h6 class="section-title" onclick="expandCollapse(this)">
+                            <h6 class="section-title" onclick="GeoPlot.expandCollapse(this)">
                                 <span string="$(chart-options)"></span>
                                 <i class="material-icons">chevron_right</i>
                             </h6>
@@ -145,7 +145,7 @@
                         <div class="empty-text flex-row-inline item-margin-small">
                             <i class="material-icons small orange-text">warning</i>
                             <div>
-                                <string>$(msg-select-a-1)</string> <span data-bind="text: WebApp.GeoPlot.ViewModes[viewMode()].label.singular"></span> <string>$(msg-select-a-2)</string>
+                                <string>$(msg-select-a-1)</string> <span data-bind="text: GeoPlot.ViewModes[viewMode()].label.singular"></span> <string>$(msg-select-a-2)</string>
                             </div>
                         </div>
                         <!--/ko-->
@@ -197,7 +197,7 @@
                 <ul class="collapsible" id="topCases" data-bind="css: {hidden: viewMode() == 'country'}">
                     <li>
                         <div class="card-title collapsible-header">
-                            <span data-bind="text: capitalizeFirst(WebApp.GeoPlot.ViewModes[viewMode()].label.plural)"></span><string>&nbsp;$(more-effected)</string>
+                            <span data-bind="text: GeoPlot.capitalizeFirst(GeoPlot.ViewModes[viewMode()].label.plural)"></span><string>&nbsp;$(more-effected)</string>
                             <i class="material-icons">chevron_right</i>
                         </div>
                         <div class="collapsible-body">
@@ -206,7 +206,7 @@
                                 <thead>
                                     <tr>
                                         <th string="$(name)"></th>
-                                        <th><span data-bind="text: capitalizeFirst(selectedIndicator().name)"></span></th>
+                                        <th><span data-bind="text: GeoPlot.capitalizeFirst(selectedIndicator().name)"></span></th>
                                         <!--ko if: selectedFactor().id != 'none'-->
                                         <th data-bind="text: selectedFactor().name"></th>
                                         <th data-bind="attr: {title: factorDescription}">Fatt.</th>
@@ -301,15 +301,19 @@
 
 
 @section Head{
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.4.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 }
 
 @section Scripts {
     <script>
-        WebApp.app.baseUrl = '@Url.Content("~/")';
-        WebApp.app.initServices();
-        ko.applyBindings(new WebApp.GeoPlot.GeoPlotPage(@Html.Json(Model)));
+        if (GeoPlot.runAsync)
+            WebApp = GeoPlot;
+        WebApp.runAsync(GeoPlot.GeoPlotApplication, {
+            baseUrl: "@Url.Content("~/")"
+        }, () => { 
+             ko.applyBindings(new GeoPlot.GeoPlotPage(@Html.Json(Model)));
+        });
+       
     </script>
 }

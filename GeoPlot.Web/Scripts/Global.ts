@@ -1,23 +1,13 @@
-﻿
-
-/****************************************/
-
-function capitalizeFirst(value: string) {
-    return value.substr(0, 1).toUpperCase() + value.substr(1);
-}
-
-/****************************************/
-
-if (!HTMLCanvasElement.prototype.toBlob) {
+﻿if (!HTMLCanvasElement.prototype.toBlob) {
     Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
-        value: function (callback, type, quality)  {
+        value: function (callback, type, quality) {
             let canvas = this;
-            setTimeout(() =>  {
+            setTimeout(() => {
                 const binStr = atob(canvas.toDataURL(type, quality).split(',')[1]);
                 const len = binStr.length;
                 const arr = new Uint8Array(len);
 
-                for (let i = 0; i < len; i++) 
+                for (let i = 0; i < len; i++)
                     arr[i] = binStr.charCodeAt(i);
 
                 callback(new Blob([arr], { type: type || 'image/png' }));
@@ -28,7 +18,14 @@ if (!HTMLCanvasElement.prototype.toBlob) {
 
 /****************************************/
 
-function expandCollapse(elment: HTMLElement) {
+export function capitalizeFirst(value: string) {
+    return value.substr(0, 1).toUpperCase() + value.substr(1);
+}
+
+
+/****************************************/
+
+export function expandCollapse(elment: HTMLElement) {
     let container = elment.parentElement;
     let content = <HTMLElement>container.querySelector(".section-content");
     if (container.classList.contains("closed")) {
@@ -41,26 +38,11 @@ function expandCollapse(elment: HTMLElement) {
     }
 }
 
-/****************************************/
-/* Chart
-/****************************************/
+declare global {
 
-if (window["Chart"]) {
-    Chart.plugins.register({
-        beforeDraw: function (chartInstance) {
-            var ctx = chartInstance.ctx;
-            ctx.fillStyle = "white";
-            ctx.fillRect(0, 0, chartInstance.width, chartInstance.height);
-        }
-    });
+    const $language: string;
+
+    function formatNumber(value: number, emptyValue?: string): string;
+
+    function $string(format: string): string;
 }
-
-/****************************************/
-/* String
-/****************************************/
-
-declare const $language: string;
-
-declare function formatNumber(value: number, emptyValue?: string): string;
-
-declare function $string(format: string): string;

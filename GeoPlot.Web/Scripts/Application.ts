@@ -1,28 +1,24 @@
-﻿namespace WebApp {
+﻿import { XHRHttpClient, Services, IApplication, IAppArgs } from "./WebApp";
 
-    export namespace GeoPlot {
+export class GeoPlotApplication implements IApplication<IAppArgs> {
 
-        export class GeoPlotApplication {
+    handleError(source: any, error: any, message?: string) {
 
-            constructor() {
-
-            }
-
-            /****************************************/
-
-            initServices() {
-
-                Services.httpClient = new XHRHttpClient();
-            }
-
-            /****************************************/
-
-            baseUrl: string;
-        } 
     }
 
-    /****************************************/
+    runAsync(args?: IAppArgs) {
+        Services.httpClient = new XHRHttpClient();
+        this.baseUrl = args.baseUrl;
+        return Promise.resolve();
+    }
 
-    export var app: IApplication = <any>(new GeoPlot.GeoPlotApplication());
-}
- 
+    startupArgs: IAppArgs;
+
+    appName: string;
+
+    baseUrl: string;
+
+    isDev: boolean;
+
+    language: string;
+} 

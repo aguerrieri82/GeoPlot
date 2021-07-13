@@ -47,7 +47,7 @@
                         <span class="name" data-bind="text: name"></span>
                         <span class="value" data-bind="text: value"></span>
                     </div>
-                    <input type="range" data-bind="value: value, attr: {max: max, min:min, step: step}, valueUpdate: 'input'" />
+                    <input type="range" data-bind="attr: {max: max, min:min, step: step}, value: value, valueUpdate: 'input'" />
                 </div>
                 <!--/ko-->
                 <!--ko template: {name: optionsTemplateName} -->
@@ -93,7 +93,7 @@
 
 <partial name="Templates\_DataImport" />
 
-<!--ko with: WebApp.GeoPlot.ColorPicker.instance -->
+<!--ko with: GeoPlot.ColorPicker.instance -->
 <div class="color-picker z-depth-2" data-bind="css: {visible: isOpened}, foreach: colors, attach: attachNode">
     <a data-bind="click: select, style: {'background-color': value}"></a>
 </div>
@@ -165,15 +165,22 @@
 
 </script>
 
+@section Head{
+   <script src="~/lib/desmos.js"></script>
+}
+
 @section Scripts {
 
-
-    <script src="~/lib/desmos.js"></script>
     <script>
-        WebApp.app.baseUrl = '@Url.Content("~/")';
-        WebApp.app.initServices();
-        ko.applyBindings(new WebApp.GeoPlot.StudioPage( @(Html.Json((Guid?)ViewBag.ProjectId)) ));
+
+        if (GeoPlot.runAsync)
+            WebApp = GeoPlot;
+
+        WebApp.runAsync(GeoPlot.GeoPlotApplication, {
+            baseUrl: "@Url.Content("~/")"
+        }, () => { 
+            ko.applyBindings(new GeoPlot.StudioPage( @(Html.Json((Guid?)ViewBag.ProjectId)) ));
+        });
+       
     </script>
-
-
 }

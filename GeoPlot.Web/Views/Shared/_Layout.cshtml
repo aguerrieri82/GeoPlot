@@ -124,12 +124,8 @@
 
     @Html.StringTable()
 
-    <environment include="Production">
-        <script src="~/js/app.min.js" asp-append-version="true"></script>
-    </environment>
-    <environment include="Development">
-        <script src="~/js/app.js" asp-append-version="true"></script>
-    </environment>
+    <script src="~/lib/webapp-core/js/webapp-core.js" asp-append-version="true"></script>
+    <script src="~/js/app.js" asp-append-version="true"></script>
 
     @RenderSection("Scripts", required: false)
 </body>

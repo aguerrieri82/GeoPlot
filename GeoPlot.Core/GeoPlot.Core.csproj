@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Eusoft\ServiceModel\src\Eusoft.ServiceModel\Eusoft.ServiceModel.csproj" />
+    <ProjectReference Include="..\..\Eusoft\ServiceModel\src\Eusoft.ServiceModel\Eusoft.ServiceModel.csproj" />
     <ProjectReference Include="..\GeoPlot.Entities\GeoPlot.Entities.csproj" />
   </ItemGroup>
 

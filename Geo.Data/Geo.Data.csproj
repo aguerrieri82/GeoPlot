@@ -16,7 +16,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Eusoft\ServiceModel\src\Eusoft.ServiceModel\Eusoft.ServiceModel.csproj" />
+    <ProjectReference Include="..\..\Eusoft\ServiceModel\src\Eusoft.ServiceModel\Eusoft.ServiceModel.csproj" />
     <ProjectReference Include="..\Geo.Data.Types\Geo.Data.Types.csproj" />
   </ItemGroup>
 </Project>
