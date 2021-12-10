@@ -470,6 +470,13 @@ export class GeoPlotPage {
             this.updateUrl();
         });
 
+        this.baseFactor.subscribe(value => {
+            if (!this.autoMaxFactor()) {
+                this.updateMap();
+            }
+            this.updateUrl();
+        });
+
         this.isDayDelta.subscribe(value => {
             this.computeStartDayForGroup();
             this.updateIndicator();
@@ -1283,8 +1290,6 @@ export class GeoPlotPage {
             this.initChart();
 
         const area = this.currentArea().value;
-        const areaId = area.id.toLowerCase();
-        const field = this.selectedIndicator().id;
 
         this._chart.data.datasets[0].label = this.factorDescription();
         this._chart.options.plugins.title.text = this._chart.data.datasets[0].label;
@@ -1299,7 +1304,7 @@ export class GeoPlotPage {
         this._chart.data.datasets[0].borderColor = this.selectedIndicator().colorDark;
         this._chart.data.datasets[0].backgroundColor = this.selectedIndicator().colorLight;
 
-        this._chart.data.datasets[0].data = this._calculator.getSerie({
+        const data = this._calculator.getSerie({
             type: "geoplot",
             areaId: area.id,
             indicatorId: this.selectedIndicator().id,
@@ -1309,8 +1314,14 @@ export class GeoPlotPage {
             factorId: this.selectedFactor().id,
             groupSize: this.groupSize(),
             isDelta: this.isDayDelta()
-        }) as any;
+        });
 
+        const orderedData = linq(data).select(a => a.y).where(a=> !isNaN(a)).orderBy(a => a).toArray();
+
+        this._chart.options.scales.y.min = orderedData[2];
+        this._chart.options.scales.y.max = orderedData[orderedData.length - 3];
+
+        this._chart.data.datasets[0].data = data as any;
         this._chart.update();
     }
 
@@ -1516,9 +1527,9 @@ export class GeoPlotPage {
                         factor = NaN;
 
                     if (indicator.canBeNegative)
-                        factor = 0.5 + (factor / (this.maxFactor() * 2));
+                        factor = 0.5 + ((factor - this.baseFactor()) / (this.maxFactor() * 2));
                     else
-                        factor = factor / this.maxFactor();
+                        factor = (factor - this.baseFactor()) / this.maxFactor();
 
 
                     factor = Math.min(1, Math.max(0, factor));
@@ -1571,6 +1582,7 @@ export class GeoPlotPage {
     selectedFactor = ko.observable<IFactor<TData>>();
     autoMaxFactor = ko.observable<boolean>(true);
     maxFactor = ko.observable<number>();
+    baseFactor = ko.observable<number>(0);
     isPlaying = ko.observable(false);
     isLogScale = ko.observable<boolean>(false);
     isDayDelta = ko.observable<boolean>(false);

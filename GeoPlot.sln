@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29827.131
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.31911.260
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.Web", "GeoPlot.Web\GeoPlot.Web.csproj", "{FCC969A4-8491-4BCC-8F94-0A4C32BDA5CC}"
 EndProject
@@ -11,9 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.Entities", "GeoPlot
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.Coronavirus", "GeoPlot.Coronavirus\GeoPlot.Coronavirus.csproj", "{43D15A0B-98AE-4458-96FD-9A5B6359AEA1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp", ""..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj", "{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp", "..\Eusoft\WebApp\src\Eusoft.WebApp\Eusoft.WebApp.csproj", "{FDF8033D-EEC8-40E2-880F-99B51A7E4A4D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp.Localization", ""..\Eusoft\WebApp\src\Eusoft.WebApp.Localization\Eusoft.WebApp.Localization.csproj", "{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp.Localization", "..\Eusoft\WebApp\src\Eusoft.WebApp.Localization\Eusoft.WebApp.Localization.csproj", "{D76EAB19-0F1F-4CD6-8B7E-CAF46B86C642}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Geo.Data", "Geo.Data\Geo.Data.csproj", "{20B334CD-FF57-4303-B420-DC7A93665476}"
 EndProject
@@ -23,13 +23,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GeoPlot.ServiceHost", "GeoP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Geo.Data.Types", "Geo.Data.Types\Geo.Data.Types.csproj", "{51E1CDB7-FDBA-412B-A122-116A4361E84A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp.Abstraction", ""..\Eusoft\WebApp\src\Eusoft.WebApp.Abstraction\Eusoft.WebApp.Abstraction.csproj", "{199E1B67-0B45-4B1C-9ED5-6E1CE03C7660}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.WebApp.Abstraction", "..\Eusoft\WebApp\src\Eusoft.WebApp.Abstraction\Eusoft.WebApp.Abstraction.csproj", "{199E1B67-0B45-4B1C-9ED5-6E1CE03C7660}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.ServiceModel", "..\Eusoft\ServiceModel\src\Eusoft.ServiceModel\Eusoft.ServiceModel.csproj", "{12483BA7-1DF9-4353-98E2-094B7798C5F6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.ServiceModel.Abstraction", ""..\Eusoft\ServiceModel\src\Eusoft.ServiceModel.Abstraction\Eusoft.ServiceModel.Abstraction.csproj", "{6B774D3A-6723-434A-8522-6157E0E26CE4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eusoft.ServiceModel.Abstraction", "..\Eusoft\ServiceModel\src\Eusoft.ServiceModel.Abstraction\Eusoft.ServiceModel.Abstraction.csproj", "{6B774D3A-6723-434A-8522-6157E0E26CE4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Framework", "Framework", "{47647A75-2FDD-4846-9E62-2B205EB74FCA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DB50FF32-F949-446F-B29B-59E5455B4754}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

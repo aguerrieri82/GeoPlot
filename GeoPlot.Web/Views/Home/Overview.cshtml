@@ -179,8 +179,14 @@
                                 </label>
                             </div>
                             <div class="input-field col s6 max-factor">
-                                <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
-                                <label string="$(factor-threshold)" class="active" for="limit"></label>
+                                 <div class="row no-margin">
+                                    <input id="limit" type="number" data-bind="enable: !autoMaxFactor(), value: maxFactor" />
+                                    <label string="$(factor-threshold)" class="active" for="limit"></label>
+                                </div>
+                                 <div class="row no-margin">
+                                    <input id="limitBase" type="number" data-bind="value: baseFactor" />
+                                    <label string="$(factor-base)" class="active" for="limitBase"></label>
+                                </div>
                             </div>
                         </div>
                         <div class="row no-margin row-factor">
