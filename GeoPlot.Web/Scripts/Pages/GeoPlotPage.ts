@@ -357,14 +357,19 @@ export class GeoPlotPage {
             name: "$(all)",
         },
         {
-            id: 0,
+            id: 1,
             name: "1° $(wave)",
             endDay: new Date(2020, 7, 31)
         },
         {
-            id: 0,
+            id: 2,
             name: "2° $(wave)",
             startDay: new Date(2020, 8, 1)
+        },
+        {
+            id: 3,
+            name: "3° $(wave)",
+            startDay: new Date(2021, 5, 23)
         },
     ]
 
@@ -483,6 +488,12 @@ export class GeoPlotPage {
             if (value)
                 this.tipManager.markAction("deltaSelected");
 
+        });
+
+        this.isAvg.subscribe(value => {
+            this.computeStartDayForGroup();
+            this.updateIndicator();
+            this.updateUrl();
         });
 
         this.isLogScale.subscribe(value => {
@@ -930,6 +941,7 @@ export class GeoPlotPage {
             factorId: this.selectedFactor().id,
             indicatorId: this.selectedIndicator().id,
             isDayDelta: this.isDayDelta(),
+            isAvg: this.isAvg(),
             execludedAreas: linq(this._execludedArea.keys()).toArray()
         });
     }
@@ -1313,13 +1325,16 @@ export class GeoPlotPage {
             exeludedAreaIds: linq(this._execludedArea.keys()).toArray(),
             factorId: this.selectedFactor().id,
             groupSize: this.groupSize(),
-            isDelta: this.isDayDelta()
+            isDelta: this.isDayDelta(),
+            isAvg: this.isAvg()
         });
 
+              
         const orderedData = linq(data).select(a => a.y).where(a=> !isNaN(a)).orderBy(a => a).toArray();
 
-        this._chart.options.scales.y.min = orderedData[2];
-        this._chart.options.scales.y.max = orderedData[orderedData.length - 3];
+        this._chart.options.scales.y.min = orderedData[0] * 1.1;
+        this._chart.options.scales.y.max = orderedData[orderedData.length - 1] * 1.1;
+
 
         this._chart.data.datasets[0].data = data as any;
         this._chart.update();
@@ -1333,7 +1348,7 @@ export class GeoPlotPage {
             return;
 
         if (dayNumber == undefined)
-            dayNumber = this.dayNumber();
+            dayNumber = parseInt(this.dayNumber() as any);
 
         const id = value.value.id.toLowerCase();
         const area = value.value;
@@ -1522,7 +1537,7 @@ export class GeoPlotPage {
                         continue;
 
 
-                    let factor = this.getFactorValue(this.dayNumber(), area);
+                    let factor = this.getFactorValue(parseInt(this.dayNumber() as any), area);
                     if (factor == Number.POSITIVE_INFINITY)
                         factor = NaN;
 
@@ -1586,6 +1601,7 @@ export class GeoPlotPage {
     isPlaying = ko.observable(false);
     isLogScale = ko.observable<boolean>(false);
     isDayDelta = ko.observable<boolean>(false);
+    isAvg = ko.observable<boolean>(false);
     isZoomChart = ko.observable<boolean>(false);
     isShowEnvData = ko.observable<boolean>(false);
     groupSize = ko.observable<number>(1);

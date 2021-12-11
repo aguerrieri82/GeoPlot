@@ -130,6 +130,7 @@ interface IComputeFactorOptions<TData> {
     areaOrId: string | IGeoArea;
     isDayDelta?: boolean;
     execludedAreas?: string[];
+    isAvg?: boolean;
 }
 
 
@@ -159,6 +160,19 @@ export class IndicatorCalculator<TData> {
 
     getFactorValue(options: IComputeFactorOptions<TData>) {
 
+
+        if (options.isAvg && typeof (options.dayNumberOrGroup) == "number") {
+            let sum: number = 0;
+            
+            const startVal = this.getFactorValue({ ...options, isAvg: false })
+
+            for (let d = options.dayNumberOrGroup - 6; d <= options.dayNumberOrGroup; d++) {
+                const value = d < 1 ? 0 : this.getFactorValue({ ...options, dayNumberOrGroup: d, isAvg: false });
+                sum += value;
+            }
+            return sum / 7;
+        }
+       
         const areaId = (typeof options.areaOrId == "string" ? options.areaOrId : options.areaOrId.id).toLowerCase();
 
         let dayGroup: number[];
@@ -275,7 +289,8 @@ export class IndicatorCalculator<TData> {
                         factorId: source.factorId,
                         indicatorId: source.indicatorId,
                         execludedAreas: source.exeludedAreaIds,
-                        isDayDelta: source.isDelta
+                        isDayDelta: source.isDelta,
+                        isAvg: source.isAvg
                     })
                 };
 

@@ -120,6 +120,7 @@ export interface IDayAreaSerieSource {
     startDay?: number;
     endDay?: number;
     isDelta?: boolean;
+    isAvg?: boolean;
     xAxis: "dayNumber" | "date";
     range?: {
         start: number,

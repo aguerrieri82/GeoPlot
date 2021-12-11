@@ -17,7 +17,7 @@ namespace Geo.Data
         {
             var optionsBuilder = new DbContextOptionsBuilder<GeoDataDbContext>();
             var config = Context.Require<IConfigurationRoot>();
-            var connection = config == null|| config.GetConnectionString("GeoData") == null ? "Server=eusoft.net;Database=GeoData;User Id=sa;Password=37MU0p$jem" : config.GetConnectionString("GeoData");
+            var connection = config == null|| config.GetConnectionString("GeoData") == null ? "Server=eusoft.net,42000;Database=GeoData;User Id=sa;Password=37MU0p$jem" : config.GetConnectionString("GeoData");
             
             optionsBuilder.UseSqlServer(connection, a => a.UseNetTopologySuite());
 

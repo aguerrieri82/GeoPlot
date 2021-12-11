@@ -181,9 +181,19 @@ export var InfectionDataSet: IDataSet<IInfectionData> = {
         },
 
         {
-            id: "death2020",
-            name: $string("$(total-death) +60 (2020)*"),
+            id: "death2021",
+            name: $string("$(total-death) +60 (2021)*"),
             validFor: ["details"],
+            colorLight: "#9c27b0",
+            colorDark: "#4a148c",
+            showInFavorites: true,
+            compute: new SimpleIndicatorFunction(a =>
+                a.historicDeaths ? a.historicDeaths["2021"] : undefined)
+        },
+        {
+            id: "death2020",
+            name: $string("$(total-death) +60 (2020)"),
+            validFor: ["details", "region", "district"],
             colorLight: "#9c27b0",
             colorDark: "#4a148c",
             showInFavorites: true,
@@ -232,6 +242,19 @@ export var InfectionDataSet: IDataSet<IInfectionData> = {
                 death2019: new SimpleIndicatorFunction(a => a.historicDeaths[2019]),
                 death2020: new SimpleIndicatorFunction(a => a.historicDeaths[2020]),
             }, values => isNaNOrNull(values.death2020) || isNaNOrNull(values.death2019) ? undefined : (values.death2020 - values.death2019))
+        },
+        {
+            id: "death-diff-2021-2020",
+            name: $string("DIff. decessi 2021-20"),
+            validFor: ["details"],
+            colorLight: "#f44336",
+            colorDark: "#b71c1c",
+            gradient: new LinearGradient("#00c853", "#bdbdbd", "#ff1744"),
+            canBeNegative: true,
+            compute: new CombineIndicatorFunction({
+                death2020: new SimpleIndicatorFunction(a => a.historicDeaths[2020]),
+                death2021: new SimpleIndicatorFunction(a => a.historicDeaths[2021]),
+            }, values => isNaNOrNull(values.death2021) || isNaNOrNull(values.death2020) ? undefined : (values.death2021 - values.death2020))
         },
         {
             id: "population",

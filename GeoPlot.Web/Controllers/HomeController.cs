@@ -261,7 +261,7 @@ namespace GeoPlot.Web.Controllers
                 result.Days.Add(item);
             };
 
-            //await FillDeathDataNational(result, 60, true);
+            await FillDeathDataNational(result, 60, false);
 
             await System.IO.File.WriteAllTextAsync(cacheFile, JsonConvert.SerializeObject(result, new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
 
@@ -424,8 +424,8 @@ namespace GeoPlot.Web.Controllers
         {
             var groups = deathRawItems.GroupBy(a => a.Date.Year).ToDictionary(a => a.Key, a => a.GroupBy(b => b.AreaCode).ToDictionary(b => b.Key));
             var daysMap = result.Days.ToDictionary(a => a.Date);
-            
-            var max2020Date = new DateTime(2020, 3, 21);
+
+            var max2021Date = new DateTime(2021, 9, 30);
 
             foreach (var yearGroup in groups)
             {
@@ -434,7 +434,7 @@ namespace GeoPlot.Web.Controllers
                     InfectionData prevAreaData = null;
                     var dateGroup = areaGroup.Value.ToDictionary(a => a.Date);
                     var minDate = new DateTime(yearGroup.Key, 1, 1);
-                    var maxDate = new DateTime(yearGroup.Key, 4, 30);
+                    var maxDate = new DateTime(yearGroup.Key, 12, 31);
                     var curDate = minDate;
                     while (curDate <= maxDate)
                     {
@@ -467,7 +467,7 @@ namespace GeoPlot.Web.Controllers
 
                         var value = entry != null ? (int?)entry.Value : 0;
 
-                        if (yearGroup.Key == 2020 && curDate > max2020Date)
+                        if (yearGroup.Key == 2021 && curDate > max2021Date)
                             value = null;
 
                         areaData.HistoricDeaths[yearGroup.Key] = value;
